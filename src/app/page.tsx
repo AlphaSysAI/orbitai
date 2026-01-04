@@ -18,7 +18,7 @@ export default function OrbitDashboard() {
 
   const [user, setUser] = useState<any>(null);
   const [activePillar, setActivePillar] = useState<PillarId>("copilot-transmission");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "library" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview">("dashboard");
   // État pour les threads de Copilot (pour la navigation contextuelle)
   const [copilotThreads, setCopilotThreads] = useState<Array<{ id_thread: string; title: string; created_at?: string }>>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -50,18 +50,23 @@ export default function OrbitDashboard() {
     if (pillar?.enabled) {
       setActivePillar(pillarId);
       // Réinitialiser l'onglet actif quand on change de pilier
-      setActiveTab("dashboard");
+      // Pour "detection-automation", le premier onglet est "overview"
+      if (pillarId === "detection-automation") {
+        setActiveTab("overview");
+      } else {
+        setActiveTab("dashboard");
+      }
     }
   };
 
   // Fonction pour gérer le clic sur Dashboard
   const handleDashboardClick = () => {
     setActiveTab("dashboard");
-    // Si on est sur un pilier avec son propre dashboard, changer vers un pilier qui affiche le dashboard global
-    if (activePillar === "copilot-transmission" || activePillar === "decision-simulation") {
-      // Changer vers le premier pilier qui n'est pas copilot-transmission ni decision-simulation
+    // Si on est sur un pilier avec son propre dashboard/vue d'ensemble, changer vers un pilier qui affiche le dashboard global
+    if (activePillar === "copilot-transmission" || activePillar === "decision-simulation" || activePillar === "detection-automation") {
+      // Changer vers le premier pilier qui n'a pas son propre dashboard
       const defaultPillar = PILLARS.find(
-        (p) => p.id !== "copilot-transmission" && p.id !== "decision-simulation"
+        (p) => p.id !== "copilot-transmission" && p.id !== "decision-simulation" && p.id !== "detection-automation"
       );
       if (defaultPillar) {
         setActivePillar(defaultPillar.id);
@@ -114,7 +119,8 @@ export default function OrbitDashboard() {
   // Dashboard global (quand on clique sur Dashboard dans le menu système et qu'on n'est pas sur un pilier avec son propre dashboard)
   const showGlobalDashboard = activeTab === "dashboard" && 
     activePillar !== "copilot-transmission" && 
-    activePillar !== "decision-simulation";
+    activePillar !== "decision-simulation" &&
+    activePillar !== "detection-automation";
 
   if (showGlobalDashboard) {
     return (
@@ -166,7 +172,15 @@ export default function OrbitDashboard() {
           />
         );
       case "detection-automation":
-        return <AutomationPillar />;
+        return (
+          <AutomationPillar
+            user={user}
+            activeTab={activeTab}
+            onPillarChange={handlePillarChange}
+            onTabChange={setActiveTab}
+            onLogout={handleLogout}
+          />
+        );
       case "decision-simulation":
         return (
           <DecisionPillar
@@ -230,7 +244,7 @@ export default function OrbitDashboard() {
         onThreadDelete={activePillar === "copilot-transmission" ? handleThreadDeleteFromNav : undefined}
         onDashboardClick={handleDashboardClick}
       />
-      {activePillar === "copilot-transmission" ? (
+      {activePillar === "copilot-transmission" || activePillar === "detection-automation" ? (
         renderActivePillar()
       ) : (
         <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative text-white">

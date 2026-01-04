@@ -124,6 +124,24 @@ export function useCopilot(userId: string | null) {
       : { id: Date.now().toString(), role: "user" as const, content: text };
     setMessages((prev) => [...prev, userMsg]);
 
+    // Enregistrer l'action dans l'historique (pour détection de tâches grises)
+    if (currentTid) {
+      try {
+        await supabase
+          .from('user_actions')
+          .insert({
+            user_id: userId,
+            action_type: 'message_sent',
+            metadata: {
+              thread_id: currentTid,
+              message_length: text.length,
+            },
+          });
+      } catch (err) {
+        // Échec silencieux pour ne pas perturber le flux principal
+      }
+    }
+
     try {
       // Appel API pour la réponse de l'IA
       const response = await fetch("/api/chat", {
@@ -220,6 +238,25 @@ Réponds UNIQUEMENT avec le titre, rien d'autre.`;
       .select();
     if (data) {
       setDocuments((prev) => [data[0], ...prev]);
+      
+      // Enregistrer l'action dans l'historique
+      try {
+        await supabase
+          .from('user_actions')
+          .insert({
+            user_id: userId,
+            action_type: 'document_upload',
+            metadata: {
+              document_id: data[0].id,
+              document_name: file.name,
+              document_size: text.length,
+            },
+          });
+      } catch (err) {
+        // Échec silencieux
+        console.error("Erreur tracking action:", err);
+      }
+      
       return data[0];
     }
     return null;

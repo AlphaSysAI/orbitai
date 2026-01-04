@@ -35,7 +35,7 @@ export const PILLARS: Pillar[] = [
     description: 'Détection proactive des tâches grises et proposition d\'automatisations ciblées pour faire gagner un temps considérable au quotidien.',
     icon: 'Sparkles',
     color: 'text-violet-400',
-    enabled: false,
+    enabled: true,
     route: '/automation',
   },
   {

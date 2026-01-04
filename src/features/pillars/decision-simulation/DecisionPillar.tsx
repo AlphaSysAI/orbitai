@@ -11,9 +11,9 @@ import { type PillarId } from "../types";
 
 interface DecisionPillarProps {
   user: { id: string; email?: string };
-  activeTab: "dashboard" | "library" | "settings";
+  activeTab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview";
   onPillarChange?: (pillarId: PillarId) => void;
-  onTabChange?: (tab: "dashboard" | "library" | "settings") => void;
+  onTabChange?: (tab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview") => void;
   onLogout?: () => void;
 }
 

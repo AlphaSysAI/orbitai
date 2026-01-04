@@ -10,9 +10,9 @@ import { type PillarId, PILLARS } from "../types";
 
 interface CopilotPillarProps {
   user: { id: string; email?: string };
-  activeTab: "dashboard" | "library";
+  activeTab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview";
   onPillarChange?: (pillarId: PillarId) => void;
-  onTabChange?: (tab: "dashboard" | "library" | "settings") => void;
+  onTabChange?: (tab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview") => void;
   onLogout?: () => void;
   onThreadsUpdate?: (threads: Array<{ id_thread: string; title: string; created_at?: string }>, activeThreadId: string | null, deleteThreadFn?: (threadId: string, e: React.MouseEvent) => Promise<void>) => void;
   externalActiveThreadId?: string | null;
@@ -114,8 +114,28 @@ export function CopilotPillar({
         const data = await res.json();
 
         if (data.text) {
-          await uploadDocument(file, data.text);
+          const uploadedDoc = await uploadDocument(file, data.text);
           newPendingFiles.push({ name: file.name, text: data.text });
+
+          // Détecter automatiquement les tâches grises dans le document
+          if (uploadedDoc && user?.id) {
+            try {
+              await fetch("/api/detect-tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  content: data.text,
+                  userId: user.id,
+                  documentId: uploadedDoc.id,
+                  source: "document",
+                }),
+              });
+              // La détection se fait en arrière-plan, pas besoin d'attendre
+            } catch (detectError) {
+              console.error("Erreur détection tâches:", detectError);
+              // Ne pas bloquer l'upload si la détection échoue
+            }
+          }
         }
       } catch (err) {
         console.error("Erreur extraction:", err);
