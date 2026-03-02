@@ -38,6 +38,8 @@ export function AutomationPillar({ user, activeTab }: AutomationPillarProps) {
   } = useAutomation(user.id);
 
   const pillarConfig = PILLARS.find((p) => p.id === "detection-automation");
+  const pillarColor = pillarConfig?.color.replace('text-', '') || 'violet-400';
+  const pillarLabel = 'Automation Expert';
 
   // Fonction pour déclencher l'analyse de l'historique
   const analyzeHistory = async () => {
@@ -127,19 +129,9 @@ export function AutomationPillar({ user, activeTab }: AutomationPillarProps) {
     <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative text-white">
       <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-8 z-20">
         <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">
-          <span className="text-purple-500 border-b-2 border-purple-500 py-5">
+          <span className={`${pillarConfig?.color || 'text-violet-400'} border-b-2 border-${pillarColor} py-5`}>
             {pillarConfig?.name || "Détection & Automatisation"}
           </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-end mr-2">
-            <span className="text-[10px] font-bold text-white leading-none">
-              {user.email?.split("@")[0]}
-            </span>
-            <span className="text-[8px] font-black text-purple-500 uppercase mt-1 tracking-widest">
-              Operator
-            </span>
-          </div>
         </div>
       </header>
 

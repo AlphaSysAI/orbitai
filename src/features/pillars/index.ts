@@ -10,3 +10,7 @@ export { DecisionPillar } from "./decision-simulation/DecisionPillar";
 export { EmotionalPillar } from "./emotional-ai/EmotionalPillar";
 export { ClientPillar } from "./client-synthesis/ClientPillar";
 
+
+
+
+

@@ -44,7 +44,7 @@ export function TaskList({
       case 'document':
         return <FileText size={16} className="text-blue-400" />;
       case 'history':
-        return <History size={16} className="text-purple-400" />;
+        return <History size={16} className="text-violet-400" />;
       case 'manual':
         return <User size={16} className="text-green-400" />;
       default:

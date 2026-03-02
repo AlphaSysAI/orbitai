@@ -17,8 +17,9 @@ export default function OrbitDashboard() {
   const router = useRouter();
 
   const [user, setUser] = useState<any>(null);
-  const [activePillar, setActivePillar] = useState<PillarId>("copilot-transmission");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview">("dashboard");
+  // Initialiser avec un pilier qui affiche le dashboard global par défaut
+  const [activePillar, setActivePillar] = useState<PillarId>("emotional-ai"); // Pilier désactivé = dashboard global
+  const [activeTab, setActiveTab] = useState<"dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview" | "monitoring" | "validation">("dashboard");
   // État pour les threads de Copilot (pour la navigation contextuelle)
   const [copilotThreads, setCopilotThreads] = useState<Array<{ id_thread: string; title: string; created_at?: string }>>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -63,10 +64,10 @@ export default function OrbitDashboard() {
   const handleDashboardClick = () => {
     setActiveTab("dashboard");
     // Si on est sur un pilier avec son propre dashboard/vue d'ensemble, changer vers un pilier qui affiche le dashboard global
-    if (activePillar === "copilot-transmission" || activePillar === "decision-simulation" || activePillar === "detection-automation") {
+    if (activePillar === "copilot-transmission" || activePillar === "decision-simulation" || activePillar === "detection-automation" || activePillar === "client-synthesis") {
       // Changer vers le premier pilier qui n'a pas son propre dashboard
       const defaultPillar = PILLARS.find(
-        (p) => p.id !== "copilot-transmission" && p.id !== "decision-simulation" && p.id !== "detection-automation"
+        (p) => p.id !== "copilot-transmission" && p.id !== "decision-simulation" && p.id !== "detection-automation" && p.id !== "client-synthesis"
       );
       if (defaultPillar) {
         setActivePillar(defaultPillar.id);
@@ -120,7 +121,8 @@ export default function OrbitDashboard() {
   const showGlobalDashboard = activeTab === "dashboard" && 
     activePillar !== "copilot-transmission" && 
     activePillar !== "decision-simulation" &&
-    activePillar !== "detection-automation";
+    activePillar !== "detection-automation" &&
+    activePillar !== "client-synthesis";
 
   if (showGlobalDashboard) {
     return (
@@ -157,7 +159,7 @@ export default function OrbitDashboard() {
         return (
           <CopilotPillar
             user={user}
-            activeTab={activeTab === "library" ? "library" : "dashboard"}
+            activeTab={activeTab === "library" ? "library" : activeTab === "validation" ? "validation" : "dashboard"}
             onPillarChange={handlePillarChange}
             onTabChange={setActiveTab}
             onLogout={handleLogout}
@@ -194,7 +196,15 @@ export default function OrbitDashboard() {
       case "emotional-ai":
         return <EmotionalPillar />;
       case "client-synthesis":
-        return <ClientPillar />;
+        return (
+          <ClientPillar
+            user={user}
+            activeTab={activeTab}
+            onPillarChange={handlePillarChange}
+            onTabChange={setActiveTab}
+            onLogout={handleLogout}
+          />
+        );
       default:
         return (
           <CopilotPillar
@@ -244,7 +254,7 @@ export default function OrbitDashboard() {
         onThreadDelete={activePillar === "copilot-transmission" ? handleThreadDeleteFromNav : undefined}
         onDashboardClick={handleDashboardClick}
       />
-      {activePillar === "copilot-transmission" || activePillar === "detection-automation" ? (
+      {activePillar === "copilot-transmission" || activePillar === "detection-automation" || activePillar === "client-synthesis" || activePillar === "decision-simulation" ? (
         renderActivePillar()
       ) : (
         <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative text-white">
@@ -253,16 +263,6 @@ export default function OrbitDashboard() {
               <span className="text-purple-500 border-b-2 border-purple-500 py-5">
                 {PILLARS.find((p) => p.id === activePillar)?.name || "OrbitAI"}
               </span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col items-end mr-2">
-                <span className="text-[10px] font-bold text-white leading-none">
-                  {user.email?.split("@")[0]}
-                </span>
-                <span className="text-[8px] font-black text-purple-500 uppercase mt-1 tracking-widest">
-                  Operator
-                </span>
-              </div>
             </div>
           </header>
           {renderActivePillar()}

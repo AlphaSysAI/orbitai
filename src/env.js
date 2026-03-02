@@ -17,6 +17,13 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    // API Keys
+    GOOGLE_PLACES_API_KEY: z.string().optional(), // Clé API Google Places pour récupérer les avis
+    OPENAI_API_KEY: z.string().optional(), // Pourrait être déjà défini ailleurs
+    // OpenClaw (agent d'entreprise)
+    OPENCLAW_GATEWAY_URL: z.string().url().optional(),
+    OPENCLAW_GATEWAY_TOKEN: z.string().optional(),
+    OPENCLAW_AGENT_ID: z.string().optional(), // défaut: "main"
   },
 
   /**
@@ -25,7 +32,10 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    // NEXT_PUBLIC_CLIENTVAR: z.string(),
+    NEXT_PUBLIC_OPENCLAW_ENABLED: z
+      .string()
+      .optional()
+      .transform((v) => v === "true"),
   },
 
   /**
@@ -38,6 +48,12 @@ export const env = createEnv({
     AUTH_DISCORD_SECRET: process.env.AUTH_DISCORD_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+    GOOGLE_PLACES_API_KEY: process.env.GOOGLE_PLACES_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENCLAW_GATEWAY_URL: process.env.OPENCLAW_GATEWAY_URL,
+    OPENCLAW_GATEWAY_TOKEN: process.env.OPENCLAW_GATEWAY_TOKEN,
+    OPENCLAW_AGENT_ID: process.env.OPENCLAW_AGENT_ID,
+    NEXT_PUBLIC_OPENCLAW_ENABLED: process.env.NEXT_PUBLIC_OPENCLAW_ENABLED,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

@@ -31,7 +31,7 @@ export function ThreadSidebar({
               onClick={() => onThreadClick(t.id_thread)}
               className={`group flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all ${
                 activeThreadId === t.id_thread
-                  ? "bg-purple-600/20 border border-purple-500/40 text-white"
+                  ? "bg-cyan-600/20 border border-cyan-500/40 text-white"
                   : "hover:bg-white/5 text-slate-400"
               }`}
             >

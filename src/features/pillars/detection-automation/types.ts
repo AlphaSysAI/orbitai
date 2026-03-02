@@ -127,3 +127,7 @@ export interface AutomationStats {
   top_automations: Array<Automation & { execution_count: number }>;
 }
 
+
+
+
+

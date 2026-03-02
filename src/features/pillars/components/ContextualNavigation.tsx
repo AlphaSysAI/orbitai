@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { 
   LayoutDashboard, Settings, Orbit, LogOut, ChevronDown, ChevronUp,
-  FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap
+  FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap, CheckCircle2
 } from "lucide-react";
 import { PILLARS, type PillarId } from "../types";
 import * as Icons from "lucide-react";
@@ -16,9 +16,9 @@ interface Thread {
 
 interface ContextualNavigationProps {
   activePillar: PillarId;
-  activeTab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview";
+  activeTab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview" | "monitoring" | "validation";
   onPillarChange: (pillarId: PillarId) => void;
-  onTabChange: (tab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview") => void;
+  onTabChange: (tab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview" | "monitoring" | "validation") => void;
   onLogout: () => void;
   userEmail?: string;
   // Props pour Copilot
@@ -58,6 +58,7 @@ export function ContextualNavigation({
         return [
           { id: 'discussions', label: 'Discussions', icon: <MessageSquare size={18} /> },
           { id: 'library', label: 'Archives', icon: <FileText size={18} /> },
+          { id: 'validation', label: 'Validation OpenClaw', icon: <CheckCircle2 size={18} /> },
         ];
       case 'decision-simulation':
         return [
@@ -69,6 +70,13 @@ export function ContextualNavigation({
           { id: 'overview', label: 'Vue d\'ensemble', icon: <LayoutDashboard size={18} /> },
           { id: 'tasks', label: 'Tâches', icon: <ListChecks size={18} /> },
           { id: 'automations', label: 'Automatisations', icon: <Zap size={18} /> },
+          { id: 'analyze', label: 'Analyse', icon: <Sparkles size={18} /> },
+        ];
+      case 'client-synthesis':
+        return [
+          { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+          { id: 'library', label: 'Import', icon: <FileText size={18} /> },
+          { id: 'monitoring', label: 'Surveillance', icon: <Zap size={18} /> },
           { id: 'analyze', label: 'Analyse', icon: <Sparkles size={18} /> },
         ];
       default:
@@ -84,7 +92,8 @@ export function ContextualNavigation({
   const isGlobalDashboard = activeTab === "dashboard" && 
     activePillar !== "copilot-transmission" && 
     activePillar !== "decision-simulation" &&
-    activePillar !== "detection-automation";
+    activePillar !== "detection-automation" &&
+    activePillar !== "client-synthesis";
 
   return (
     <aside className="w-72 border-r border-slate-800 bg-[#0f172a] flex flex-col z-30 shadow-2xl text-white overflow-hidden">
@@ -110,7 +119,7 @@ export function ContextualNavigation({
             }
           }}
           className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all mb-3 ${
-            activeTab === "dashboard" && activePillar !== "copilot-transmission" && activePillar !== "decision-simulation"
+            activeTab === "dashboard" && activePillar !== "copilot-transmission" && activePillar !== "decision-simulation" && activePillar !== "client-synthesis"
               ? "bg-purple-600/20 border border-purple-500/40 text-purple-400"
               : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
           }`}
@@ -203,13 +212,13 @@ export function ContextualNavigation({
                 key={nav.id}
                 onClick={() => {
                   // Pour "discussions", on map vers "dashboard" pour Copilot
-                  let tabToSet: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview";
+                  let tabToSet: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview" | "monitoring" | "validation";
                   if (nav.id === 'discussions') {
                     tabToSet = 'dashboard';
                   } else if (nav.id === 'overview') {
                     tabToSet = 'overview';
                   } else {
-                    tabToSet = nav.id as "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview";
+                    tabToSet = nav.id as typeof tabToSet;
                   }
                   onTabChange(tabToSet);
                   setIsSystemMenuOpen(false);
@@ -217,6 +226,7 @@ export function ContextualNavigation({
                   className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
                     (nav.id === 'discussions' && activeTab === 'dashboard') || 
                     (nav.id === 'overview' && activeTab === 'overview') ||
+                    (nav.id === 'validation' && activeTab === 'validation') ||
                     (activeTab === nav.id && nav.id !== 'discussions')
                       ? "bg-purple-600/20 border border-purple-500/40 text-purple-400"
                       : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"

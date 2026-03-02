@@ -57,10 +57,12 @@ export async function POST(req: Request) {
       .order('created_at', { ascending: false })
       .limit(100);
 
+    // Récupérer uniquement les documents du pilier Copilot (base de connaissances)
     const { data: documents } = await supabase
       .from('documents')
       .select('name, created_at')
       .eq('user_id', userId)
+      .eq('pillar_id', 'copilot-transmission') // Filtrer uniquement les documents du pilier Copilot
       .gte('created_at', cutoffDate.toISOString())
       .order('created_at', { ascending: false })
       .limit(50);

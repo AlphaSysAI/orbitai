@@ -213,9 +213,6 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
   };
   return (
     <div className="max-w-4xl mx-auto py-10 animate-in fade-in duration-500 text-white">
-      <h1 className="text-4xl font-extrabold mb-10 text-white italic uppercase tracking-tighter">
-        Archives
-      </h1>
       {simulations.length === 0 ? (
         <div className="bg-slate-900/40 border border-slate-800 p-12 rounded-[2rem] text-center">
           <div className="flex justify-center mb-4">

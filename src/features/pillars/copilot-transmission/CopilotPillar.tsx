@@ -6,13 +6,15 @@ import { useCopilot } from "./hooks/useCopilot";
 import { ChatInterface } from "./components/ChatInterface";
 import { DocumentLibrary } from "./components/DocumentLibrary";
 import { DocumentModal } from "./components/DocumentModal";
+import { ValidationDashboard } from "@/components/ValidationDashboard";
+import { AutomationSettings } from "@/components/AutomationSettings";
 import { type PillarId, PILLARS } from "../types";
 
 interface CopilotPillarProps {
   user: { id: string; email?: string };
-  activeTab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview";
+  activeTab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview" | "validation";
   onPillarChange?: (pillarId: PillarId) => void;
-  onTabChange?: (tab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview") => void;
+  onTabChange?: (tab: "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview" | "validation") => void;
   onLogout?: () => void;
   onThreadsUpdate?: (threads: Array<{ id_thread: string; title: string; created_at?: string }>, activeThreadId: string | null, deleteThreadFn?: (threadId: string, e: React.MouseEvent) => Promise<void>) => void;
   externalActiveThreadId?: string | null;
@@ -34,6 +36,8 @@ export function CopilotPillar({
     messages,
     documents,
     isLoading,
+    chatMode,
+    setChatMode,
     createThread,
     deleteThread,
     deleteDocument,
@@ -41,6 +45,8 @@ export function CopilotPillar({
     uploadDocument,
     fetchDocuments,
   } = useCopilot(user.id);
+
+  const agentModeAvailable = process.env.NEXT_PUBLIC_OPENCLAW_ENABLED === "true";
 
   // Transmettre les threads au parent pour la navigation contextuelle
   useEffect(() => {
@@ -84,6 +90,38 @@ export function CopilotPillar({
   const handleNewConversation = async () => {
     // Créer une nouvelle conversation et l'ouvrir
     await handleCreateThread();
+  };
+
+  const handleGenerateOnboardingGuide = async () => {
+    // Générer un guide d'onboarding condensé basé sur tous les documents
+    if (documents.length === 0) {
+      alert("Veuillez d'abord uploader des documents pour générer un guide d'onboarding.");
+      return;
+    }
+
+    const guidePrompt = `Génère un guide d'onboarding complet et condensé pour une nouvelle recrue qui reprend ce poste.
+
+Ce guide doit :
+1. **Expliquer les fondements du poste** : rôle, responsabilités principales, objectifs clés
+2. **Synthétiser les processus essentiels** : étapes clés, procédures importantes
+3. **Identifier les points critiques** : éléments à maîtriser en priorité
+4. **Structurer l'information** : organiser par thématiques ou par processus
+5. **Être pédagogique** : adapté à quelqu'un qui découvre le poste
+6. **Citer les sources** : indiquer de quels documents proviennent les informations
+
+Format : Guide structuré avec sections claires, sous-titres, et points clés.
+
+Base-toi sur TOUS les documents de la base de connaissances pour créer ce guide complet.`;
+
+    // Créer un nouveau thread et envoyer le message
+    const newThreadId = await createThread();
+    if (newThreadId) {
+      setActiveThreadId(newThreadId);
+      // Attendre un peu que le thread soit bien créé avant d'envoyer le message
+      setTimeout(() => {
+        submitMessage(guidePrompt);
+      }, 100);
+    }
   };
 
   const handleDeleteThread = async (threadId: string, e: React.MouseEvent) => {
@@ -177,31 +215,62 @@ export function CopilotPillar({
   };
 
   const pillarConfig = PILLARS.find((p) => p.id === "copilot-transmission");
+  const pillarColor = pillarConfig?.color.replace('text-', '') || 'cyan-400';
+  const pillarLabel = 'Knowledge Expert';
 
   return (
     <>
       <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative text-white">
         <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-8 z-20">
           <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">
-            <span className="text-purple-500 border-b-2 border-purple-500 py-5">
+            <span className={`${pillarConfig?.color || 'text-cyan-400'} border-b-2 border-${pillarColor} py-5`}>
               {pillarConfig?.name || "Copilote IA & Transmission"}
             </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end mr-2">
-              <span className="text-[10px] font-bold text-white leading-none">
-                {user.email?.split("@")[0]}
-              </span>
-              <span className="text-[8px] font-black text-purple-500 uppercase mt-1 tracking-widest">
-                Operator
-              </span>
-            </div>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto p-8 relative">
+          {activeTab === "validation" && (
+            <>
+              <ValidationDashboard userId={user.id} />
+              <div className="max-w-4xl mx-auto">
+                <AutomationSettings userId={user.id} />
+              </div>
+            </>
+          )}
           {activeTab === "dashboard" && (
             <div className="max-w-4xl mx-auto py-10">
+              {/* Indicateur de base de connaissances */}
+              {documents.length > 0 && (
+                <div className="mb-6 p-4 bg-slate-900/40 border border-slate-800 rounded-xl flex items-center gap-3">
+                  <div className="p-2 bg-green-600/20 rounded-lg">
+                    <FileText size={16} className="text-green-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white">
+                      Base de connaissances active
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {documents.length} document{documents.length > 1 ? 's' : ''} disponible{documents.length > 1 ? 's' : ''} • Posez une question pour rechercher dans vos documents
+                    </p>
+                  </div>
+                </div>
+              )}
+              {documents.length === 0 && (
+                <div className="mb-6 p-4 bg-amber-900/20 border border-amber-800/50 rounded-xl flex items-center gap-3">
+                  <div className="p-2 bg-amber-600/20 rounded-lg">
+                    <FileText size={16} className="text-amber-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white">
+                      Aucun document dans la base de connaissances
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Uploadez des PDFs pour créer votre base de connaissances et permettre à l'IA de répondre à vos questions
+                    </p>
+                  </div>
+                </div>
+              )}
               <ChatInterface
                 messages={messages}
                 input={localInput}
@@ -210,6 +279,12 @@ export function CopilotPillar({
                 onSubmit={submitMessage}
                 onFileUpload={handleFilesUpload}
                 onNewConversation={handleNewConversation}
+                onGenerateGuide={handleGenerateOnboardingGuide}
+                userId={user.id}
+                threadId={activeThreadId || undefined}
+                agentModeAvailable={agentModeAvailable}
+                chatMode={chatMode}
+                onChatModeChange={setChatMode}
               />
             </div>
           )}
@@ -263,7 +338,7 @@ export function CopilotPillar({
                           key={doc.id}
                           className="bg-slate-900/40 border border-slate-800 p-4 rounded-xl flex items-center gap-3"
                         >
-                          <FileText size={20} className="text-purple-400 flex-shrink-0" />
+                          <FileText size={20} className="text-cyan-400 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-white text-sm truncate">{doc.name}</p>
                             <p className="text-xs text-slate-500">

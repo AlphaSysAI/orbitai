@@ -50,7 +50,7 @@ export function CopilotNavigation({
           onTabChange("dashboard");
         }}
       >
-        <div className="bg-purple-600 p-2 rounded-lg">
+        <div className="bg-cyan-600 p-2 rounded-lg">
           <Orbit size={20} className="text-white" />
         </div>
         <h2 className="text-xl font-bold tracking-tighter text-white uppercase italic">
@@ -76,7 +76,7 @@ export function CopilotNavigation({
                   disabled={!pillar.enabled}
                   className={`flex-1 flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
                     isActive && pillar.enabled
-                      ? "bg-purple-600/20 border-2 border-purple-500/40"
+                      ? "bg-cyan-600/20 border-2 border-cyan-500/40"
                       : pillar.enabled
                         ? "bg-slate-800/50 hover:bg-slate-800 border-2 border-transparent"
                         : "bg-slate-800/30 opacity-40 cursor-not-allowed border-2 border-transparent"
@@ -107,7 +107,7 @@ export function CopilotNavigation({
                   disabled={!pillar.enabled}
                   className={`flex-1 max-w-[150px] flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
                     isActive && pillar.enabled
-                      ? "bg-purple-600/20 border-2 border-purple-500/40"
+                      ? "bg-cyan-600/20 border-2 border-cyan-500/40"
                       : pillar.enabled
                         ? "bg-slate-800/50 hover:bg-slate-800 border-2 border-transparent"
                         : "bg-slate-800/30 opacity-40 cursor-not-allowed border-2 border-transparent"
@@ -139,7 +139,7 @@ export function CopilotNavigation({
             onClick={() => onTabChange("dashboard")}
             className={`flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl transition-all ${
               activeTab === "dashboard"
-                ? "bg-purple-600/20 border border-purple-500/40 text-purple-400"
+                ? "bg-cyan-600/20 border border-cyan-500/40 text-cyan-400"
                 : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
             }`}
           >
@@ -150,7 +150,7 @@ export function CopilotNavigation({
             onClick={() => onTabChange("library")}
             className={`flex-1 flex items-center justify-center gap-2 p-2.5 rounded-xl transition-all ${
               activeTab === "library"
-                ? "bg-purple-600/20 border border-purple-500/40 text-purple-400"
+                ? "bg-cyan-600/20 border border-cyan-500/40 text-cyan-400"
                 : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
             }`}
           >
@@ -165,7 +165,7 @@ export function CopilotNavigation({
         {/* Bouton Nouveau Thread */}
         <button
           onClick={onCreateThread}
-          className="w-full mb-6 flex items-center justify-center gap-2 p-3.5 bg-slate-800 hover:bg-purple-600 rounded-2xl transition-all border border-slate-700 group shadow-lg text-white font-black text-[10px] uppercase tracking-widest flex-shrink-0"
+          className="w-full mb-6 flex items-center justify-center gap-2 p-3.5 bg-slate-800 hover:bg-cyan-600 rounded-2xl transition-all border border-slate-700 group shadow-lg text-white font-black text-[10px] uppercase tracking-widest flex-shrink-0"
         >
           <Plus size={16} /> Nouveau Flux
         </button>
@@ -181,7 +181,7 @@ export function CopilotNavigation({
             onClick={() => onThreadClick(t.id_thread)}
             className={`group flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all ${
               activeThreadId === t.id_thread
-                ? "bg-purple-600/20 border border-purple-500/40 text-white"
+                ? "bg-cyan-600/20 border border-cyan-500/40 text-white"
                 : "hover:bg-white/5 text-slate-400"
             }`}
           >
@@ -205,7 +205,7 @@ export function CopilotNavigation({
             onClick={() => onTabChange("dashboard")}
             className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-left ${
               activeTab === "dashboard" && activePillar !== "copilot-transmission"
-                ? "bg-purple-600/15 text-purple-400"
+                ? "bg-cyan-600/15 text-cyan-400"
                 : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
             }`}
           >
@@ -216,7 +216,7 @@ export function CopilotNavigation({
             onClick={() => onTabChange("settings")}
             className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-left ${
               activeTab === "settings"
-                ? "bg-purple-600/15 text-purple-400"
+                ? "bg-cyan-600/15 text-cyan-400"
                 : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
             }`}
           >
@@ -230,7 +230,7 @@ export function CopilotNavigation({
           {userEmail && (
             <div className="px-4 py-2 text-[10px] text-slate-400">
               <p className="font-bold text-white">{userEmail.split("@")[0]}</p>
-              <p className="text-[8px] text-purple-500 uppercase mt-1 tracking-widest">Operator</p>
+              <p className="text-[8px] text-cyan-400 uppercase mt-1 tracking-widest">Operator</p>
             </div>
           )}
           <button

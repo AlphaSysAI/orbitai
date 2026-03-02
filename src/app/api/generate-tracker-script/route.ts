@@ -28,15 +28,36 @@ set -e
 GREEN='\\033[0;32m'
 YELLOW='\\033[1;33m'
 BLUE='\\033[0;34m'
+RED='\\033[0;31m'
 NC='\\033[0m'
 
-echo -e "\\${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\${NC}"
-echo -e "\\${GREEN}🚀 OrbitAI - Tracking d'activité\\${NC}"
-echo -e "\\${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\\${NC}"
+echo -e "\${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\${NC}"
+echo -e "\${GREEN}🚀 OrbitAI - Tracking d'activité\${NC}"
+echo -e "\${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\${NC}"
 echo ""
 
+# Vérifier que le script a les permissions d'exécution
+if [ ! -x "\$0" ]; then
+    echo -e "\${YELLOW}⚠️  Le script n'a pas les permissions d'exécution.\${NC}"
+    echo -e "\${BLUE}Tentative d'ajout des permissions...\${NC}"
+    chmod +x "\$0"
+    if [ $? -eq 0 ]; then
+        echo -e "\${GREEN}✓ Permissions ajoutées. Veuillez relancer le script.\${NC}"
+        read -p "Appuyez sur Entrée pour quitter..."
+        exit 0
+    else
+        echo -e "\${RED}❌ Impossible d'ajouter les permissions automatiquement.\${NC}"
+        echo ""
+        echo -e "\${YELLOW}Veuillez exécuter cette commande dans Terminal :\${NC}"
+        echo -e "\${BLUE}chmod +x "\$0"\${NC}"
+        echo ""
+        read -p "Appuyez sur Entrée pour quitter..."
+        exit 1
+    fi
+fi
+
 # Obtenir le répertoire du script
-SCRIPT_DIR="$( cd "$( dirname "\\${BASH_SOURCE[0]}" )" && pwd )"
+SCRIPT_DIR="$( cd "$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"
 
 # Configuration
 export USER_ID="${userId}"
@@ -44,48 +65,88 @@ export ORBITAI_API_URL="${trackActivityUrl}"
 
 # Vérifier Python
 if ! command -v python3 &> /dev/null; then
-    echo -e "\\${YELLOW}❌ Python 3 n'est pas installé.\\${NC}"
+    echo -e "\${YELLOW}❌ Python 3 n'est pas installé.\${NC}"
     echo "   Installez Python depuis https://www.python.org/downloads/"
     read -p "Appuyez sur Entrée pour quitter..."
     exit 1
 fi
 
 # Vérifier et installer les dépendances si nécessaire
-echo -e "\\${YELLOW}Vérification des dépendances...\\${NC}"
-if command -v pip3 &> /dev/null; then
-    # Vérifier si requests est déjà installé
-    if ! python3 -c "import requests" 2>/dev/null; then
-        echo -e "\\${YELLOW}Installation des dépendances Python...\\${NC}"
-        pip3 install -q --upgrade pip 2>/dev/null || true
-        pip3 install -q requests
-        echo -e "\\${GREEN}✓ Dépendances installées\\${NC}"
-    else
-        echo -e "\\${GREEN}✓ Dépendances déjà installées\\${NC}"
+echo -e "\${YELLOW}Vérification des dépendances...\${NC}"
+
+# Fonction pour installer les dépendances avec différentes méthodes
+install_dependencies() {
+    # Liste des dépendances à installer
+    DEPS="requests pynput"
+    
+    # Méthode 1: Essayer avec --user (recommandé pour macOS/Homebrew)
+    if pip3 install -q --user \$DEPS 2>/dev/null; then
+        echo -e "\${GREEN}✓ Dépendances installées (mode utilisateur)\${NC}"
+        return 0
+    fi
+    
+    # Méthode 2: Essayer avec --break-system-packages (si nécessaire)
+    if pip3 install -q --break-system-packages \$DEPS 2>/dev/null; then
+        echo -e "\${GREEN}✓ Dépendances installées\${NC}"
+        return 0
+    fi
+    
+    # Méthode 3: Essayer sans flag (pour les anciens systèmes)
+    if pip3 install -q \$DEPS 2>/dev/null; then
+        echo -e "\${GREEN}✓ Dépendances installées\${NC}"
+        return 0
+    fi
+    
+    return 1
+}
+
+# Vérifier si les dépendances sont déjà installées
+if python3 -c "import requests, pynput" 2>/dev/null; then
+    echo -e "\${GREEN}✓ Dépendances déjà installées\${NC}"
+elif command -v pip3 &> /dev/null; then
+    echo -e "\${YELLOW}Installation des dépendances Python (requests, pynput)...\${NC}"
+    if ! install_dependencies; then
+        echo -e "\${RED}❌ Erreur lors de l'installation des dépendances.\${NC}"
+        echo -e "\${YELLOW}Veuillez installer manuellement :\${NC}"
+        echo -e "\${BLUE}pip3 install --user requests pynput\${NC}"
+        echo ""
+        read -p "Appuyez sur Entrée pour quitter..."
+        exit 1
     fi
 else
-    echo -e "\\${YELLOW}pip3 non trouvé, tentative d'installation...\\${NC}"
-    python3 -m ensurepip --upgrade 2>/dev/null || true
-    pip3 install -q requests
+    echo -e "\${YELLOW}pip3 non trouvé, tentative d'initialisation...\${NC}"
+    python3 -m ensurepip --upgrade --user 2>/dev/null || true
+    if command -v pip3 &> /dev/null; then
+        install_dependencies || {
+            echo -e "\${RED}❌ Erreur lors de l'installation des dépendances.\${NC}"
+            read -p "Appuyez sur Entrée pour quitter..."
+            exit 1
+        }
+    else
+        echo -e "\${RED}❌ pip3 n'est pas disponible. Veuillez installer Python avec pip.\${NC}"
+        read -p "Appuyez sur Entrée pour quitter..."
+        exit 1
+    fi
 fi
 
 # Demander les permissions système
-echo -e "\\${YELLOW}Vérification et demande des permissions système...\\${NC}"
+echo -e "\${YELLOW}Vérification et demande des permissions système...\${NC}"
 echo ""
 
 # Demander la permission d'accessibilité (Accessibility)
-echo -e "\\${BLUE}📋 Permission d'accessibilité (Accessibility)\\${NC}"
-echo -e "\\${YELLOW}Cette permission est nécessaire pour suivre les fenêtres et applications actives.\\${NC}"
+echo -e "\${BLUE}📋 Permission d'accessibilité (Accessibility)\${NC}"
+echo -e "\${YELLOW}Cette permission est nécessaire pour suivre les fenêtres et applications actives.\${NC}"
 echo ""
 
 # Essayer d'accéder à System Events - cela déclenchera la demande de permission si elle n'est pas déjà accordée
 if ! osascript -e 'tell application "System Events" to get name of processes' > /dev/null 2>&1; then
-    echo -e "\\${YELLOW}⚠️  Permission d'accessibilité non accordée.\\${NC}"
-    echo -e "\\${BLUE}Une boîte de dialogue va apparaître. Cliquez sur \\"Autoriser\\" ou \\"Ouvrir les préférences système\\".\\${NC}"
+    echo -e "\${YELLOW}⚠️  Permission d'accessibilité non accordée.\${NC}"
+    echo -e "\${BLUE}Une boîte de dialogue va apparaître. Cliquez sur \\"Autoriser\\" ou \\"Ouvrir les préférences système\\".\${NC}"
     echo ""
     # Ouvrir les préférences système directement à la page des permissions d'accessibilité
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" 2>/dev/null || open "x-apple.systempreferences:com.apple.preference.security" 2>/dev/null || true
     
-    echo -e "\\${BLUE}Dans les Préférences Système :\\${NC}"
+    echo -e "\${BLUE}Dans les Préférences Système :\${NC}"
     echo "   1. Recherchez \\"orbitai-tracker.command\\" ou \\"Terminal\\" dans la liste"
     echo "   2. Cochez la case à côté pour autoriser"
     echo "   3. Vous devrez peut-être redémarrer ce script après avoir accordé la permission"
@@ -93,26 +154,26 @@ if ! osascript -e 'tell application "System Events" to get name of processes' > 
     
     read -p "Appuyez sur Entrée une fois la permission accordée... "
 else
-    echo -e "\\${GREEN}✓ Permission d'accessibilité déjà accordée\\${NC}"
+    echo -e "\${GREEN}✓ Permission d'accessibilité déjà accordée\${NC}"
 fi
 
 echo ""
 
 # Demander la permission d'automatisation si nécessaire (sera demandée automatiquement lors de l'utilisation)
-echo -e "\\${BLUE}📋 Permission d'automatisation (Automation)\\${NC}"
-echo -e "\\${YELLOW}Cette permission peut être demandée automatiquement lors de l'accès aux applications (Mail, Safari, etc.)\\${NC}"
-echo -e "\\${BLUE}Si une boîte de dialogue apparaît, cliquez sur \\"Autoriser\\".\\${NC}"
+echo -e "\${BLUE}📋 Permission d'automatisation (Automation)\${NC}"
+echo -e "\${YELLOW}Cette permission peut être demandée automatiquement lors de l'accès aux applications (Mail, Safari, etc.)\${NC}"
+echo -e "\${BLUE}Si une boîte de dialogue apparaît, cliquez sur \\"Autoriser\\".\${NC}"
 echo ""
 
-echo -e "\\${GREEN}✓ Vérification des permissions terminée\\${NC}"
+echo -e "\${GREEN}✓ Vérification des permissions terminée\${NC}"
 echo ""
 
 # Lancer le tracker
-echo -e "\\${GREEN}✓ Démarrage du tracking...\\${NC}"
-echo -e "\\${BLUE}Appuyez sur Ctrl+C pour arrêter\\${NC}"
+echo -e "\${GREEN}✓ Démarrage du tracking...\${NC}"
+echo -e "\${BLUE}Appuyez sur Ctrl+C pour arrêter\${NC}"
 echo ""
 
-cd "\\$SCRIPT_DIR"
+cd "\$SCRIPT_DIR"
 python3 activity-tracker.py
 `;
 

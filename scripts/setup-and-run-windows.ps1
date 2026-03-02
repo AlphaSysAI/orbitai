@@ -78,3 +78,7 @@ Write-Host ""
 Set-Location $scriptDir
 python activity-tracker-windows.py
 
+
+
+
+

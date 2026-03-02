@@ -213,20 +213,6 @@ export function ConversationGuide({
 
   return (
     <div className="flex flex-col h-full bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden relative">
-      {/* Header */}
-      <div className="p-6 border-b border-slate-800 bg-slate-900/50 flex items-center gap-3">
-        <div className="p-2 bg-sky-600/20 rounded-lg">
-          <Brain size={20} className="text-sky-400" />
-        </div>
-        <div>
-          <h3 className="font-bold text-white">Assistant Décisionnel</h3>
-          <p className="text-xs text-slate-400">
-            {status === 'conversation' && "Explorons ensemble votre situation..."}
-            {status === 'analyzing' && "Analyse en cours..."}
-            {status === 'ready' && "Simulation prête"}
-          </p>
-        </div>
-      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">

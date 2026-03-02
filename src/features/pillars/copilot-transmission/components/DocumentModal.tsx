@@ -40,7 +40,7 @@ export function DocumentModal({
             <p className="font-black text-2xl uppercase tracking-tighter italic text-white">
               Centre de Préparation de Données
             </p>
-            <p className="text-[10px] text-purple-500 font-bold uppercase mt-1 tracking-widest italic">
+            <p className="text-[10px] text-cyan-400 font-bold uppercase mt-1 tracking-widest italic">
               {pendingFiles.length} document(s) prêt(s)
             </p>
           </div>
@@ -63,14 +63,14 @@ export function DocumentModal({
                 onClick={() => onFileSelect(idx)}
                 className={`group p-4 rounded-2xl cursor-pointer transition-all border flex items-center justify-between ${
                   selectedFileIndex === idx
-                    ? "bg-purple-600/20 border-purple-500 text-white shadow-lg shadow-purple-900/10"
+                    ? "bg-cyan-600/20 border-cyan-500 text-white shadow-lg shadow-cyan-900/10"
                     : "bg-slate-900/40 border-slate-800 text-slate-400 hover:bg-slate-800"
                 }`}
               >
                 <div className="flex items-center gap-3 overflow-hidden text-white">
                   <FileText
                     size={14}
-                    className={selectedFileIndex === idx ? "text-purple-400" : "text-slate-600"}
+                    className={selectedFileIndex === idx ? "text-cyan-400" : "text-slate-600"}
                   />
                   <span className="text-[11px] font-bold truncate">{file.name}</span>
                 </div>
@@ -85,11 +85,11 @@ export function DocumentModal({
                 </button>
               </div>
             ))}
-            <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-800 rounded-2xl cursor-pointer hover:border-purple-500/50 hover:bg-purple-500/5 transition-all text-slate-500 hover:text-purple-400 group text-white">
+            <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-slate-800 rounded-2xl cursor-pointer hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all text-slate-500 hover:text-cyan-400 group text-white">
               <input
                 type="file"
                 className="hidden"
-                accept=".pdf"
+                accept=".pdf,.docx,.xlsx,.xls,.txt,.md,.csv"
                 multiple
                 onChange={onAddMoreFiles}
               />
@@ -112,7 +112,7 @@ export function DocumentModal({
           </button>
           <button
             onClick={onLaunchAnalysis}
-            className="flex-1 py-4 bg-purple-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-purple-500 transition-all text-white shadow-2xl shadow-purple-600/40 flex items-center justify-center gap-3"
+            className="flex-1 py-4 bg-cyan-600 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-cyan-500 transition-all text-white shadow-2xl shadow-cyan-600/40 flex items-center justify-center gap-3"
           >
             <Zap size={16} /> Lancer l'Analyse Croisée
           </button>

@@ -50,7 +50,7 @@ export function DocumentLibrary({
                 className="flex items-center gap-5 cursor-pointer"
                 onClick={() => onDocumentSelect(doc)}
               >
-                <div className="p-4 bg-purple-600/10 rounded-2xl text-purple-400">
+                <div className="p-4 bg-cyan-600/10 rounded-2xl text-cyan-400">
                   <FileText size={20} />
                 </div>
                 <div>

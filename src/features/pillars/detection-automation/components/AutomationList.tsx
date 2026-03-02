@@ -106,7 +106,7 @@ export function AutomationList({
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-bold text-white truncate">{automation.name}</p>
                     {automation.ai_suggested && (
-                      <span className="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-violet-500/20 text-violet-400 px-2 py-0.5 rounded-full">
                         IA
                       </span>
                     )}
@@ -168,4 +168,5 @@ export function AutomationList({
     </div>
   );
 }
+
 

@@ -62,7 +62,7 @@ export const PILLARS: Pillar[] = [
     description: 'Agrégation automatique des retours multi-sources pour offrir une vision claire, structurée et actionnable de la voix client.',
     icon: 'BarChart2',
     color: 'text-emerald-400',
-    enabled: false,
+    enabled: true,
     route: '/client',
   },
 ];

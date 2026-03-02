@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Sparkles, ListChecks, Zap, TrendingUp, Clock, CheckCircle2, RefreshCw, Activity, Play, Square, StopCircle } from "lucide-react";
+import { Sparkles, ListChecks, Zap, TrendingUp, Clock, CheckCircle2, RefreshCw, Activity, Play, Square, StopCircle, Download } from "lucide-react";
 import { AutomationStats, GrayTask, Automation } from "../types";
 
 interface AutomationDashboardProps {
@@ -81,6 +81,66 @@ export function AutomationDashboard({ stats, tasks, automations, isLoading, onAn
       return;
     }
 
+    // Si le script est déjà téléchargé, donner des instructions pour le lancer
+    if (hasDownloadedScript || trackingStatus?.hasEverTracked) {
+      const filename = detectedOS === 'macos' ? 'orbitai-tracker.command' : 'orbitai-tracker.bat';
+      
+      if (detectedOS === 'macos') {
+        const launchMessage = `Le script est déjà téléchargé dans votre dossier Téléchargements.
+
+📋 POUR LANCER LE TRACKING :
+
+Option 1 - Via Terminal (Recommandé) :
+1. Ouvrez Terminal (Applications > Utilitaires > Terminal)
+2. Tapez : cd ~/Downloads
+3. Tapez : chmod +x orbitai-tracker.command
+4. Tapez : ./orbitai-tracker.command
+
+Option 2 - Via Finder :
+1. Ouvrez le Finder et allez dans Téléchargements
+2. Faites un clic DROIT (ou Ctrl+clic) sur "orbitai-tracker.command"
+3. Sélectionnez "Ouvrir" (pas double-clic)
+4. Cliquez sur "Ouvrir" dans la boîte de dialogue qui apparaît
+
+⚠️ Si vous voyez une erreur "privilèges d'accès", utilisez la méthode Terminal.
+
+Le script s'installera et se lancera automatiquement.
+Cette page vérifiera automatiquement le statut du tracking.`;
+
+        if (window.confirm(launchMessage + '\n\nVoulez-vous ouvrir le dossier Téléchargements maintenant ?')) {
+          // Ouvrir le dossier Téléchargements sur macOS
+          window.open('x-apple-finder://Users/' + (window.navigator.userAgent.includes('Mac') ? '~' : '') + '/Downloads');
+        }
+      } else {
+        const launchMessage = `Le script est déjà téléchargé dans votre dossier Téléchargements.
+
+Pour le lancer :
+1. Ouvrez l'Explorateur de fichiers
+2. Allez dans Téléchargements
+3. Double-cliquez sur "orbitai-tracker.bat"
+4. Autorisez l'exécution si Windows demande confirmation
+
+Le script s'installera et se lancera automatiquement.
+Cette page vérifiera automatiquement le statut du tracking.`;
+
+        alert(launchMessage);
+      }
+      
+      // Vérifier le statut après un délai
+      setTimeout(() => {
+        checkTrackingStatus();
+        const checkInterval = setInterval(() => {
+          checkTrackingStatus();
+        }, 5000);
+        
+        setTimeout(() => {
+          clearInterval(checkInterval);
+        }, 60000); // Vérifier pendant 1 minute
+      }, 3000);
+      
+      return; // Ne pas télécharger à nouveau
+    }
+
     // Demander confirmation à l'utilisateur
     const confirmMessage = `Vous allez télécharger et lancer un script de tracking d'activité.
 
@@ -127,12 +187,22 @@ Voulez-vous continuer ?`;
       if (detectedOS === 'macos') {
         const launchMessage = `Le script a été téléchargé dans votre dossier Téléchargements.
 
-Pour le lancer :
-1. Ouvrez le Finder
-2. Allez dans Téléchargements
-3. Double-cliquez sur "orbitai-tracker.command"
-4. Si macOS demande confirmation, cliquez sur "Ouvrir"
-5. Autorisez les permissions demandées dans les préférences système
+📋 INSTRUCTIONS D'INSTALLATION (IMPORTANT) :
+
+⚠️ macOS bloque l'exécution des fichiers téléchargés par défaut.
+
+Option 1 - Via Terminal (Recommandé) :
+1. Ouvrez Terminal (Applications > Utilitaires > Terminal)
+2. Tapez : cd ~/Downloads
+3. Tapez : chmod +x orbitai-tracker.command
+4. Tapez : ./orbitai-tracker.command
+
+Option 2 - Via Finder :
+1. Ouvrez le Finder et allez dans Téléchargements
+2. Faites un clic DROIT (ou Ctrl+clic) sur "orbitai-tracker.command"
+3. Sélectionnez "Ouvrir" (pas double-clic)
+4. Cliquez sur "Ouvrir" dans la boîte de dialogue qui apparaît
+5. Si macOS demande confirmation, cliquez sur "Ouvrir"
 
 Le script s'installera et se lancera automatiquement.
 
@@ -281,8 +351,8 @@ Le script s'installera et se lancera automatiquement.
 
         <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl">
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-600/20 rounded-xl">
-              <Clock size={24} className="text-purple-400" />
+            <div className="p-3 bg-violet-600/20 rounded-xl">
+              <Clock size={24} className="text-violet-400" />
             </div>
           </div>
           <p className="text-3xl font-bold text-white mb-1">{stats.time_saved_hours.toFixed(1)}h</p>
@@ -342,15 +412,53 @@ Le script s'installera et se lancera automatiquement.
               {/* Bouton d'installation automatique */}
               {(detectedOS === 'macos' || detectedOS === 'windows') && (
                 <div>
-                  <button
-                    onClick={handleDownloadAndInstall}
-                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-white text-sm transition mb-3"
-                  >
-                    <Play size={16} />
-                    {hasDownloadedScript || trackingStatus?.hasEverTracked
-                      ? "Lancer le tracking"
-                      : "Télécharger et lancer le tracking"}
-                  </button>
+                  <div className="flex gap-2 mb-3">
+                    <button
+                      onClick={handleDownloadAndInstall}
+                      className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-white text-sm transition"
+                    >
+                      <Play size={16} />
+                      {hasDownloadedScript || trackingStatus?.hasEverTracked
+                        ? "Lancer le tracking"
+                        : "Télécharger et lancer le tracking"}
+                    </button>
+                    {(hasDownloadedScript || trackingStatus?.hasEverTracked) && (
+                      <button
+                        onClick={async () => {
+                          if (!userId) {
+                            alert("User ID manquant. Veuillez rafraîchir la page.");
+                            return;
+                          }
+                          if (detectedOS !== 'macos' && detectedOS !== 'windows') return;
+                          
+                          try {
+                            const response = await fetch(`/api/generate-tracker-script?userId=${userId}&os=${detectedOS}`);
+                            if (!response.ok) {
+                              throw new Error('Erreur lors du téléchargement');
+                            }
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            const filename = detectedOS === 'macos' ? 'orbitai-tracker.command' : 'orbitai-tracker.bat';
+                            link.download = filename;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            window.URL.revokeObjectURL(url);
+                            
+                            alert(`Script téléchargé avec succès !\n\nLe fichier "${filename}" a été téléchargé dans votre dossier Téléchargements.`);
+                          } catch (error: any) {
+                            alert(`Erreur lors du téléchargement : ${error.message}`);
+                          }
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm transition"
+                        title="Télécharger à nouveau le script"
+                      >
+                        <Download size={16} />
+                      </button>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 mb-2">
                     {hasDownloadedScript || trackingStatus?.hasEverTracked ? (
                       <>Le script est déjà téléchargé. Double-cliquez sur "orbitai-tracker.{detectedOS === 'macos' ? 'command' : 'bat'}" dans votre dossier Téléchargements pour le lancer.</>

@@ -18,7 +18,10 @@ interface Document {
   name: string;
   created_at: string;
   full_text: string;
+  pillar_id?: string; // Identifiant du pilier source
 }
+
+export type ChatMode = "copilot" | "agent";
 
 export function useCopilot(userId: string | null) {
   const supabase = createClient();
@@ -28,6 +31,7 @@ export function useCopilot(userId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [chatMode, setChatMode] = useState<ChatMode>("copilot");
 
   useEffect(() => {
     if (userId) {
@@ -62,9 +66,13 @@ export function useCopilot(userId: string | null) {
   };
 
   const fetchDocuments = async () => {
+    if (!userId) return; // Sécurité : ne pas récupérer si pas d'userId
+    // Récupérer uniquement les documents du pilier Copilot pour cet utilisateur
     const { data } = await supabase
       .from("documents")
       .select("*")
+      .eq("user_id", userId) // SÉCURITÉ : filtrer par user_id
+      .eq("pillar_id", "copilot-transmission") // Filtrer par pilier
       .order("created_at", { ascending: false });
     if (data) setDocuments(data);
   };
@@ -91,7 +99,14 @@ export function useCopilot(userId: string | null) {
   };
 
   const deleteDocument = async (docId: string) => {
-    const { error } = await supabase.from("documents").delete().eq("id", docId);
+    if (!userId) return; // Sécurité : ne pas supprimer si pas d'userId
+    // Supprimer uniquement les documents du pilier Copilot pour cet utilisateur (sécurité)
+    const { error } = await supabase
+      .from("documents")
+      .delete()
+      .eq("id", docId)
+      .eq("user_id", userId) // SÉCURITÉ : filtrer par user_id
+      .eq("pillar_id", "copilot-transmission"); // Filtrer par pilier
     if (!error) {
       setDocuments((prev) => prev.filter((d) => d.id !== docId));
     }
@@ -143,11 +158,27 @@ export function useCopilot(userId: string | null) {
     }
 
     try {
-      // Appel API pour la réponse de l'IA
-      const response = await fetch("/api/chat", {
+      const apiUrl = chatMode === "agent" ? "/api/agent-chat" : "/api/chat";
+      const response = await fetch(apiUrl, {
         method: "POST",
-        body: JSON.stringify({ messages: [...messages, userMsg] }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages, userMsg],
+          userId: userId ?? undefined,
+        }),
       });
+
+      if (!response.ok) {
+        const text = await response.text();
+        let errMessage = `Erreur ${response.status}`;
+        try {
+          const errData = JSON.parse(text);
+          errMessage = errData.error || errData.detail || errMessage;
+        } catch {
+          if (text) errMessage = text.slice(0, 200);
+        }
+        throw new Error(errMessage);
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -195,6 +226,7 @@ Réponds UNIQUEMENT avec le titre, rien d'autre.`;
         // Générer le titre en arrière-plan (ne pas bloquer l'UI)
         (async () => {
           try {
+            // Titre toujours via Copilot (OpenAI), pas OpenClaw
             const titleRes = await fetch("/api/chat", {
               method: "POST",
               body: JSON.stringify({
@@ -232,9 +264,15 @@ Réponds UNIQUEMENT avec le titre, rien d'autre.`;
 
   const uploadDocument = async (file: File, text: string) => {
     if (!userId) return null;
+    // Marquer le document comme appartenant au pilier Copilot
     const { data } = await supabase
       .from("documents")
-      .insert([{ user_id: userId, name: file.name, full_text: text }])
+      .insert([{ 
+        user_id: userId, 
+        name: file.name, 
+        full_text: text,
+        pillar_id: 'copilot-transmission' // Identifier le pilier source
+      }])
       .select();
     if (data) {
       setDocuments((prev) => [data[0], ...prev]);
@@ -269,6 +307,8 @@ Réponds UNIQUEMENT avec le titre, rien d'autre.`;
     messages,
     documents,
     isLoading,
+    chatMode,
+    setChatMode,
     createThread,
     deleteThread,
     deleteDocument,
