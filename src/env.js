@@ -20,10 +20,18 @@ export const env = createEnv({
     // API Keys
     GOOGLE_PLACES_API_KEY: z.string().optional(), // Clé API Google Places pour récupérer les avis
     OPENAI_API_KEY: z.string().optional(), // Pourrait être déjà défini ailleurs
-    // OpenClaw (agent d'entreprise)
+    // LEGACY — OpenClaw retiré du produit ; conservé pour routes/backend en migration (Phase B+)
     OPENCLAW_GATEWAY_URL: z.string().url().optional(),
     OPENCLAW_GATEWAY_TOKEN: z.string().optional(),
-    OPENCLAW_AGENT_ID: z.string().optional(), // défaut: "main"
+    OPENCLAW_AGENT_ID: z.string().optional(),
+    OPENCLAW_VALIDATION_STATUS_TOKEN: z.string().optional(), // LEGACY Phase D — préférer REVIEW_POLLING_TOKEN
+    // Token polling GET /api/review/status (Authorization: Bearer …)
+    REVIEW_POLLING_TOKEN: z.string().optional(),
+    // Tracker d'activité (script Python) — min. 32 caractères en production
+    TRACKER_SIGNING_SECRET:
+      process.env.NODE_ENV === "production"
+        ? z.string().min(32)
+        : z.string().min(32).optional(),
   },
 
   /**
@@ -32,6 +40,7 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
+    /** @deprecated Plus exposé en UI — conservé temporairement pour compat build */
     NEXT_PUBLIC_OPENCLAW_ENABLED: z
       .string()
       .optional()
@@ -53,6 +62,9 @@ export const env = createEnv({
     OPENCLAW_GATEWAY_URL: process.env.OPENCLAW_GATEWAY_URL,
     OPENCLAW_GATEWAY_TOKEN: process.env.OPENCLAW_GATEWAY_TOKEN,
     OPENCLAW_AGENT_ID: process.env.OPENCLAW_AGENT_ID,
+    OPENCLAW_VALIDATION_STATUS_TOKEN: process.env.OPENCLAW_VALIDATION_STATUS_TOKEN,
+    REVIEW_POLLING_TOKEN: process.env.REVIEW_POLLING_TOKEN,
+    TRACKER_SIGNING_SECRET: process.env.TRACKER_SIGNING_SECRET,
     NEXT_PUBLIC_OPENCLAW_ENABLED: process.env.NEXT_PUBLIC_OPENCLAW_ENABLED,
   },
   /**

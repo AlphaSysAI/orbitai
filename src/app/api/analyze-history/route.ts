@@ -11,6 +11,17 @@ interface UserAction {
   created_at: string;
 }
 
+type RecentActionItem =
+  | { type: "message"; content: string; date: string }
+  | { type: "document_upload"; name: string; date: string }
+  | { type: string; metadata: Record<string, unknown>; date: string };
+
+function formatRecentActionLabel(action: RecentActionItem): string {
+  if ("content" in action) return action.content;
+  if ("name" in action) return action.name;
+  return action.type;
+}
+
 export async function POST(req: Request) {
   try {
     const { userId, days = 30 } = await req.json();
@@ -105,22 +116,22 @@ export async function POST(req: Request) {
       action_types: actionCounts,
       top_applications: topApps,
       recent_actions: [
-        ...(actions?.slice(0, 30).map(a => ({
+        ...(actions?.slice(0, 30).map((a): RecentActionItem => ({
           type: a.action_type,
           metadata: a.metadata,
           date: a.created_at,
         })) || []),
-        ...(messages?.slice(0, 20).map(m => ({
-          type: 'message',
+        ...(messages?.slice(0, 20).map((m): RecentActionItem => ({
+          type: "message",
           content: m.content.substring(0, 200),
           date: m.created_at,
         })) || []),
-        ...(documents?.slice(0, 10).map(d => ({
-          type: 'document_upload',
+        ...(documents?.slice(0, 10).map((d): RecentActionItem => ({
+          type: "document_upload",
           name: d.name,
           date: d.created_at,
         })) || []),
-      ],
+      ] satisfies RecentActionItem[],
     };
 
     // Analyser avec l'IA pour détecter les patterns répétitifs
@@ -139,7 +150,7 @@ Répartition des actions:
 ${Object.entries(historySummary.action_types || {}).map(([type, count]) => `- ${type}: ${count} fois`).join('\n')}
 
 Activités récentes:
-${historySummary.recent_actions.map((a, i) => `${i + 1}. [${a.type}] ${a.type === 'message' ? a.content : a.name} (${a.date})`).join('\n')}
+${historySummary.recent_actions.map((a, i) => `${i + 1}. [${a.type}] ${formatRecentActionLabel(a)} (${a.date})`).join('\n')}
 
 Identifie les patterns répétitifs et les tâches qui pourraient être automatisées.
 Pour chaque tâche détectée, fournis:

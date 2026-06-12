@@ -1,8 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  getLegacyActionLabel,
+  legacyActionToReviewFields,
+} from "@/lib/review/types";
+import { forWrite } from "@/lib/supabase-write";
 import type {
   AgentActionsIndexInsert,
   AgentLogsInsert,
   AgentLogsRow,
+  AiReviewQueueInsert,
+  AiReviewQueueRow,
+  AiReviewQueueUpdate,
   AutomationPolicyInsert,
   AutomationPolicyRow,
   AutomationPolicyStatus,
@@ -21,16 +29,9 @@ import type {
   ValidationQueueInsert,
   ValidationQueueRow,
   ValidationQueueStatus,
-  ValidationQueueUpdate,
 } from "@/types/database.types";
 
 type Client = SupabaseClient<Database>;
-
-/** Assertion pour satisfaire le typage strict Supabase (Insert/Update inférés en never si schéma manquant). */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function asInsert<T>(x: T): any {
-  return x;
-}
 
 /**
  * Enregistre un log agent (table agent_logs).
@@ -40,13 +41,13 @@ export async function saveAgentLog(
   supabase: Client,
   data: AgentLogsInsert
 ): Promise<{ data: AgentLogsRow | null; error: Error | null }> {
-  const { data: row, error } = await supabase
+  const { data: row, error } = await forWrite(supabase)
     .from("agent_logs")
-    .insert(asInsert({
+    .insert({
       user_id: data.user_id,
       action_type: data.action_type,
       result: data.result ?? {},
-    }))
+    })
     .select()
     .single();
 
@@ -54,66 +55,113 @@ export async function saveAgentLog(
   return { data: row as AgentLogsRow, error: null };
 }
 
+/** @deprecated Shape legacy — mappe une ligne ai_review_queue pour sync-worker / compat. */
+export function toLegacyValidationRow(row: AiReviewQueueRow): ValidationQueueRow {
+  const humanInputRequired = row.review_metadata?.human_input_required;
+  const rawLogLine = row.review_metadata?.raw_log_line;
+  return {
+    id: row.id,
+    event_id: row.review_id,
+    user_id: row.user_id,
+    action: getLegacyActionLabel(row),
+    payload: row.proposed_payload ?? {},
+    rationale: row.summary ?? "",
+    human_input_required:
+      typeof humanInputRequired === "boolean" ? humanInputRequired : true,
+    status: row.status,
+    raw_log_line:
+      rawLogLine != null && typeof rawLogLine === "object"
+        ? (rawLogLine as Record<string, unknown>)
+        : null,
+    validated_at: row.validated_at,
+    validated_by: row.validated_by,
+    rejection_reason: row.rejection_reason,
+    executed_at: row.published_at,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+}
+
+function validationInsertToAiReview(data: ValidationQueueInsert): AiReviewQueueInsert {
+  const { review_type, review_metadata, title } = legacyActionToReviewFields(data.action);
+  const metadata: Record<string, unknown> = { ...review_metadata };
+  if (data.human_input_required !== undefined) {
+    metadata.human_input_required = data.human_input_required;
+  }
+  if (data.raw_log_line != null) {
+    metadata.raw_log_line = data.raw_log_line;
+  }
+  return {
+    review_id: data.event_id,
+    user_id: data.user_id,
+    review_type,
+    title,
+    summary: data.rationale ?? "",
+    proposed_payload: data.payload ?? {},
+    source_module: "legacy_openclaw",
+    status: data.status ?? "pending",
+    review_metadata: metadata,
+    published_at: data.executed_at ?? undefined,
+  };
+}
+
 /**
- * Ajoute une entrée dans la file de validation (validation_queue).
- * @returns La ligne insérée ou null en cas d'erreur
+ * Ajoute une entrée dans ai_review_queue (AI Review Engine).
+ * @deprecated Préférer upsertReview depuis @/lib/review/queue.
  */
 export async function addToValidationQueue(
   supabase: Client,
   data: ValidationQueueInsert
 ): Promise<{ data: ValidationQueueRow | null; error: Error | null }> {
-  const { data: row, error } = await supabase
-    .from("validation_queue")
-    .insert(asInsert({
-      event_id: data.event_id,
-      user_id: data.user_id,
-      action: data.action,
-      payload: data.payload ?? {},
-      rationale: data.rationale ?? "",
-      human_input_required: data.human_input_required ?? true,
-      status: data.status ?? "pending",
-      raw_log_line: data.raw_log_line ?? null,
-    }))
+  const insert = validationInsertToAiReview(data);
+  const { data: row, error } = await forWrite(supabase)
+    .from("ai_review_queue")
+    .insert(insert)
     .select()
     .single();
 
   if (error) return { data: null, error };
-  return { data: row as ValidationQueueRow, error: null };
+  return { data: toLegacyValidationRow(row as AiReviewQueueRow), error: null };
 }
 
 /**
  * Récupère les tâches en attente de validation pour un utilisateur.
+ * @deprecated Préférer fetchPendingReviews depuis @/lib/review/queue.
  */
 export async function fetchPendingValidations(
   supabase: Client,
   userId: string
 ): Promise<{ data: ValidationQueueRow[]; error: Error | null }> {
   const { data, error } = await supabase
-    .from("validation_queue")
+    .from("ai_review_queue")
     .select("*")
     .eq("user_id", userId)
     .eq("status", "pending")
     .order("created_at", { ascending: false });
 
   if (error) return { data: [], error };
-  return { data: (data ?? []) as ValidationQueueRow[], error: null };
+  return {
+    data: ((data ?? []) as AiReviewQueueRow[]).map(toLegacyValidationRow),
+    error: null,
+  };
 }
 
 /**
- * Récupère une entrée de la file de validation par id.
+ * Récupère une entrée ai_review_queue par id (shape legacy).
+ * @deprecated Préférer getReviewById depuis @/lib/review/queue.
  */
 export async function getValidationQueueItem(
   supabase: Client,
   id: string
 ): Promise<{ data: ValidationQueueRow | null; error: Error | null }> {
   const { data, error } = await supabase
-    .from("validation_queue")
+    .from("ai_review_queue")
     .select("*")
     .eq("id", id)
     .single();
 
   if (error) return { data: null, error };
-  return { data: data as ValidationQueueRow, error: null };
+  return { data: toLegacyValidationRow(data as AiReviewQueueRow), error: null };
 }
 
 export type ValidationQueueFetchResult = {
@@ -124,16 +172,17 @@ export type ValidationQueueFetchResult = {
 };
 
 /**
- * Récupère une entrée de la file de validation par event_id.
+ * Récupère une entrée ai_review_queue par review_id (ex-event_id).
+ * @deprecated Préférer getReviewByReviewId depuis @/lib/review/queue.
  */
 export async function getValidationQueueItemByEventId(
   supabase: Client,
   eventId: string
 ): Promise<ValidationQueueFetchResult> {
   const { data, error } = await supabase
-    .from("validation_queue")
+    .from("ai_review_queue")
     .select("*")
-    .eq("event_id", eventId)
+    .eq("review_id", eventId)
     .single();
 
   const err = error as { code?: string } | null;
@@ -141,11 +190,12 @@ export async function getValidationQueueItemByEventId(
     return { data: null, error: null, notFound: true };
   }
   if (error) return { data: null, error };
-  return { data: data as ValidationQueueRow, error: null };
+  return { data: toLegacyValidationRow(data as AiReviewQueueRow), error: null };
 }
 
 /**
- * Met à jour le statut d'une entrée dans la file de validation.
+ * Met à jour le statut d'une entrée ai_review_queue.
+ * @deprecated Préférer updateReviewStatus depuis @/lib/review/queue.
  */
 export async function updateValidationStatus(
   supabase: Client,
@@ -153,7 +203,7 @@ export async function updateValidationStatus(
   status: ValidationQueueStatus,
   options?: { validated_by?: string; rejection_reason?: string }
 ): Promise<{ error: Error | null }> {
-  const update: ValidationQueueUpdate = {
+  const update: AiReviewQueueUpdate = {
     status,
     updated_at: new Date().toISOString(),
     validated_at: new Date().toISOString(),
@@ -161,7 +211,7 @@ export async function updateValidationStatus(
   if (options?.validated_by) update.validated_by = options.validated_by;
   if (options?.rejection_reason != null) update.rejection_reason = options.rejection_reason;
 
-  const { error } = await supabase.from("validation_queue").update(asInsert(update)).eq("id", id);
+  const { error } = await forWrite(supabase).from("ai_review_queue").update(update).eq("id", id);
   return { error: error ?? null };
 }
 
@@ -173,8 +223,8 @@ export async function upsertAgentActionIndex(
   supabase: Client,
   data: AgentActionsIndexInsert & { full_text: string }
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from("agent_actions_index").upsert(
-    asInsert({
+  const { error } = await forWrite(supabase).from("agent_actions_index").upsert(
+    {
       event_id: data.event_id,
       user_id: data.user_id,
       action: data.action,
@@ -182,7 +232,7 @@ export async function upsertAgentActionIndex(
       payload: data.payload ?? {},
       rationale: data.rationale ?? "",
       full_text: data.full_text,
-    }),
+    },
     { onConflict: "event_id" }
   );
   return { error: error ?? null };
@@ -191,55 +241,66 @@ export async function upsertAgentActionIndex(
 // --- Database-first inbox & execution (remplace file-based) ---
 
 /**
- * Récupère les tâches approuvées dont l'exécution n'a pas encore été faite (remplace lecture outbox).
+ * Récupère les révisions approuvées dont la publication worker n'a pas encore été faite.
+ * published_at IS NULL = ex-executed_at IS NULL (sync-worker OpenClaw legacy).
  */
 export async function fetchApprovedTasksPendingExecution(
   supabase: Client
 ): Promise<{ data: ValidationQueueRow[]; error: Error | null }> {
   const { data, error } = await supabase
-    .from("validation_queue")
+    .from("ai_review_queue")
     .select("*")
     .eq("status", "approved")
-    .is("executed_at", null)
+    .eq("review_type", "legacy_action")
+    .is("published_at", null)
     .order("validated_at", { ascending: true });
 
   if (error) return { data: [], error };
-  return { data: (data ?? []) as ValidationQueueRow[], error: null };
+  return {
+    data: ((data ?? []) as AiReviewQueueRow[]).map(toLegacyValidationRow),
+    error: null,
+  };
 }
 
 /**
- * Marque une tâche de la file de validation comme exécutée (remplace fichier ack en outbox).
+ * Marque une révision approuvée comme publiée/exécutée (ex-setValidationQueueExecuted).
  */
 export async function setValidationQueueExecuted(
   supabase: Client,
   id: string
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase
-    .from("validation_queue")
-    .update(asInsert({ executed_at: new Date().toISOString(), updated_at: new Date().toISOString() }))
+  const { error } = await forWrite(supabase)
+    .from("ai_review_queue")
+    .update(
+      { published_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+    )
     .eq("id", id);
   return { error: error ?? null };
 }
 
 /**
- * Upsert dans validation_queue (conflit sur event_id). Utilisé par le worker lors du drain inbox.
+ * Upsert dans ai_review_queue (conflit sur review_id). Utilisé par le worker lors du drain inbox.
+ * N'écrit jamais via la VIEW validation_queue legacy.
  */
 export async function upsertToValidationQueue(
   supabase: Client,
   data: ValidationQueueInsert
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from("validation_queue").upsert(
-    asInsert({
-      event_id: data.event_id,
-      user_id: data.user_id,
-      action: data.action,
-      payload: data.payload ?? {},
-      rationale: data.rationale ?? "",
-      human_input_required: data.human_input_required ?? true,
-      status: data.status ?? "pending",
-      raw_log_line: data.raw_log_line ?? null,
-    }),
-    { onConflict: "event_id" }
+  const insert = validationInsertToAiReview(data);
+  const { error } = await forWrite(supabase).from("ai_review_queue").upsert(
+    {
+      review_id: insert.review_id,
+      user_id: insert.user_id,
+      review_type: insert.review_type ?? "legacy_action",
+      title: insert.title ?? "legacy_action",
+      summary: insert.summary ?? "",
+      proposed_payload: insert.proposed_payload ?? {},
+      source_module: insert.source_module ?? "legacy_openclaw",
+      status: insert.status ?? "pending",
+      review_metadata: insert.review_metadata ?? {},
+      priority: insert.priority ?? 0,
+    },
+    { onConflict: "review_id" }
   );
   return { error: error ?? null };
 }
@@ -269,9 +330,9 @@ export async function markInboxAgentLogProcessed(
   supabase: Client,
   id: string
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase
+  const { error } = await forWrite(supabase)
     .from("inbox_agent_logs")
-    .update(asInsert({ processed_at: new Date().toISOString() }))
+    .update({ processed_at: new Date().toISOString() })
     .eq("id", id);
   return { error: error ?? null };
 }
@@ -283,7 +344,7 @@ export async function insertInboxAgentLog(
   supabase: Client,
   data: InboxAgentLogInsert
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from("inbox_agent_logs").insert(asInsert({
+  const { error } = await forWrite(supabase).from("inbox_agent_logs").insert({
     event_id: data.event_id,
     user_id: data.user_id,
     action: data.action,
@@ -292,7 +353,7 @@ export async function insertInboxAgentLog(
     rationale: data.rationale ?? "",
     human_input_required: data.human_input_required ?? true,
     raw_line: data.raw_line ?? null,
-  }));
+  });
   return { error: error ?? null };
 }
 
@@ -321,9 +382,9 @@ export async function markInboxReportProcessed(
   supabase: Client,
   id: string
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase
+  const { error } = await forWrite(supabase)
     .from("inbox_reports")
-    .update(asInsert({ processed_at: new Date().toISOString() }))
+    .update({ processed_at: new Date().toISOString() })
     .eq("id", id);
   return { error: error ?? null };
 }
@@ -335,14 +396,14 @@ export async function insertDailyReport(
   supabase: Client,
   data: DailyReportsInsert
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from("daily_reports").insert(asInsert({
+  const { error } = await forWrite(supabase).from("daily_reports").insert({
     user_id: data.user_id,
     report_date: data.report_date,
     summary: data.summary ?? "",
     events: data.events ?? [],
     metadata: data.metadata ?? {},
     source_file: data.source_file ?? null,
-  }));
+  });
   return { error: error ?? null };
 }
 
@@ -353,13 +414,13 @@ export async function insertInboxReport(
   supabase: Client,
   data: InboxReportInsert
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from("inbox_reports").insert(asInsert({
+  const { error } = await forWrite(supabase).from("inbox_reports").insert({
     user_id: data.user_id,
     report_date: data.report_date,
     summary: data.summary ?? "",
     events: data.events ?? [],
     metadata: data.metadata ?? {},
-  }));
+  });
   return { error: error ?? null };
 }
 
@@ -388,9 +449,9 @@ export async function markInboxValidationProcessed(
   supabase: Client,
   id: string
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase
+  const { error } = await forWrite(supabase)
     .from("inbox_validation")
-    .update(asInsert({ processed_at: new Date().toISOString() }))
+    .update({ processed_at: new Date().toISOString() })
     .eq("id", id);
   return { error: error ?? null };
 }
@@ -402,14 +463,14 @@ export async function insertInboxValidation(
   supabase: Client,
   data: InboxValidationInsert
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from("inbox_validation").insert(asInsert({
+  const { error } = await forWrite(supabase).from("inbox_validation").insert({
     event_id: data.event_id,
     user_id: data.user_id,
     action: data.action,
     payload: data.payload ?? {},
     rationale: data.rationale ?? "",
     human_input_required: data.human_input_required ?? true,
-  }));
+  });
   return { error: error ?? null };
 }
 
@@ -437,15 +498,15 @@ export async function upsertSkillManifest(
   supabase: Client,
   data: SkillManifestInsert
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase.from("skill_manifests").upsert(
-    asInsert({
+  const { error } = await forWrite(supabase).from("skill_manifests").upsert(
+    {
       id: data.id,
       version: data.version ?? "0",
       action_type: data.action_type,
       payload: data.payload ?? {},
       hash: data.hash ?? null,
       updated_at: new Date().toISOString(),
-    }),
+    },
     { onConflict: "action_type" }
   );
   return { error: error ?? null };
@@ -462,7 +523,7 @@ export async function getSuccessCountByAction(
   supabase: Client,
   userId: string
 ): Promise<{ data: SuccessCountByAction[]; error: Error | null }> {
-  const { data, error } = await supabase.rpc("get_success_count_by_action", {
+  const { data, error } = await forWrite(supabase).rpc("get_success_count_by_action", {
     p_user_id: userId,
   });
   if (error) return { data: [], error };
@@ -531,15 +592,15 @@ export async function upsertAutomationPolicy(
   supabase: Client,
   data: AutomationPolicyInsert
 ): Promise<{ data: AutomationPolicyRow | null; error: Error | null }> {
-  const { data: row, error } = await supabase
+  const { data: row, error } = await forWrite(supabase)
     .from("automation_policies")
     .upsert(
-      asInsert({
+      {
         user_id: data.user_id,
         action_type: data.action_type,
         status: data.status ?? "PENDING",
         updated_at: new Date().toISOString(),
-      }),
+      },
       { onConflict: "user_id,action_type" }
     )
     .select()
@@ -557,9 +618,9 @@ export async function updateAutomationPolicyStatus(
   id: string,
   status: AutomationPolicyStatus
 ): Promise<{ error: Error | null }> {
-  const { error } = await supabase
+  const { error } = await forWrite(supabase)
     .from("automation_policies")
-    .update(asInsert({ status, updated_at: new Date().toISOString() }))
+    .update({ status, updated_at: new Date().toISOString() })
     .eq("id", id);
   return { error: error ?? null };
 }

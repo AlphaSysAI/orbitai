@@ -12,6 +12,10 @@ SET session_replication_role = 'replica';
 -- Supprimer les triggers d'abord
 DROP TRIGGER IF EXISTS trigger_update_preferences_on_feedback ON message_feedback;
 
+-- Supprimer les fonctions et vues OpenClaw
+DROP VIEW IF EXISTS v_user_action_success_count CASCADE;
+DROP FUNCTION IF EXISTS get_success_count_by_action(UUID) CASCADE;
+
 -- Supprimer les fonctions (CASCADE supprime aussi les dépendances)
 DROP FUNCTION IF EXISTS update_user_preferences_from_feedback() CASCADE;
 
@@ -20,6 +24,18 @@ DROP FUNCTION IF EXISTS update_user_preferences_from_feedback() CASCADE;
 
 -- Supprimer les tables dans l'ordre (en respectant les dépendances)
 -- Tables dépendantes en premier (avec CASCADE pour supprimer aussi les foreign keys)
+
+-- OpenClaw (auto-pilot dépend de agent_actions_index via la vue)
+DROP TABLE IF EXISTS automation_policies CASCADE;
+DROP TABLE IF EXISTS skill_manifests CASCADE;
+DROP TABLE IF EXISTS inbox_validation CASCADE;
+DROP TABLE IF EXISTS inbox_reports CASCADE;
+DROP TABLE IF EXISTS inbox_agent_logs CASCADE;
+DROP TABLE IF EXISTS agent_logs CASCADE;
+DROP TABLE IF EXISTS daily_reports CASCADE;
+DROP TABLE IF EXISTS agent_actions_index CASCADE;
+DROP VIEW IF EXISTS validation_queue CASCADE;
+DROP TABLE IF EXISTS ai_review_queue CASCADE;
 
 -- Pilier 5: Synthèse Intelligente Client (doivent être supprimées en premier à cause des foreign keys)
 DROP TABLE IF EXISTS marketing_analysis CASCADE;
@@ -54,7 +70,10 @@ BEGIN
     'documents', 'threads', 'messages', 'decision_simulations',
     'gray_tasks', 'automations', 'automation_executions', 'user_actions',
     'user_preferences', 'message_feedback',
-    'client_feedback_sources', 'client_feedback_items', 'marketing_analysis'
+    'client_feedback_sources', 'client_feedback_items', 'marketing_analysis',
+    'ai_review_queue', 'agent_actions_index', 'daily_reports', 'agent_logs',
+    'inbox_agent_logs', 'inbox_reports', 'inbox_validation', 'skill_manifests',
+    'automation_policies'
   );
   
   IF remaining_tables = 0 THEN

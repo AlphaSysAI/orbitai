@@ -21,8 +21,6 @@ interface Document {
   pillar_id?: string; // Identifiant du pilier source
 }
 
-export type ChatMode = "copilot" | "agent";
-
 export function useCopilot(userId: string | null) {
   const supabase = createClient();
 
@@ -31,7 +29,6 @@ export function useCopilot(userId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [chatMode, setChatMode] = useState<ChatMode>("copilot");
 
   useEffect(() => {
     if (userId) {
@@ -158,8 +155,7 @@ export function useCopilot(userId: string | null) {
     }
 
     try {
-      const apiUrl = chatMode === "agent" ? "/api/agent-chat" : "/api/chat";
-      const response = await fetch(apiUrl, {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -226,7 +222,7 @@ Réponds UNIQUEMENT avec le titre, rien d'autre.`;
         // Générer le titre en arrière-plan (ne pas bloquer l'UI)
         (async () => {
           try {
-            // Titre toujours via Copilot (OpenAI), pas OpenClaw
+            // Titre via Copilot (OpenAI)
             const titleRes = await fetch("/api/chat", {
               method: "POST",
               body: JSON.stringify({
@@ -307,8 +303,6 @@ Réponds UNIQUEMENT avec le titre, rien d'autre.`;
     messages,
     documents,
     isLoading,
-    chatMode,
-    setChatMode,
     createThread,
     deleteThread,
     deleteDocument,

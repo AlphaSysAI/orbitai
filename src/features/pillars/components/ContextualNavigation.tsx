@@ -58,7 +58,7 @@ export function ContextualNavigation({
         return [
           { id: 'discussions', label: 'Discussions', icon: <MessageSquare size={18} /> },
           { id: 'library', label: 'Archives', icon: <FileText size={18} /> },
-          { id: 'validation', label: 'Validation OpenClaw', icon: <CheckCircle2 size={18} /> },
+          { id: 'validation', label: 'Révisions IA', icon: <CheckCircle2 size={18} /> },
         ];
       case 'decision-simulation':
         return [

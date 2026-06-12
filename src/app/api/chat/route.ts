@@ -81,17 +81,23 @@ function findRelevantPassages(query: string, documents: Array<{ name: string; fu
     } else {
       // Trier les positions et prendre des passages autour des mots-clés
       keywordPositions.sort((a, b) => a - b);
-      
+
+      const firstPos = keywordPositions[0];
+      if (firstPos === undefined) return;
+
       // Grouper les positions proches (dans un rayon de 500 caractères)
       const groups: number[][] = [];
-      let currentGroup: number[] = [keywordPositions[0]];
-      
+      let currentGroup: number[] = [firstPos];
+
       for (let i = 1; i < keywordPositions.length; i++) {
-        if (keywordPositions[i] - currentGroup[currentGroup.length - 1] < 500) {
-          currentGroup.push(keywordPositions[i]);
+        const pos = keywordPositions[i];
+        if (pos === undefined) continue;
+        const last = currentGroup[currentGroup.length - 1];
+        if (last !== undefined && pos - last < 500) {
+          currentGroup.push(pos);
         } else {
           groups.push(currentGroup);
-          currentGroup = [keywordPositions[i]];
+          currentGroup = [pos];
         }
       }
       groups.push(currentGroup);

@@ -69,7 +69,7 @@ export type ProcessInboxValidationResult = {
 };
 
 /**
- * Traite les demandes de validation en attente depuis inbox_validation : upsert dans validation_queue puis marquage traité.
+ * Traite les demandes de validation en attente depuis inbox_validation : upsert dans ai_review_queue puis marquage traité.
  */
 export async function processInboxValidationFromDb(
   supabase: ReturnType<typeof createClient<Database>>
@@ -93,7 +93,7 @@ export async function processInboxValidationFromDb(
       status: "pending",
     });
     if (upsertError) {
-      result.errors.push(`inbox_validation ${row.id}: upsert validation_queue – ${upsertError.message}`);
+      result.errors.push(`inbox_validation ${row.id}: upsert ai_review_queue – ${upsertError.message}`);
       continue;
     }
     const { error: markError } = await markInboxValidationProcessed(supabase, row.id);
@@ -111,7 +111,7 @@ export type ProcessInboxAgentLogsResult = {
 };
 
 /**
- * Traite les événements agent en attente depuis inbox_agent_logs : dispatch vers agent_actions_index ou validation_queue.
+ * Traite les événements agent en attente depuis inbox_agent_logs : dispatch vers agent_actions_index ou ai_review_queue.
  */
 export async function processInboxAgentLogsFromDb(
   supabase: ReturnType<typeof createClient<Database>>
@@ -177,7 +177,7 @@ export async function processInboxAgentLogsFromDb(
           raw_log_line: row.raw_line,
         });
         if (error) {
-          result.errors.push(`inbox_agent_log ${row.id}: validation_queue – ${error.message}`);
+          result.errors.push(`inbox_agent_log ${row.id}: ai_review_queue – ${error.message}`);
         } else {
           result.pendingEnqueued++;
         }
@@ -224,7 +224,7 @@ export type ProcessApprovedTasksResult = {
 
 /**
  * Consomme les tâches approuvées non encore exécutées (remplace lecture outbox fichier).
- * Récupère depuis validation_queue (status=approved, executed_at IS NULL), exécute l'action, marque executed_at.
+ * Récupère depuis ai_review_queue (status=approved, published_at IS NULL), exécute l'action, marque published_at.
  */
 export async function processApprovedTasksFromDb(
   supabase: ReturnType<typeof createClient<Database>>
@@ -270,7 +270,7 @@ export type RunOpenClawSyncResult = {
 
 /**
  * Worker de synchronisation 100 % database-driven.
- * Sond la base (inbox_*, validation_queue) au lieu du système de fichiers.
+ * Sond la base (inbox_*, ai_review_queue) au lieu du système de fichiers.
  * Aucune donnée ne transite par le disque local.
  */
 export async function runOpenClawSync(): Promise<RunOpenClawSyncResult> {
@@ -297,7 +297,7 @@ export async function runOpenClawSync(): Promise<RunOpenClawSyncResult> {
     errors.push(`processInboxReportsFromDb: ${String(e)}`);
   }
 
-  // 2. Inbox validation → validation_queue
+  // 2. Inbox validation → ai_review_queue
   try {
     const validationResult = await processInboxValidationFromDb(supabase);
     inboxValidationProcessed = validationResult.processed;
@@ -306,7 +306,7 @@ export async function runOpenClawSync(): Promise<RunOpenClawSyncResult> {
     errors.push(`processInboxValidationFromDb: ${String(e)}`);
   }
 
-  // 3. Inbox événements agent → agent_actions_index / validation_queue
+  // 3. Inbox événements agent → agent_actions_index / ai_review_queue
   try {
     const agentLogsResult = await processInboxAgentLogsFromDb(supabase);
     inboxAgentLogsExecuted = agentLogsResult.executedIndexed;
@@ -317,7 +317,7 @@ export async function runOpenClawSync(): Promise<RunOpenClawSyncResult> {
     errors.push(`processInboxAgentLogsFromDb: ${String(e)}`);
   }
 
-  // 4. Tâches approuvées en attente d'exécution → exécution puis executed_at
+  // 4. Tâches approuvées en attente d'exécution → exécution puis published_at
   try {
     const approvedResult = await processApprovedTasksFromDb(supabase);
     approvedTasksExecuted = approvedResult.executed;

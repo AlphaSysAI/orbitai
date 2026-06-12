@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import { Send, Download, Paperclip, Plus, ThumbsUp, ThumbsDown, Edit, X, GraduationCap, Bot } from "lucide-react";
+import { Send, Download, Paperclip, Plus, ThumbsUp, ThumbsDown, Edit, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { jsPDF } from "jspdf";
 
@@ -10,8 +10,6 @@ interface Message {
   role: "user" | "assistant";
   content: string;
 }
-
-export type ChatMode = "copilot" | "agent";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -24,10 +22,6 @@ interface ChatInterfaceProps {
   onGenerateGuide?: () => void;
   userId?: string | null;
   threadId?: string | null;
-  /** Affiche le sélecteur Copilot / Agent quand OpenClaw est configuré */
-  agentModeAvailable?: boolean;
-  chatMode?: ChatMode;
-  onChatModeChange?: (mode: ChatMode) => void;
 }
 
 export function ChatInterface({
@@ -41,9 +35,6 @@ export function ChatInterface({
   onGenerateGuide,
   userId,
   threadId,
-  agentModeAvailable,
-  chatMode = "copilot",
-  onChatModeChange,
 }: ChatInterfaceProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -81,42 +72,10 @@ export function ChatInterface({
           <div>
             <h3 className="font-bold text-white">Orbit Core</h3>
             <p className="text-xs text-slate-400">
-              {chatMode === "agent"
-                ? "Agent d'entreprise (OpenClaw) — raisonnement & outils"
-                : "Base de connaissances & Transmission de savoir"}
+              Copilote IA &amp; Transmission de savoir
             </p>
           </div>
         </div>
-        {agentModeAvailable && onChatModeChange && (
-          <div className="flex rounded-lg border border-slate-700 bg-slate-900/80 p-0.5">
-            <button
-              type="button"
-              onClick={() => onChatModeChange("copilot")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                chatMode === "copilot"
-                  ? "bg-cyan-600/30 text-cyan-300 border border-cyan-500/40"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-              title="Réponses basées sur vos documents (RAG)"
-            >
-              <GraduationCap size={14} />
-              Copilot
-            </button>
-            <button
-              type="button"
-              onClick={() => onChatModeChange("agent")}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                chatMode === "agent"
-                  ? "bg-violet-600/30 text-violet-300 border border-violet-500/40"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-              title="Agent avec raisonnement et outils (OpenClaw)"
-            >
-              <Bot size={14} />
-              Agent
-            </button>
-          </div>
-        )}
         <div className="flex items-center gap-2">
           {onGenerateGuide && messages.length === 0 && (
             <button

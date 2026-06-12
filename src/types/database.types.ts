@@ -1,12 +1,104 @@
 /**
- * Types pour les tables Supabase (validation_queue, agent_logs).
- * validation_queue : schéma existant (001_openclaw_validation.sql).
+ * Types pour les tables Supabase (ai_review_queue, agent_logs).
+ * ai_review_queue : migration 007_ai_review_engine.sql.
  * agent_logs : 003_agent_logs.sql.
  */
 
-export type ValidationQueueStatus = "pending" | "approved" | "rejected";
+/** Type JSON Supabase (colonnes jsonb). */
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
 
-/** Ligne validation_queue (schéma actuel + executed_at) */
+export type ReviewStatus = "pending" | "approved" | "rejected";
+
+/** @deprecated Utiliser ReviewStatus */
+export type ValidationQueueStatus = ReviewStatus;
+
+export type ReviewType =
+  | "knowledge_concept"
+  | "knowledge_procedure"
+  | "knowledge_role"
+  | "knowledge_faq"
+  | "document_summary"
+  | "learning_path"
+  | "quiz"
+  | "expert_pattern"
+  | "automation_suggestion"
+  | "legacy_action";
+
+/** Ligne ai_review_queue (AI Review Engine) */
+export interface AiReviewQueueRow {
+  id: string;
+  review_id: string;
+  user_id: string;
+  review_type: ReviewType | string;
+  subject_type: string | null;
+  subject_id: string | null;
+  source_module: string | null;
+  title: string;
+  summary: string;
+  proposed_payload: Record<string, unknown>;
+  source_context: Record<string, unknown>;
+  status: ReviewStatus;
+  validated_at: string | null;
+  validated_by: string | null;
+  rejection_reason: string | null;
+  published_at: string | null;
+  priority: number;
+  review_metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AiReviewQueueInsert {
+  id?: string;
+  review_id: string;
+  user_id: string;
+  review_type?: ReviewType | string;
+  subject_type?: string | null;
+  subject_id?: string | null;
+  source_module?: string | null;
+  title?: string;
+  summary?: string;
+  proposed_payload?: Record<string, unknown>;
+  source_context?: Record<string, unknown>;
+  status?: ReviewStatus;
+  validated_at?: string | null;
+  validated_by?: string | null;
+  rejection_reason?: string | null;
+  published_at?: string | null;
+  priority?: number;
+  review_metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AiReviewQueueUpdate {
+  review_type?: ReviewType | string;
+  subject_type?: string | null;
+  subject_id?: string | null;
+  source_module?: string | null;
+  title?: string;
+  summary?: string;
+  proposed_payload?: Record<string, unknown>;
+  source_context?: Record<string, unknown>;
+  status?: ReviewStatus;
+  validated_at?: string | null;
+  validated_by?: string | null;
+  rejection_reason?: string | null;
+  published_at?: string | null;
+  priority?: number;
+  review_metadata?: Record<string, unknown>;
+  updated_at?: string;
+}
+
+/**
+ * @deprecated Utiliser AiReviewQueueRow — shape legacy pour sync-worker / compat.
+ */
 export interface ValidationQueueRow {
   id: string;
   event_id: string;
@@ -25,6 +117,7 @@ export interface ValidationQueueRow {
   updated_at: string;
 }
 
+/** @deprecated Utiliser AiReviewQueueInsert */
 export interface ValidationQueueInsert {
   id?: string;
   event_id: string;
@@ -43,6 +136,7 @@ export interface ValidationQueueInsert {
   updated_at?: string;
 }
 
+/** @deprecated Utiliser AiReviewQueueUpdate */
 export interface ValidationQueueUpdate {
   action?: string;
   payload?: Record<string, unknown>;
@@ -247,54 +341,54 @@ export interface AutomationPolicyUpdate {
 }
 
 /** Schéma des tables public pour le client Supabase (typage générique) */
+type TableDef<Row, Insert, Update> = {
+  Row: Row;
+  Insert: Insert;
+  Update: Update;
+  Relationships: [];
+};
+
 export interface Database {
   public: {
     Tables: {
-      validation_queue: {
-        Row: ValidationQueueRow;
-        Insert: ValidationQueueInsert;
-        Update: ValidationQueueUpdate;
-      };
-      agent_logs: {
-        Row: AgentLogsRow;
-        Insert: AgentLogsInsert;
-        Update: AgentLogsUpdate;
-      };
-      agent_actions_index: {
-        Row: AgentActionsIndexRow;
-        Insert: AgentActionsIndexInsert;
-        Update: Partial<AgentActionsIndexInsert>;
-      };
-      daily_reports: {
-        Row: DailyReportsRow;
-        Insert: DailyReportsInsert;
-        Update: Partial<DailyReportsInsert>;
-      };
-      inbox_agent_logs: {
-        Row: InboxAgentLogRow;
-        Insert: InboxAgentLogInsert;
-        Update: { processed_at?: string | null };
-      };
-      inbox_reports: {
-        Row: InboxReportRow;
-        Insert: InboxReportInsert;
-        Update: { processed_at?: string | null };
-      };
-      inbox_validation: {
-        Row: InboxValidationRow;
-        Insert: InboxValidationInsert;
-        Update: { processed_at?: string | null };
-      };
-      skill_manifests: {
-        Row: SkillManifestRow;
-        Insert: SkillManifestInsert;
-        Update: SkillManifestUpdate;
-      };
-      automation_policies: {
-        Row: AutomationPolicyRow;
-        Insert: AutomationPolicyInsert;
-        Update: AutomationPolicyUpdate;
+      ai_review_queue: TableDef<AiReviewQueueRow, AiReviewQueueInsert, AiReviewQueueUpdate>;
+      agent_logs: TableDef<AgentLogsRow, AgentLogsInsert, AgentLogsUpdate>;
+      agent_actions_index: TableDef<
+        AgentActionsIndexRow,
+        AgentActionsIndexInsert,
+        Partial<AgentActionsIndexInsert>
+      >;
+      daily_reports: TableDef<DailyReportsRow, DailyReportsInsert, Partial<DailyReportsInsert>>;
+      inbox_agent_logs: TableDef<
+        InboxAgentLogRow,
+        InboxAgentLogInsert,
+        { processed_at?: string | null }
+      >;
+      inbox_reports: TableDef<
+        InboxReportRow,
+        InboxReportInsert,
+        { processed_at?: string | null }
+      >;
+      inbox_validation: TableDef<
+        InboxValidationRow,
+        InboxValidationInsert,
+        { processed_at?: string | null }
+      >;
+      skill_manifests: TableDef<SkillManifestRow, SkillManifestInsert, SkillManifestUpdate>;
+      automation_policies: TableDef<
+        AutomationPolicyRow,
+        AutomationPolicyInsert,
+        AutomationPolicyUpdate
+      >;
+    };
+    Views: Record<string, never>;
+    Functions: {
+      get_success_count_by_action: {
+        Args: { p_user_id: string };
+        Returns: { action_type: string; success_count: number }[];
       };
     };
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

@@ -1,8 +1,11 @@
 -- ============================================
 -- ORBITAI - INITIALISATION COMPLÈTE DE LA BASE DE DONNÉES
 -- ============================================
--- Ce script initialise toutes les tables nécessaires pour OrbitAI
+-- Ce script initialise toutes les tables nécessaires pour OrbitAI,
+-- y compris OpenClaw (validation, inbox database-first, auto-pilot).
+-- Inclut le contenu des migrations 001 à 005.
 -- Exécutez ce script dans votre console Supabase SQL Editor
+-- (ou reset.sql puis init.sql pour repartir de zéro).
 -- ============================================
 
 -- ============================================
@@ -950,6 +953,275 @@ DROP POLICY IF EXISTS "Users can delete their own marketing analysis" ON marketi
 CREATE POLICY "Users can delete their own marketing analysis"
   ON marketing_analysis FOR DELETE
   USING (auth.uid() = user_id);
+
+-- ============================================
+-- 6. AI REVIEW ENGINE + OpenClaw legacy (inbox, auto-pilot, agent index)
+-- (migrations 001 à 005 + 007 ai_review_queue)
+-- ============================================
+
+-- Table: ai_review_queue (file de révision humaine — AI Review Engine)
+CREATE TABLE IF NOT EXISTS ai_review_queue (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  review_id TEXT NOT NULL UNIQUE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  review_type TEXT NOT NULL DEFAULT 'legacy_action' CHECK (review_type IN (
+    'knowledge_concept',
+    'knowledge_procedure',
+    'knowledge_role',
+    'knowledge_faq',
+    'document_summary',
+    'learning_path',
+    'quiz',
+    'expert_pattern',
+    'automation_suggestion',
+    'legacy_action'
+  )),
+  subject_type TEXT,
+  subject_id TEXT,
+  source_module TEXT,
+  title TEXT NOT NULL DEFAULT '',
+  summary TEXT NOT NULL DEFAULT '',
+  proposed_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  source_context JSONB NOT NULL DEFAULT '{}'::jsonb,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  validated_at TIMESTAMPTZ,
+  validated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  rejection_reason TEXT,
+  published_at TIMESTAMPTZ,
+  priority INT NOT NULL DEFAULT 0,
+  review_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_review_queue_user_id ON ai_review_queue(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_review_queue_review_id ON ai_review_queue(review_id);
+CREATE INDEX IF NOT EXISTS idx_ai_review_queue_status ON ai_review_queue(status);
+CREATE INDEX IF NOT EXISTS idx_ai_review_queue_created_at ON ai_review_queue(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_review_queue_review_type ON ai_review_queue(review_type);
+CREATE INDEX IF NOT EXISTS idx_ai_review_queue_user_pending
+  ON ai_review_queue(user_id, created_at DESC)
+  WHERE status = 'pending';
+
+ALTER TABLE ai_review_queue ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own ai reviews" ON ai_review_queue;
+CREATE POLICY "Users can view their own ai reviews"
+  ON ai_review_queue FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own ai reviews" ON ai_review_queue;
+CREATE POLICY "Users can update their own ai reviews"
+  ON ai_review_queue FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- INSERT sur ai_review_queue : réservé au worker (clé service_role Supabase, contourne RLS).
+
+COMMENT ON TABLE ai_review_queue IS
+  'AI Review Engine — file de révision humaine (1 review = 1 artefact).';
+COMMENT ON COLUMN ai_review_queue.review_id IS
+  'Identifiant stable externe (ex-event_id OpenClaw).';
+COMMENT ON COLUMN ai_review_queue.review_type IS
+  'Type métier de la révision (Knowledge, Quiz, legacy_action, …).';
+COMMENT ON COLUMN ai_review_queue.published_at IS
+  'Horodatage publication post-approbation (ex-executed_at OpenClaw).';
+
+-- Table: agent_actions_index (mémoire RAG – uniquement actions exécutées ou approuvées)
+CREATE TABLE IF NOT EXISTS agent_actions_index (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  event_id TEXT NOT NULL UNIQUE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  status TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  rationale TEXT NOT NULL DEFAULT '',
+  full_text TEXT NOT NULL DEFAULT '',
+  source_file TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_actions_index_user_id ON agent_actions_index(user_id);
+CREATE INDEX IF NOT EXISTS idx_agent_actions_index_event_id ON agent_actions_index(event_id);
+CREATE INDEX IF NOT EXISTS idx_agent_actions_index_created_at ON agent_actions_index(created_at DESC);
+
+ALTER TABLE agent_actions_index ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own agent actions" ON agent_actions_index;
+CREATE POLICY "Users can view their own agent actions"
+  ON agent_actions_index FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- INSERT sur agent_actions_index : réservé au worker (clé service_role).
+
+-- Table: daily_reports (rapports journaliers)
+CREATE TABLE IF NOT EXISTS daily_reports (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  report_date DATE NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  events JSONB NOT NULL DEFAULT '[]'::jsonb,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  source_file TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_reports_user_id ON daily_reports(user_id);
+CREATE INDEX IF NOT EXISTS idx_daily_reports_report_date ON daily_reports(report_date DESC);
+CREATE INDEX IF NOT EXISTS idx_daily_reports_created_at ON daily_reports(created_at DESC);
+
+ALTER TABLE daily_reports ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view their own daily reports" ON daily_reports;
+CREATE POLICY "Users can view their own daily reports"
+  ON daily_reports FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- INSERT réservé au worker (service_role).
+
+-- Table: agent_logs (logs des actions agent, append-only)
+CREATE TABLE IF NOT EXISTS agent_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  action_type TEXT NOT NULL,
+  result JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_logs_user_id ON agent_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_agent_logs_action_type ON agent_logs(action_type);
+CREATE INDEX IF NOT EXISTS idx_agent_logs_created_at ON agent_logs(created_at DESC);
+
+ALTER TABLE agent_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own agent_logs" ON agent_logs;
+CREATE POLICY "Users can view own agent_logs"
+  ON agent_logs FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert own agent_logs" ON agent_logs;
+CREATE POLICY "Users can insert own agent_logs"
+  ON agent_logs FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Inbox : événements bruts agent (remplace logs/daily/*.json)
+CREATE TABLE IF NOT EXISTS inbox_agent_logs (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  event_id TEXT NOT NULL,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('executed', 'pending_validation', 'failed')),
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  rationale TEXT NOT NULL DEFAULT '',
+  human_input_required BOOLEAN NOT NULL DEFAULT true,
+  raw_line JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  processed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_inbox_agent_logs_processed ON inbox_agent_logs(processed_at) WHERE processed_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_inbox_agent_logs_created ON inbox_agent_logs(created_at ASC);
+
+ALTER TABLE inbox_agent_logs ENABLE ROW LEVEL SECURITY;
+-- INSERT/SELECT réservés au worker (service_role).
+
+-- Inbox : rapports journaliers (remplace inbox/reports fichiers)
+CREATE TABLE IF NOT EXISTS inbox_reports (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  report_date DATE NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  events JSONB NOT NULL DEFAULT '[]'::jsonb,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  processed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_inbox_reports_processed ON inbox_reports(processed_at) WHERE processed_at IS NULL;
+
+ALTER TABLE inbox_reports ENABLE ROW LEVEL SECURITY;
+
+-- Inbox : demandes de validation (remplace inbox/validation fichiers)
+CREATE TABLE IF NOT EXISTS inbox_validation (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  event_id TEXT NOT NULL,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  action TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  rationale TEXT NOT NULL DEFAULT '',
+  human_input_required BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  processed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_inbox_validation_processed ON inbox_validation(processed_at) WHERE processed_at IS NULL;
+
+ALTER TABLE inbox_validation ENABLE ROW LEVEL SECURITY;
+
+-- Skills en base (remplace data/skills/ et inbox/skills)
+CREATE TABLE IF NOT EXISTS skill_manifests (
+  id TEXT PRIMARY KEY,
+  version TEXT NOT NULL DEFAULT '0',
+  action_type TEXT NOT NULL,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  hash TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(action_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_skill_manifests_action_type ON skill_manifests(action_type);
+
+ALTER TABLE skill_manifests ENABLE ROW LEVEL SECURITY;
+
+-- Table: automation_policies (auto-pilot – une ligne par user_id + action_type)
+CREATE TABLE IF NOT EXISTS automation_policies (
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  action_type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'DECLINED_50', 'DECLINED_100', 'ENABLED')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, action_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_automation_policies_user_id ON automation_policies(user_id);
+CREATE INDEX IF NOT EXISTS idx_automation_policies_status ON automation_policies(status);
+
+ALTER TABLE automation_policies ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own automation policies" ON automation_policies;
+CREATE POLICY "Users can view own automation policies"
+  ON automation_policies FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own automation policies" ON automation_policies;
+CREATE POLICY "Users can update own automation policies"
+  ON automation_policies FOR UPDATE
+  USING (auth.uid() = user_id);
+
+-- INSERT réservé au service (création de la ligne PENDING quand success_count >= 50).
+
+-- Vue : success_count par (user_id, action_type) à partir de agent_actions_index
+CREATE OR REPLACE VIEW v_user_action_success_count AS
+SELECT
+  user_id,
+  action AS action_type,
+  COUNT(*)::integer AS success_count
+FROM agent_actions_index
+GROUP BY user_id, action;
+
+-- Fonction : retourne success_count par action_type pour un user_id (déclenchement paliers auto-pilot)
+CREATE OR REPLACE FUNCTION get_success_count_by_action(p_user_id UUID)
+RETURNS TABLE(action_type TEXT, success_count INTEGER) AS $$
+  SELECT action::TEXT AS action_type, COUNT(*)::INTEGER AS success_count
+  FROM agent_actions_index
+  WHERE user_id = p_user_id
+  GROUP BY action;
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+COMMENT ON TABLE automation_policies IS 'Auto-Pilot: paliers 50 (PENDING -> ENABLED/DECLINED_50) et palier 2 (DECLINED_50 -> ENABLED/DECLINED_50). DECLINED_100 = révoqué.';
+COMMENT ON VIEW v_user_action_success_count IS 'Nombre de succès (lignes agent_actions_index) par user_id et action_type.';
+COMMENT ON FUNCTION get_success_count_by_action(UUID) IS 'Retourne le nombre de succès par action_type pour un utilisateur (déclenchement paliers Auto-Pilot).';
 
 -- ============================================
 -- FIN DU SCRIPT D'INITIALISATION

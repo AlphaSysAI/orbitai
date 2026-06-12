@@ -317,7 +317,7 @@ IMPORTANT : Réponds UNIQUEMENT en français. Tous les titres, descriptions, rec
             schema: AnalysisResultSchema,
             prompt,
             temperature: 0.3,
-            maxTokens: 4000, // Limiter les tokens de sortie aussi
+            maxOutputTokens: 4000, // Limiter les tokens de sortie aussi
           });
           return result;
         } catch (error: any) {

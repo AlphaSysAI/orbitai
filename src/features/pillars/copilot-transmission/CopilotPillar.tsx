@@ -7,7 +7,6 @@ import { ChatInterface } from "./components/ChatInterface";
 import { DocumentLibrary } from "./components/DocumentLibrary";
 import { DocumentModal } from "./components/DocumentModal";
 import { ValidationDashboard } from "@/components/ValidationDashboard";
-import { AutomationSettings } from "@/components/AutomationSettings";
 import { type PillarId, PILLARS } from "../types";
 
 interface CopilotPillarProps {
@@ -36,8 +35,6 @@ export function CopilotPillar({
     messages,
     documents,
     isLoading,
-    chatMode,
-    setChatMode,
     createThread,
     deleteThread,
     deleteDocument,
@@ -45,8 +42,6 @@ export function CopilotPillar({
     uploadDocument,
     fetchDocuments,
   } = useCopilot(user.id);
-
-  const agentModeAvailable = process.env.NEXT_PUBLIC_OPENCLAW_ENABLED === "true";
 
   // Transmettre les threads au parent pour la navigation contextuelle
   useEffect(() => {
@@ -231,12 +226,7 @@ Base-toi sur TOUS les documents de la base de connaissances pour créer ce guide
 
         <main className="flex-1 overflow-y-auto p-8 relative">
           {activeTab === "validation" && (
-            <>
-              <ValidationDashboard userId={user.id} />
-              <div className="max-w-4xl mx-auto">
-                <AutomationSettings userId={user.id} />
-              </div>
-            </>
+            <ValidationDashboard userId={user.id} />
           )}
           {activeTab === "dashboard" && (
             <div className="max-w-4xl mx-auto py-10">
@@ -282,9 +272,6 @@ Base-toi sur TOUS les documents de la base de connaissances pour créer ce guide
                 onGenerateGuide={handleGenerateOnboardingGuide}
                 userId={user.id}
                 threadId={activeThreadId || undefined}
-                agentModeAvailable={agentModeAvailable}
-                chatMode={chatMode}
-                onChatModeChange={setChatMode}
               />
             </div>
           )}
