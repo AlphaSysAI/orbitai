@@ -1,11 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, Settings, Orbit, LogOut, ChevronDown, ChevronUp,
-  FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap, CheckCircle2
+  FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap, CheckCircle2, Fuel, Shield
 } from "lucide-react";
 import { PILLARS, type PillarId } from "../types";
+import {
+  STATION_NAV_LINKS,
+  filterNavLinksByModules,
+} from "@/lib/organizations/navigation";
+import { isModuleEnabled, type EnabledOrgModule } from "@/lib/organizations/types";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import * as Icons from "lucide-react";
 
 interface Thread {
@@ -28,6 +36,8 @@ interface ContextualNavigationProps {
   onThreadDelete?: (threadId: string, e: React.MouseEvent) => void;
   // Prop pour gérer le clic sur Dashboard
   onDashboardClick?: () => void;
+  /** Modules activés pour l'organisation (multi-tenant) */
+  enabledModules?: EnabledOrgModule[];
 }
 
 export function ContextualNavigation({
@@ -42,9 +52,20 @@ export function ContextualNavigation({
   onThreadClick,
   onThreadDelete,
   onDashboardClick,
+  enabledModules = [],
 }: ContextualNavigationProps) {
+  const pathname = usePathname();
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
+  const { isAdmin } = useIsAdmin();
   const activePillarConfig = PILLARS.find((p) => p.id === activePillar);
+  const stationLinks = filterNavLinksByModules(STATION_NAV_LINKS, enabledModules);
+  const hasRegiaire = stationLinks.length > 0;
+
+  const visiblePillars = PILLARS.filter((pillar) => {
+    if (!pillar.enabled) return false;
+    if (enabledModules.length === 0) return true;
+    return isModuleEnabled(enabledModules, pillar.id);
+  });
 
   const getIcon = (iconName: string) => {
     const IconComponent = (Icons as any)[iconName] || Icons.LayoutDashboard;
@@ -137,7 +158,7 @@ export function ContextualNavigation({
         <div className="space-y-2">
           {/* Première ligne : 3 premiers piliers */}
           <div className="flex gap-2">
-            {PILLARS.slice(0, 3).map((pillar) => {
+            {visiblePillars.slice(0, 3).map((pillar) => {
               const Icon = (Icons as any)[pillar.icon] || Icons.LayoutDashboard;
               const isActive = activePillar === pillar.id;
               return (
@@ -168,7 +189,7 @@ export function ContextualNavigation({
           </div>
           {/* Deuxième ligne : 2 derniers piliers centrés */}
           <div className="flex gap-2 justify-center">
-            {PILLARS.slice(3).map((pillar) => {
+            {visiblePillars.slice(3).map((pillar) => {
               const Icon = (Icons as any)[pillar.icon] || Icons.LayoutDashboard;
               const isActive = activePillar === pillar.id;
               return (
@@ -199,6 +220,36 @@ export function ContextualNavigation({
           </div>
         </div>
       </div>
+
+      {/* RégiAire — liens filtrés par module org */}
+      {hasRegiaire && (
+        <div className="border-b border-slate-800 bg-slate-900/30 p-3 flex-shrink-0">
+          <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 px-2 flex items-center gap-2">
+            <Fuel size={10} className="text-amber-500" />
+            RégiAire
+          </p>
+          <div className="flex flex-col gap-2">
+            {stationLinks.map((link) => {
+              const Icon = link.icon;
+              const isActive = pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                    isActive
+                      ? "bg-amber-600/20 border border-amber-500/40 text-amber-400"
+                      : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">{link.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Navigation contextuelle du pilier actif - Affichée juste sous les piliers (masquée sur dashboard global) */}
       {pillarNav.length > 0 && !isGlobalDashboard && (
@@ -305,6 +356,15 @@ export function ContextualNavigation({
 
         {isSystemMenuOpen && (
           <div className="space-y-1 pl-8 animate-in slide-in-from-top-2 duration-200">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="w-full flex items-center gap-4 p-3 rounded-xl transition-all text-left text-slate-500 hover:bg-white/5 hover:text-violet-400"
+              >
+                <Shield size={16} />
+                <span className="font-black text-[10px] uppercase tracking-widest">Administration</span>
+              </Link>
+            )}
             <button
               onClick={() => {
                 onTabChange("settings");

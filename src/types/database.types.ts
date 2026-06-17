@@ -316,6 +316,33 @@ export interface SkillManifestUpdate {
 /** Statuts Auto-Pilot (005_automation_policies_autopilot.sql) */
 export type AutomationPolicyStatus = "PENDING" | "DECLINED_50" | "DECLINED_100" | "ENABLED";
 
+/** Table organizations (009 multi-tenant) */
+export interface OrganizationRow {
+  id: string;
+  name: string;
+  manager_first_name: string | null;
+  manager_last_name: string | null;
+  manager_email: string | null;
+  business_sector: string | null;
+  created_at: string;
+}
+
+export interface OrganizationMemberRow {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "member" | string;
+  created_at: string;
+}
+
+export interface OrganizationModuleRow {
+  id: string;
+  organization_id: string;
+  module_name: string;
+  is_enabled: boolean;
+  updated_at: string;
+}
+
 /** Table automation_policies (Auto-Pilot, deux paliers de confiance) */
 export interface AutomationPolicyRow {
   id: string;
@@ -380,12 +407,55 @@ export interface Database {
         AutomationPolicyInsert,
         AutomationPolicyUpdate
       >;
+      organizations: TableDef<
+        OrganizationRow,
+        Pick<OrganizationRow, "name"> & {
+          id?: string;
+          manager_first_name?: string | null;
+          manager_last_name?: string | null;
+          manager_email?: string | null;
+          business_sector?: string | null;
+          created_at?: string;
+        },
+        Partial<
+          Pick<
+            OrganizationRow,
+            "name" | "manager_first_name" | "manager_last_name" | "manager_email" | "business_sector"
+          >
+        >
+      >;
+      organization_members: TableDef<
+        OrganizationMemberRow,
+        Pick<OrganizationMemberRow, "organization_id" | "user_id"> & {
+          id?: string;
+          role?: string;
+          created_at?: string;
+        },
+        Partial<Pick<OrganizationMemberRow, "role">>
+      >;
+      organization_modules: TableDef<
+        OrganizationModuleRow,
+        Pick<OrganizationModuleRow, "organization_id" | "module_name"> & {
+          id?: string;
+          is_enabled?: boolean;
+          updated_at?: string;
+        },
+        Partial<Pick<OrganizationModuleRow, "is_enabled" | "updated_at">>
+      >;
     };
     Views: Record<string, never>;
     Functions: {
       get_success_count_by_action: {
         Args: { p_user_id: string };
         Returns: { action_type: string; success_count: number }[];
+      };
+      org_has_module: {
+        Args: { p_organization_id: string; p_module_name: string };
+        Returns: boolean;
+      };
+      get_my_enabled_modules: {
+        Args: Record<string, never>;
+        Returns: { organization_id: string; module_name: string }[];
       };
     };
     Enums: Record<string, never>;

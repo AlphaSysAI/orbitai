@@ -51,14 +51,14 @@ flowchart TB
   subgraph API["API Routes"]
     Chat["/api/chat — RAG Copilot"]
     AgentChat["/api/agent-chat — proxy OpenClaw"]
-    Validation["/api/validation/*"]
+    Validation["/api/review/*"]
     Cron["/api/cron/openclaw-sync"]
     Other["autres routes pilier…"]
   end
 
   subgraph Data["Supabase PostgreSQL"]
     Core["documents, threads, messages…"]
-    OpenClaw["validation_queue, agent_actions_index, inbox_*…"]
+    OpenClaw["ai_review_queue, agent_actions_index, inbox_*…"]
   end
 
   subgraph External["Services externes"]
@@ -299,24 +299,26 @@ Défini dans `src/lib/openclaw/schema.ts` (Zod) :
 **Étapes du worker** (`runOpenClawSync`) :
 
 1. `inbox_reports` → insert `daily_reports` → marquer `processed_at`
-2. `inbox_validation` → upsert `validation_queue` → marquer `processed_at`
+2. `inbox_validation` → upsert `ai_review_queue` → marquer `processed_at`
 3. `inbox_agent_logs` :
    - `status=executed` → insert `agent_actions_index`
    - `status=pending_validation` + policy `ENABLED` → auto-approbation → `agent_actions_index` (status `auto_approved`)
-   - `status=pending_validation` sans Auto-Pilot → insert `validation_queue`
+   - `status=pending_validation` sans Auto-Pilot → insert `ai_review_queue`
    - `status=failed` → ignoré
-4. `validation_queue` (approved, `executed_at IS NULL`) → exécution via `skill_manifests` → marquer `executed_at`
+4. `ai_review_queue` (approved, `published_at IS NULL`, `legacy_action`) → exécution via `skill_manifests` → marquer `published_at`
 
-### 6.5 API Validation (Human-in-the-Loop)
+### 6.5 API Review (Human-in-the-Loop)
 
 | Route | Méthode | Rôle |
 |-------|---------|------|
-| `/api/validation/queue` | GET | Liste tâches `pending` pour un `user_id` |
-| `/api/validation/approve` | POST | Approuve (`event_id`) → insert `agent_actions_index` |
-| `/api/validation/reject` | POST | Rejette avec raison optionnelle |
-| `/api/validation/status` | GET | Polling statut par `event_id` (pour OpenClaw) |
+| `/api/review/queue` | GET | Liste révisions `pending` (session auth) |
+| `/api/review/approve` | POST | Approuve (`review_id` / `event_id`) → insert `agent_actions_index` si `legacy_action` |
+| `/api/review/reject` | POST | Rejette avec raison optionnelle |
+| `/api/review/status` | GET | Polling statut par `review_id` / `event_id` |
 
-**UI** : `src/components/ValidationDashboard.tsx` (onglet Validation du pilier Automatisation)
+**UI** : `src/components/ValidationDashboard.tsx` (onglet « Révisions IA » du pilier Copilote)
+
+> Les routes `/api/validation/*` ont été supprimées en Phase D.1. Utiliser `/api/review/*`.
 
 ### 6.6 Auto-Pilot (deux paliers de confiance)
 
@@ -416,10 +418,10 @@ Les fichiers `database/migrations/*.sql` restent comme historique incrémental p
 | `POST /api/client-feedback/import` | Node | Import retours clients |
 | `POST /api/client-feedback/analyze` | Node | Analyse marketing IA |
 | `POST /api/client-feedback/fetch-monitoring` | Node | Fetch avis Google Places |
-| `GET /api/validation/queue` | Node | File validation OpenClaw |
-| `POST /api/validation/approve` | Node | Approuver action |
-| `POST /api/validation/reject` | Node | Rejeter action |
-| `GET /api/validation/status` | Node | Statut validation (polling) |
+| `GET /api/review/queue` | Node | File révisions IA (AI Review Engine) |
+| `POST /api/review/approve` | Node | Approuver révision |
+| `POST /api/review/reject` | Node | Rejeter révision |
+| `GET /api/review/status` | Node | Statut révision (polling) |
 | `GET /api/automation-policies` | Node | Policies Auto-Pilot |
 | `PATCH /api/automation-policies` | Node | Mise à jour policy |
 | `GET /api/automation-policies/enabled` | Node | Policies ENABLED |
@@ -566,8 +568,8 @@ Cron /api/cron/openclaw-sync :
   - policy ENABLED ? → agent_actions_index (auto_approved)
   - sinon → validation_queue (pending)
                        ↓
-Humain → /api/validation/approve → agent_actions_index
-      ou /api/validation/reject  → pas d'index RAG
+Humain → /api/review/approve → agent_actions_index (legacy_action)
+      ou /api/review/reject  → pas d'index RAG
                        ↓
 Worker → executeApprovedAction (skill_manifests) → executed_at
 ```

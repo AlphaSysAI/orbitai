@@ -40,7 +40,7 @@
 | Détection tâches grises à l'upload | ✅ | `/api/detect-tasks` → `gray_tasks` |
 | Feedback utilisateur sur réponses | ✅ | `/api/feedback` → `message_feedback`, apprentissage préférences |
 | Mode Agent OpenClaw (optionnel) | ❌ UI retirée | Route `/api/agent-chat` legacy — backend Phase D |
-| Révisions IA (ex-Validation OpenClaw) | ✅ | Onglet « Révisions IA » → `ValidationDashboard` ; routes `/api/validation/*` (legacy) |
+| Révisions IA | ✅ | Onglet « Révisions IA » → `ValidationDashboard` ; API canonique `/api/review/*` |
 | Auto-Pilot OpenClaw (UI) | ❌ UI retirée | Routes `/api/automation-policies/*` legacy — backend Phase D |
 
 ### Pilier Simulation décisionnelle
@@ -84,7 +84,7 @@
 | Schémas Zod logs / rapports / skills | ✅ | `src/lib/openclaw/schema.ts` |
 | Worker sync database-first | ✅ | `runOpenClawSync` — tables `inbox_*` → dispatch |
 | Cron endpoint | ✅ | `GET|POST /api/cron/openclaw-sync` + secret |
-| File validation HITL | ✅ | `validation_queue`, approve/reject/status |
+| File validation HITL | ✅ | `ai_review_queue`, `/api/review/*`, `/api/tasks/validate` |
 | Index mémoire agent | ✅ | `agent_actions_index` (insert worker + approve) |
 | Auto-approbation si policy ENABLED | ✅ | Dans `processInboxAgentLogsFromDb` |
 | Rapports journaliers | ✅ | `inbox_reports` → `daily_reports` |
@@ -105,7 +105,7 @@
 | **Page Réglages système** | ⏳ | Onglet accessible, contenu placeholder (« disponibles prochainement ») sauf `AutomationSettings` dans Copilot/Validation |
 | **Pilier IA émotionnelle** | ⏳ | `enabled: false`, écran « bientôt disponible » — utilisé comme pilier par défaut pour le dashboard global |
 | **Documentation technique** | 🟡 | `DOCUMENTATION_TECHNIQUE.md` décrit encore OpenClaw file-based et marque la synthèse client « à venir » — en décalage avec le code |
-| **Auth API routes** | 🟡 | Plusieurs routes acceptent `userId` / `user_id` en body/query **sans vérifier la session** (voir bugs) |
+| **Auth API routes** | 🟡 | Routes review sécurisées (session) ; `/api/automation-policies/*` et `/api/track-activity` à durcir |
 
 ---
 
@@ -131,7 +131,7 @@
 
 | Bug | Fichier(s) | Impact |
 |-----|------------|--------|
-| **API validation sans auth session** | `/api/validation/queue`, `/api/automation-policies/*` | `user_id` passé en query ; le serveur utilise `service_role` → un client pourrait lire/modifier les données d'un autre user s'il devine l'UUID |
+| **API validation sans auth session** | `/api/automation-policies/*`, `/api/track-activity` | `user_id` passé en query/body sans session stricte |
 | **`/api/track-activity` sans auth** | `track-activity/route.ts` | N'importe qui peut poster de l'activité pour un `userId` arbitraire |
 | **Approve/reject avec service role** | `validation/approve`, `validation/reject` | Pas de vérification que l'appelant est le propriétaire de la tâche (partiellement mitigé par check `user_id` dans le body vs row) |
 

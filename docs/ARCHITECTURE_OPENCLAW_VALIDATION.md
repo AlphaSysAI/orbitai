@@ -141,7 +141,7 @@ Index : `(user_id)`, `(created_at)`, et index full-text sur `full_text` si besoi
 3. **Humain** : via l’UI OrbitAI (ou API), consulte la file, approuve ou rejette.
 4. **API Approve** : met à jour `validation_queue` (status `approved`), puis insère dans `agent_actions_index` pour que le RAG puisse indexer.
 5. **API Reject** : met à jour `validation_queue` (status `rejected`), pas d’insert dans `agent_actions_index`.
-6. **OpenClaw** : peut interroger `GET /api/validation/status?event_id=...` pour savoir si une tâche a été validée (polling).
+6. **OpenClaw** : peut interroger `GET /api/review/status?event_id=...` (ou `review_id`) pour savoir si une tâche a été validée (polling). Les routes `/api/validation/*` sont supprimées (Phase D.1).
 
 ---
 

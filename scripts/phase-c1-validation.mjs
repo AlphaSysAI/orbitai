@@ -1,5 +1,5 @@
 /**
- * Phase C.1 — Validation migration 007 + AI Review Engine
+ * Phase C.1 / D.1 — Validation AI Review Engine (Supabase + API canonique /api/review/*)
  * Usage: node scripts/phase-c1-validation.mjs [--api-base http://localhost:3000] [--cleanup]
  */
 import "dotenv/config";
@@ -25,7 +25,6 @@ const admin = createClient(url, serviceKey, {
 });
 
 const results = {
-  migrationAlreadyApplied: null,
   sql: {},
   api: {},
   errors: [],
@@ -41,6 +40,17 @@ async function countTable(name) {
   const { count, error } = await admin.from(name).select("*", { count: "exact", head: true });
   if (error) throw new Error(`${name} count: ${error.message}`);
   return count ?? 0;
+}
+
+function isMissingRelationError(error) {
+  const msg = error?.message ?? "";
+  const code = error?.code ?? "";
+  return (
+    code === "42P01" ||
+    msg.includes("does not exist") ||
+    msg.includes("Could not find the table") ||
+    msg.includes("schema cache")
+  );
 }
 
 async function getAuthSession(email) {
@@ -100,31 +110,20 @@ async function apiFetch(path, options = {}, auth = null) {
 async function verifySqlState() {
   console.log("\n=== 1. ÉTAT SQL ===\n");
 
-  const countVq = await countTable("validation_queue");
   const countAr = await countTable("ai_review_queue");
-  results.sql.count_validation_queue_view = countVq;
   results.sql.count_ai_review_queue = countAr;
-  log("SQL", `COUNT validation_queue (VIEW): ${countVq}`);
   log("SQL", `COUNT ai_review_queue: ${countAr}`);
 
-  const { error: viewInsertErr } = await admin.from("validation_queue").insert({
-    event_id: "probe_view_write",
-    user_id: "00000000-0000-0000-0000-000000000001",
-    action: "probe",
-    payload: {},
-    rationale: "probe",
-    status: "pending",
-  });
-  const isView = viewInsertErr?.message?.includes("view") ?? false;
-  results.migrationAlreadyApplied = isView;
-  results.sql.validation_queue_is_view = isView;
-  log("SQL", `validation_queue est une VIEW (insert refusé): ${isView}`, isView);
-
-  const { error: legacyColErr } = await admin
-    .from("validation_queue")
-    .select("event_id, action, payload, rationale, executed_at, human_input_required, raw_log_line")
-    .limit(0);
-  log("SQL", `Colonnes legacy VIEW accessibles: ${!legacyColErr}`, !legacyColErr);
+  const { error: viewErr } = await admin.from("validation_queue").select("*", { count: "exact", head: true });
+  const viewDropped = viewErr != null && isMissingRelationError(viewErr);
+  results.sql.validation_queue_view_dropped = viewDropped;
+  if (viewDropped) {
+    log("SQL", "VIEW validation_queue absente (migration 008 appliquée)");
+  } else if (!viewErr) {
+    log("SQL", "VIEW validation_queue encore présente — appliquer migration 008", false);
+  } else {
+    log("SQL", `Erreur inattendue validation_queue: ${viewErr.message}`, false);
+  }
 
   const { error: newColErr } = await admin
     .from("ai_review_queue")
@@ -133,12 +132,6 @@ async function verifySqlState() {
     )
     .limit(0);
   log("SQL", `Colonnes ai_review_queue accessibles: ${!newColErr}`, !newColErr);
-
-  if (countVq !== countAr) {
-    log("SQL", `COUNT VIEW vs TABLE incohérent (${countVq} vs ${countAr})`, false);
-  } else {
-    log("SQL", `COUNT VIEW = TABLE (${countVq})`);
-  }
 }
 
 async function createTestReview(userId) {
@@ -170,16 +163,9 @@ async function createTestReview(userId) {
 
   log("SQL", `Ligne test créée review_id=${reviewId} id=${data.id}`);
 
-  const { data: viaView } = await admin
-    .from("validation_queue")
-    .select("*")
-    .eq("event_id", reviewId)
-    .single();
-
   const checks = [
-    ["review_id = event_id", data.review_id === viaView?.event_id],
+    ["review_id présent", typeof data.review_id === "string" && data.review_id.length > 0],
     ["review_type legacy_action", data.review_type === "legacy_action"],
-    ["VIEW action = review_type (legacy)", viaView?.action === "legacy_action"],
     ["metadata raw_log_line", data.review_metadata?.raw_log_line?.line === "test raw log"],
     ["metadata human_input_required", data.review_metadata?.human_input_required === true],
     ["metadata test flag", data.review_metadata?.test === true],
@@ -193,10 +179,9 @@ async function createTestReview(userId) {
   return { row: data, reviewId, internalId: data.id };
 }
 
-async function testApiRoutes(auth, reviewId, internalId) {
-  console.log("\n=== 2. TESTS API ===\n");
+async function testApiRoutes(auth, reviewId) {
+  console.log("\n=== 2. TESTS API (/api/review/*) ===\n");
 
-  // Auth required
   const noAuth = await apiFetch("/api/review/queue");
   log("API", `GET /api/review/queue sans auth → ${noAuth.status}`, noAuth.status === 401);
 
@@ -213,22 +198,9 @@ async function testApiRoutes(auth, reviewId, internalId) {
   log("API", `Champs canoniques + aliases présents: ${aliasFields}`, aliasFields);
   results.api.canonical_and_legacy_fields = aliasFields;
 
-  const legacyQueue = await apiFetch("/api/validation/queue", {}, auth);
-  const dep = legacyQueue.headers.get("Deprecation");
-  const legacyHdr = legacyQueue.headers.get("X-OrbitAI-Legacy");
-  log("API", `GET /api/validation/queue → ${legacyQueue.status}, Deprecation=${dep}, Legacy=${legacyHdr}`);
-  log("API", `Headers legacy OK`, dep === "true" && legacyHdr === "validation-api");
-
   const statusBefore = await apiFetch(`/api/review/status?event_id=${reviewId}`, {}, auth);
   log("API", `GET /api/review/status → ${statusBefore.status} status=${statusBefore.body?.status}`);
 
-  const legacyStatus = await apiFetch(`/api/validation/status?event_id=${reviewId}`, {}, auth);
-  log(
-    "API",
-    `GET /api/validation/status → ${legacyStatus.status}, Deprecation=${legacyStatus.headers.get("Deprecation")}`
-  );
-
-  // Reject test row via review/reject (leave approve for tasks/validate)
   const rejectRes = await apiFetch(
     "/api/review/reject",
     { method: "POST", body: JSON.stringify({ review_id: reviewId, reason: "phase_c1_reject_test" }) },
@@ -236,14 +208,6 @@ async function testApiRoutes(auth, reviewId, internalId) {
   );
   log("API", `POST /api/review/reject → ${rejectRes.status}`, rejectRes.status === 200);
 
-  const legacyReject = await apiFetch(
-    "/api/validation/reject",
-    { method: "POST", body: JSON.stringify({ event_id: reviewId, reason: "already_rejected" }) },
-    auth
-  );
-  log("API", `POST /api/validation/reject (déjà rejeté) → ${legacyReject.status} (attendu 404)`, legacyReject.status === 404);
-
-  // Create second row for approve + tasks/validate tests
   const reviewId2 = `phase_c1_test_approve_${Date.now()}`;
   const { data: row2, error: insErr } = await admin
     .from("ai_review_queue")
@@ -270,16 +234,6 @@ async function testApiRoutes(auth, reviewId, internalId) {
   log("API", `POST /api/review/approve → ${approveRes.status}`, approveRes.status === 200);
   results.api.approve = approveRes.status;
 
-  const legacyApprove = await apiFetch(
-    "/api/validation/approve",
-    { method: "POST", body: JSON.stringify({ event_id: reviewId2 }) },
-    auth
-  );
-  log(
-    "API",
-    `POST /api/validation/approve (déjà approuvé) → ${legacyApprove.status}, Deprecation=${legacyApprove.headers.get("Deprecation")}`
-  );
-
   const { data: approvedRow } = await admin.from("ai_review_queue").select("*").eq("review_id", reviewId2).single();
   log("API", `Après approve status=${approvedRow?.status}`, approvedRow?.status === "approved");
   log("API", `published_at null après approve (worker): ${approvedRow?.published_at == null}`, approvedRow?.published_at == null);
@@ -290,7 +244,6 @@ async function testApiRoutes(auth, reviewId, internalId) {
     .eq("event_id", reviewId2);
   log("API", `agent_actions_index upsert legacy: count=${indexCount}`, (indexCount ?? 0) >= 1);
 
-  // tasks/validate — create pending row
   const reviewId3 = `phase_c1_tasks_validate_${Date.now()}`;
   const { data: row3, error: ins3 } = await admin
     .from("ai_review_queue")
@@ -349,6 +302,9 @@ async function testApiRoutes(auth, reviewId, internalId) {
   });
   log("API", `POST /api/tasks/validate sans auth → ${noAuthTask.status}`, noAuthTask.status === 401);
 
+  const legacyRoute = await apiFetch("/api/validation/queue", {}, auth);
+  log("API", `/api/validation/queue supprimée → ${legacyRoute.status}`, legacyRoute.status === 404);
+
   results.api.test_review_ids = [reviewId, reviewId2, reviewId3, reviewId4];
 
   if (CLEANUP) {
@@ -359,7 +315,7 @@ async function testApiRoutes(auth, reviewId, internalId) {
 }
 
 async function main() {
-  console.log("Phase C.1 validation — Supabase + API");
+  console.log("Phase C.1 / D.1 validation — Supabase + API /api/review/*");
   console.log(`API base: ${API_BASE}`);
 
   await verifySqlState();
@@ -378,7 +334,7 @@ async function main() {
     log("AUTH", "Session obtenue via magic link admin");
   } catch (e) {
     log("AUTH", `Impossible d'obtenir session: ${e.message}`, false);
-    console.log("\n⚠ Tests API ignorés — démarrer le dev server et relancer avec session manuelle.");
+    console.log("\n⚠ Tests API ignorés — démarrer le dev server et relancer.");
     console.log(JSON.stringify(results, null, 2));
     process.exit(1);
   }
@@ -386,7 +342,7 @@ async function main() {
   await createTestReview(testUser.id);
 
   try {
-    await testApiRoutes(auth, results.sql.test_review_id, results.sql.test_row_id);
+    await testApiRoutes(auth, results.sql.test_review_id);
   } catch (e) {
     if (e.cause?.code === "ECONNREFUSED" || e.message?.includes("fetch failed")) {
       log("API", `Serveur non joignable sur ${API_BASE} — lancer: npm run dev`, false);

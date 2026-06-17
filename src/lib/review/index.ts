@@ -26,8 +26,6 @@ export {
 
 export { publishReview, type PublishReviewContext, type PublishReviewResult } from "./publish";
 
-export { withLegacyValidationHeaders, LEGACY_VALIDATION_HEADER } from "./legacy";
-
 export {
   handleReviewQueue,
   handleReviewApprove,

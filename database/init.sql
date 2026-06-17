@@ -1202,7 +1202,12 @@ CREATE POLICY "Users can update own automation policies"
 -- INSERT réservé au service (création de la ligne PENDING quand success_count >= 50).
 
 -- Vue : success_count par (user_id, action_type) à partir de agent_actions_index
-CREATE OR REPLACE VIEW v_user_action_success_count AS
+-- security_invoker : RLS de l'utilisateur courant (pas SECURITY DEFINER)
+DROP VIEW IF EXISTS v_user_action_success_count;
+
+CREATE VIEW v_user_action_success_count
+WITH (security_invoker = true)
+AS
 SELECT
   user_id,
   action AS action_type,
@@ -1220,8 +1225,125 @@ RETURNS TABLE(action_type TEXT, success_count INTEGER) AS $$
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 COMMENT ON TABLE automation_policies IS 'Auto-Pilot: paliers 50 (PENDING -> ENABLED/DECLINED_50) et palier 2 (DECLINED_50 -> ENABLED/DECLINED_50). DECLINED_100 = révoqué.';
-COMMENT ON VIEW v_user_action_success_count IS 'Nombre de succès (lignes agent_actions_index) par user_id et action_type.';
+COMMENT ON VIEW v_user_action_success_count IS 'Nombre de succès (lignes agent_actions_index) par user_id et action_type. security_invoker.';
 COMMENT ON FUNCTION get_success_count_by_action(UUID) IS 'Retourne le nombre de succès par action_type pour un utilisateur (déclenchement paliers Auto-Pilot).';
+
+-- ============================================
+-- MULTI-TENANT : organizations + modules (009)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  manager_first_name TEXT,
+  manager_last_name TEXT,
+  manager_email TEXT,
+  business_sector TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_organizations_manager_email ON organizations(manager_email);
+
+CREATE TABLE IF NOT EXISTS organization_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (organization_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_organization_members_user_id ON organization_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_organization_members_org_id ON organization_members(organization_id);
+
+CREATE TABLE IF NOT EXISTS organization_modules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  module_name TEXT NOT NULL,
+  is_enabled BOOLEAN NOT NULL DEFAULT false,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (organization_id, module_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_organization_modules_org_id ON organization_modules(organization_id);
+CREATE INDEX IF NOT EXISTS idx_organization_modules_name ON organization_modules(module_name);
+
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organization_modules ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Members can view their organizations" ON organizations;
+CREATE POLICY "Members can view their organizations"
+  ON organizations FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_members om
+      WHERE om.organization_id = organizations.id
+        AND om.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can view own memberships" ON organization_members;
+CREATE POLICY "Users can view own memberships"
+  ON organization_members FOR SELECT
+  USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "Members can view org modules" ON organization_modules;
+CREATE POLICY "Members can view org modules"
+  ON organization_modules FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_members om
+      WHERE om.organization_id = organization_modules.organization_id
+        AND om.user_id = auth.uid()
+    )
+  );
+
+CREATE OR REPLACE FUNCTION org_has_module(
+  p_organization_id UUID,
+  p_module_name TEXT
+) RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM organization_modules om
+    INNER JOIN organization_members mem
+      ON mem.organization_id = om.organization_id
+    WHERE om.organization_id = p_organization_id
+      AND om.module_name = p_module_name
+      AND om.is_enabled = true
+      AND mem.user_id = auth.uid()
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION get_my_enabled_modules()
+RETURNS TABLE(
+  organization_id UUID,
+  module_name TEXT
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT om.organization_id, om.module_name
+  FROM organization_modules om
+  INNER JOIN organization_members mem
+    ON mem.organization_id = om.organization_id
+  WHERE mem.user_id = auth.uid()
+    AND om.is_enabled = true
+  ORDER BY om.module_name;
+$$;
+
+COMMENT ON TABLE organizations IS 'Tenant / organisation cliente OrbitAI.';
+COMMENT ON TABLE organization_members IS 'Appartenance utilisateur à une organisation.';
+COMMENT ON TABLE organization_modules IS 'Modules activés par organisation (ex: knowledge_base, regiaire_core).';
+COMMENT ON FUNCTION org_has_module(UUID, TEXT) IS 'Vérifie si l''utilisateur courant a accès au module pour l''organisation.';
+COMMENT ON FUNCTION get_my_enabled_modules() IS 'Modules activés pour l''utilisateur authentifié.';
 
 -- ============================================
 -- FIN DU SCRIPT D'INITIALISATION

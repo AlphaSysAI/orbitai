@@ -11,10 +11,12 @@ import { AutomationPillar } from "@/features/pillars/detection-automation/Automa
 import { DecisionPillar } from "@/features/pillars/decision-simulation/DecisionPillar";
 import { EmotionalPillar } from "@/features/pillars/emotional-ai/EmotionalPillar";
 import { ClientPillar } from "@/features/pillars/client-synthesis/ClientPillar";
+import { useOrganizationModules } from "@/hooks/useOrganizationModules";
 
 export default function OrbitDashboard() {
   const supabase = createClient();
   const router = useRouter();
+  const { enabledModules } = useOrganizationModules();
 
   const [user, setUser] = useState<any>(null);
   // Initialiser avec un pilier qui affiche le dashboard global par défaut
@@ -93,6 +95,7 @@ export default function OrbitDashboard() {
           onLogout={handleLogout}
           userEmail={user.email}
           onDashboardClick={handleDashboardClick}
+          enabledModules={enabledModules}
         />
         <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative text-white">
           <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-8 z-20">
@@ -135,6 +138,7 @@ export default function OrbitDashboard() {
           onLogout={handleLogout}
           userEmail={user.email}
           onDashboardClick={handleDashboardClick}
+          enabledModules={enabledModules}
         />
         <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative text-white">
           <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-8 z-20">
@@ -253,6 +257,7 @@ export default function OrbitDashboard() {
         onThreadClick={activePillar === "copilot-transmission" ? handleThreadClickFromNav : undefined}
         onThreadDelete={activePillar === "copilot-transmission" ? handleThreadDeleteFromNav : undefined}
         onDashboardClick={handleDashboardClick}
+        enabledModules={enabledModules}
       />
       {activePillar === "copilot-transmission" || activePillar === "detection-automation" || activePillar === "client-synthesis" || activePillar === "decision-simulation" ? (
         renderActivePillar()

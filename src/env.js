@@ -32,6 +32,8 @@ export const env = createEnv({
       process.env.NODE_ENV === "production"
         ? z.string().min(32)
         : z.string().min(32).optional(),
+    /** Emails autorisés à accéder à /admin (séparés par des virgules) */
+    ORBIT_ADMIN_EMAILS: z.string().optional(),
   },
 
   /**
@@ -65,6 +67,7 @@ export const env = createEnv({
     OPENCLAW_VALIDATION_STATUS_TOKEN: process.env.OPENCLAW_VALIDATION_STATUS_TOKEN,
     REVIEW_POLLING_TOKEN: process.env.REVIEW_POLLING_TOKEN,
     TRACKER_SIGNING_SECRET: process.env.TRACKER_SIGNING_SECRET,
+    ORBIT_ADMIN_EMAILS: process.env.ORBIT_ADMIN_EMAILS,
     NEXT_PUBLIC_OPENCLAW_ENABLED: process.env.NEXT_PUBLIC_OPENCLAW_ENABLED,
   },
   /**

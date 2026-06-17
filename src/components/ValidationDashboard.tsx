@@ -29,7 +29,7 @@ export function ValidationDashboard({ userId }: ValidationDashboardProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/validation/queue");
+      const res = await fetch("/api/review/queue");
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? `Erreur ${res.status}`);

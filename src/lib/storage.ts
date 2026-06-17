@@ -280,7 +280,7 @@ export async function setValidationQueueExecuted(
 
 /**
  * Upsert dans ai_review_queue (conflit sur review_id). Utilisé par le worker lors du drain inbox.
- * N'écrit jamais via la VIEW validation_queue legacy.
+ * N'écrit jamais via une VIEW legacy (supprimée migration 008).
  */
 export async function upsertToValidationQueue(
   supabase: Client,

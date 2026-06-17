@@ -15,6 +15,8 @@ DROP TRIGGER IF EXISTS trigger_update_preferences_on_feedback ON message_feedbac
 -- Supprimer les fonctions et vues OpenClaw
 DROP VIEW IF EXISTS v_user_action_success_count CASCADE;
 DROP FUNCTION IF EXISTS get_success_count_by_action(UUID) CASCADE;
+DROP FUNCTION IF EXISTS org_has_module(UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS get_my_enabled_modules() CASCADE;
 
 -- Supprimer les fonctions (CASCADE supprime aussi les dépendances)
 DROP FUNCTION IF EXISTS update_user_preferences_from_feedback() CASCADE;
@@ -24,6 +26,11 @@ DROP FUNCTION IF EXISTS update_user_preferences_from_feedback() CASCADE;
 
 -- Supprimer les tables dans l'ordre (en respectant les dépendances)
 -- Tables dépendantes en premier (avec CASCADE pour supprimer aussi les foreign keys)
+
+-- Multi-tenant (009)
+DROP TABLE IF EXISTS organization_modules CASCADE;
+DROP TABLE IF EXISTS organization_members CASCADE;
+DROP TABLE IF EXISTS organizations CASCADE;
 
 -- OpenClaw (auto-pilot dépend de agent_actions_index via la vue)
 DROP TABLE IF EXISTS automation_policies CASCADE;
@@ -73,7 +80,7 @@ BEGIN
     'client_feedback_sources', 'client_feedback_items', 'marketing_analysis',
     'ai_review_queue', 'agent_actions_index', 'daily_reports', 'agent_logs',
     'inbox_agent_logs', 'inbox_reports', 'inbox_validation', 'skill_manifests',
-    'automation_policies'
+    'automation_policies', 'organization_modules', 'organization_members', 'organizations'
   );
   
   IF remaining_tables = 0 THEN

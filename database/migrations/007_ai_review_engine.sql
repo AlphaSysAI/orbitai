@@ -202,29 +202,6 @@ COMMENT ON COLUMN ai_review_queue.review_type IS
 COMMENT ON COLUMN ai_review_queue.published_at IS
   'Horodatage publication post-approbation (ex-executed_at OpenClaw).';
 
--- ── 10. VIEW legacy lecture seule ─────────────────────────────────
-DROP VIEW IF EXISTS validation_queue;
-
-CREATE VIEW validation_queue AS
-SELECT
-  id,
-  review_id AS event_id,
-  user_id,
-  review_type AS action,
-  proposed_payload AS payload,
-  summary AS rationale,
-  COALESCE((review_metadata->>'human_input_required')::boolean, true) AS human_input_required,
-  status,
-  review_metadata->'raw_log_line' AS raw_log_line,
-  validated_at,
-  validated_by,
-  rejection_reason,
-  published_at AS executed_at,
-  created_at,
-  updated_at
-FROM ai_review_queue;
-
-COMMENT ON VIEW validation_queue IS
-  'LEGACY lecture seule — compatibilité OpenClaw. Supprimer Phase D.';
+-- ── 10. VIEW legacy — supprimée Phase D.1 (008/011). Ne pas recréer validation_queue.
 
 COMMIT;

@@ -122,7 +122,7 @@ async function main() {
   const headers = { Cookie: auth.cookieHeader, "Content-Type": "application/json" };
 
   // Parcours Révisions IA (API = ce que fait ValidationDashboard)
-  const queue = await fetch(`${API_BASE}/api/validation/queue`, { headers });
+  const queue = await fetch(`${API_BASE}/api/review/queue`, { headers });
   const queueBody = await queue.json();
   const item = queueBody.items?.find((i) => i.review_id === reviewId || i.event_id === reviewId);
   log(queue.status === 200 && !!item, "UI", `File Révisions IA: item visible (${item?.action})`);
