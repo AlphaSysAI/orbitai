@@ -107,6 +107,7 @@ export function ScanWorkspace({
         expected_qty: row.expected_qty,
         scanned_qty: row.scanned_qty,
         dlc: row.dlc,
+        needs_review: row.needs_review ?? false,
         has_dlc: products?.has_dlc ?? false,
       };
     });
