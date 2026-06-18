@@ -79,3 +79,101 @@ export async function upsertProductForLine(
 
   return (data as { id: string }).id;
 }
+
+const DELIVERY_LINE_SELECT =
+  "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc";
+
+/** Ligne BL appartenant à une livraison de l'org courante (ownership via join deliveries). */
+export async function getDeliveryLineInOrg(
+  ctx: RegiaireContext,
+  deliveryId: string,
+  ean: string
+): Promise<{
+  id: string;
+  delivery_id: string;
+  product_id: string | null;
+  raw_name: string;
+  ean: string;
+  expected_qty: number;
+  scanned_qty: number;
+  dlc: string | null;
+} | null> {
+  const { data, error } = await ctx.db
+    .from("delivery_lines")
+    .select(DELIVERY_LINE_SELECT)
+    .eq("delivery_id", deliveryId)
+    .eq("ean", ean)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const delivery = await getDeliveryInOrg(ctx, deliveryId);
+  if (!delivery) return null;
+
+  return data as {
+    id: string;
+    delivery_id: string;
+    product_id: string | null;
+    raw_name: string;
+    ean: string;
+    expected_qty: number;
+    scanned_qty: number;
+    dlc: string | null;
+  };
+}
+
+/**
+ * EAN absent du BL : produit créé au scan (pas à l'analyse), ligne ad hoc expected_qty=0.
+ * Le premier incrément utilise allow_extra=true (RPC : 0 < 0 est faux).
+ */
+export async function createAdHocScanLine(
+  ctx: RegiaireContext,
+  deliveryId: string,
+  ean: string,
+  dlc?: string
+): Promise<{
+  id: string;
+  delivery_id: string;
+  product_id: string | null;
+  raw_name: string;
+  ean: string;
+  expected_qty: number;
+  scanned_qty: number;
+  dlc: string | null;
+}> {
+  const productId = await upsertProductForLine(
+    ctx,
+    ean,
+    `Produit ${ean}`,
+    Boolean(dlc)
+  );
+
+  const { data, error } = await ctx.db
+    .from("delivery_lines")
+    .insert({
+      delivery_id: deliveryId,
+      product_id: productId,
+      raw_name: `Produit ${ean}`,
+      ean,
+      expected_qty: 0,
+      scanned_qty: 0,
+      dlc: dlc ?? null,
+    })
+    .select(DELIVERY_LINE_SELECT)
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? "Impossible de créer la ligne de scan");
+  }
+
+  return data as {
+    id: string;
+    delivery_id: string;
+    product_id: string | null;
+    raw_name: string;
+    ean: string;
+    expected_qty: number;
+    scanned_qty: number;
+    dlc: string | null;
+  };
+}

@@ -90,6 +90,7 @@ export async function analyzeBL(
     const lineRows = [];
     for (const line of extraction.lines) {
       const hasDlc = line.dlc !== null;
+      // Produit lié dès l'analyse BL (EAN présent sur le document).
       const productId = await upsertProductForLine(
         ctx,
         line.ean,

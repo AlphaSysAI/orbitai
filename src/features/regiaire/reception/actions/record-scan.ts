@@ -6,7 +6,11 @@ import {
   RecordScanResultSchema,
   type RecordScanResult,
 } from "@/features/regiaire/reception/schemas";
-import { getDeliveryInOrg } from "@/features/regiaire/reception/delivery-access";
+import {
+  createAdHocScanLine,
+  getDeliveryInOrg,
+  getDeliveryLineInOrg,
+} from "@/features/regiaire/reception/delivery-access";
 import {
   RegiaireContextError,
   requireRegiaireContext,
@@ -17,7 +21,7 @@ export type RecordScanActionResult =
   | { success: false; error: string; code?: string };
 
 /**
- * Enregistre un scan EAN sur une livraison en cours.
+ * Enregistre un scan EAN sur une livraison en cours (incrément atomique via RPC).
  */
 export async function recordScan(
   deliveryId: string,
@@ -46,55 +50,36 @@ export async function recordScan(
       };
     }
 
-    const { data: lineRaw, error: lineError } = await ctx.db
-      .from("delivery_lines")
-      .select("id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc")
-      .eq("delivery_id", parsed.deliveryId)
-      .eq("ean", parsed.ean)
-      .maybeSingle();
+    let line = await getDeliveryLineInOrg(ctx, parsed.deliveryId, parsed.ean);
+    let allowExtra = parsed.extra;
 
-    if (lineError || !lineRaw) {
+    if (!line) {
+      line = await createAdHocScanLine(ctx, parsed.deliveryId, parsed.ean, parsed.dlc);
+      allowExtra = true;
+    }
+
+    const { data: updatedRows, error: rpcError } = await ctx.db.rpc(
+      "regiaire_increment_scan",
+      {
+        p_line_id: line.id,
+        p_allow_extra: allowExtra,
+        p_dlc: parsed.dlc ?? null,
+      }
+    );
+
+    if (rpcError) {
+      return { success: false, error: rpcError.message };
+    }
+
+    const rows = (updatedRows ?? []) as unknown[];
+    if (rows.length === 0) {
       return {
         success: false,
-        error: "Aucune ligne BL ne correspond à cet EAN",
+        error: "La quantité dépasse l'attendu",
       };
     }
 
-    const line = DeliveryLineRowSchema.parse(lineRaw);
-
-    const nextQty = line.scanned_qty + 1;
-    if (nextQty > line.expected_qty && !parsed.extra) {
-      return {
-        success: false,
-        error:
-          "Quantité scannée supérieure à la quantité attendue (utilisez extra=true pour forcer)",
-      };
-    }
-
-    const updatePayload: {
-      scanned_qty: number;
-      dlc?: string;
-    } = { scanned_qty: nextQty };
-
-    if (parsed.dlc && !line.dlc) {
-      updatePayload.dlc = parsed.dlc;
-    }
-
-    const { data: updatedRaw, error: updateError } = await ctx.db
-      .from("delivery_lines")
-      .update(updatePayload)
-      .eq("id", line.id)
-      .select("id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc")
-      .single();
-
-    if (updateError || !updatedRaw) {
-      return {
-        success: false,
-        error: updateError?.message ?? "Échec mise à jour du scan",
-      };
-    }
-
-    const updated = DeliveryLineRowSchema.parse(updatedRaw);
+    const updated = DeliveryLineRowSchema.parse(rows[0]);
 
     const result = RecordScanResultSchema.parse({
       deliveryId: parsed.deliveryId,

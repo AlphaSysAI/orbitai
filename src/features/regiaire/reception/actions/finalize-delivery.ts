@@ -19,6 +19,11 @@ export type FinalizeDeliveryActionResult =
   | { success: true; data: FinalizeDeliveryResult }
   | { success: false; error: string; code?: string };
 
+type FinalizeRpcRow = {
+  outcome: string;
+  batches_created: number;
+};
+
 function buildDiscrepancies(
   lines: Array<{
     ean: string;
@@ -102,9 +107,27 @@ function buildSupplierEmailDraft(params: {
   };
 }
 
+async function loadDeliveryLines(
+  ctx: Awaited<ReturnType<typeof requireRegiaireContext>>,
+  deliveryId: string
+) {
+  const { data: linesRaw, error: linesError } = await ctx.db
+    .from("delivery_lines")
+    .select(
+      "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc"
+    )
+    .eq("delivery_id", deliveryId);
+
+  if (linesError) {
+    throw new Error(linesError.message);
+  }
+
+  return (linesRaw ?? []).map((row) => DeliveryLineRowSchema.parse(row));
+}
+
 /**
- * Finalise une réception : stock si conforme, ou écart + brouillon email fournisseur.
- * Aucun envoi email réel (provider à brancher ultérieurement).
+ * Finalise une réception : transition + stock via RPC atomique ;
+ * écarts et brouillon email calculés en TS sur le résultat.
  */
 export async function finalizeDelivery(
   deliveryId: string
@@ -124,26 +147,42 @@ export async function finalizeDelivery(
       };
     }
 
-    const { data: linesRaw, error: linesError } = await ctx.db
-      .from("delivery_lines")
-      .select(
-        "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc"
-      )
-      .eq("delivery_id", deliveryId);
+    const { data: rpcRaw, error: rpcError } = await ctx.db.rpc(
+      "regiaire_finalize_delivery",
+      { p_delivery_id: deliveryId }
+    );
 
-    if (linesError) {
-      return { success: false, error: linesError.message };
+    if (rpcError) {
+      const message = rpcError.message;
+      if (message.includes("no_scanned_stock")) {
+        return {
+          success: false,
+          error: "Aucune quantité scannée à intégrer au stock",
+        };
+      }
+      if (message.includes("no_lines")) {
+        return { success: false, error: "Aucune ligne sur cette livraison" };
+      }
+      return { success: false, error: message };
     }
 
-    const lines = (linesRaw ?? []).map((row) => DeliveryLineRowSchema.parse(row));
+    const rpcRows = (rpcRaw ?? []) as FinalizeRpcRow[];
+    const rpcResult = rpcRows[0];
 
-    if (lines.length === 0) {
-      return { success: false, error: "Aucune ligne sur cette livraison" };
+    if (!rpcResult) {
+      return { success: false, error: "Réponse RPC invalide" };
     }
 
-    const discrepancies = buildDiscrepancies(lines);
+    if (rpcResult.outcome === "already_finalized") {
+      return {
+        success: false,
+        error: "Cette livraison a déjà été finalisée",
+      };
+    }
 
-    if (discrepancies.length > 0) {
+    if (rpcResult.outcome === "discrepancy") {
+      const lines = await loadDeliveryLines(ctx, deliveryId);
+      const discrepancies = buildDiscrepancies(lines);
       const supplier = await getSupplierInOrg(ctx, delivery.supplier_id);
       const draftEmail = buildSupplierEmailDraft({
         supplierName: supplier?.name ?? "Fournisseur",
@@ -151,16 +190,6 @@ export async function finalizeDelivery(
         deliveryId,
         discrepancies,
       });
-
-      const { error: updateError } = await ctx.db
-        .from("deliveries")
-        .update({ status: "discrepancy" })
-        .eq("id", deliveryId)
-        .eq("organization_id", ctx.organizationId);
-
-      if (updateError) {
-        return { success: false, error: updateError.message };
-      }
 
       const result = FinalizeDeliveryResultSchema.parse({
         status: "discrepancy",
@@ -172,51 +201,17 @@ export async function finalizeDelivery(
       return { success: true, data: result };
     }
 
-    const batchRows = lines
-      .filter((line) => line.scanned_qty > 0 && line.product_id)
-      .map((line) => ({
-        organization_id: ctx.organizationId,
-        product_id: line.product_id as string,
-        quantity: line.scanned_qty,
-        dlc: line.dlc,
-        delivery_id: deliveryId,
-      }));
-
-    if (batchRows.length === 0) {
-      return {
-        success: false,
-        error: "Aucune quantité scannée à intégrer au stock",
-      };
-    }
-
-    const { error: batchError } = await ctx.db
-      .from("stock_batches")
-      .insert(batchRows);
-
-    if (batchError) {
-      return { success: false, error: batchError.message };
-    }
-
-    const { error: completeError } = await ctx.db
-      .from("deliveries")
-      .update({
+    if (rpcResult.outcome === "completed") {
+      const result = FinalizeDeliveryResultSchema.parse({
         status: "completed",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", deliveryId)
-      .eq("organization_id", ctx.organizationId);
+        deliveryId,
+        batchesCreated: rpcResult.batches_created,
+      });
 
-    if (completeError) {
-      return { success: false, error: completeError.message };
+      return { success: true, data: result };
     }
 
-    const result = FinalizeDeliveryResultSchema.parse({
-      status: "completed",
-      deliveryId,
-      batchesCreated: batchRows.length,
-    });
-
-    return { success: true, data: result };
+    return { success: false, error: `Résultat RPC inconnu : ${rpcResult.outcome}` };
   } catch (error) {
     if (error instanceof RegiaireContextError) {
       return { success: false, error: error.message, code: error.code };
