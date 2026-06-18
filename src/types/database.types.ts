@@ -585,6 +585,10 @@ export interface Database {
         };
         Returns: DeliveryLineRow[];
       };
+      regiaire_decrement_scan: {
+        Args: { p_line_id: string };
+        Returns: DeliveryLineRow[];
+      };
       regiaire_finalize_delivery: {
         Args: { p_delivery_id: string };
         Returns: { outcome: string; batches_created: number }[];
