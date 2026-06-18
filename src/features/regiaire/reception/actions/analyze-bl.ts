@@ -5,11 +5,12 @@ import {
   type AnalyzeBLResult,
 } from "@/features/regiaire/reception/schemas";
 import {
-  aggregateBlLinesByEan,
+  aggregateBlLines,
   getDeliveryInOrg,
   upsertProductForLine,
 } from "@/features/regiaire/reception/delivery-access";
 import { parseBlDocument } from "@/features/regiaire/reception/parse-bl";
+import { normalizeExtractedLine } from "@/features/regiaire/reception/validate-bl-line";
 import {
   buildBlStoragePath,
   REGIAIRE_BL_BUCKET,
@@ -26,8 +27,8 @@ export type AnalyzeBLActionResult =
   | { success: false; error: string; code?: string };
 
 /**
- * Analyse IA d'un bon de livraison : upload storage org-scoped + extraction lignes.
- * Les lignes sont fusionnées par EAN avant insert (une ligne par EAN par livraison).
+ * Analyse IA d'un bon de livraison : upload storage + extraction à incertitude.
+ * Écrit les lignes en statut draft (revue requise avant scan).
  */
 export async function analyzeBL(
   deliveryId: string,
@@ -41,7 +42,7 @@ export async function analyzeBL(
       return { success: false, error: "Livraison introuvable" };
     }
 
-    if (delivery.status !== "draft" && delivery.status !== "scanning") {
+    if (delivery.status !== "draft") {
       return {
         success: false,
         error: "Cette livraison ne peut plus être analysée",
@@ -59,7 +60,8 @@ export async function analyzeBL(
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const extraction = await parseBlDocument(buffer, file.type, file.name);
-    const mergedLines = aggregateBlLinesByEan(extraction.lines);
+    const normalized = extraction.lines.map(normalizeExtractedLine);
+    const mergedLines = aggregateBlLines(normalized);
 
     const storagePath = buildBlStoragePath(
       ctx.organizationId,
@@ -92,22 +94,26 @@ export async function analyzeBL(
 
     const lineRows = [];
     for (const line of mergedLines) {
-      const hasDlc = line.dlc !== null;
-      const productId = await upsertProductForLine(
-        ctx,
-        line.ean,
-        line.name,
-        hasDlc
-      );
+      let productId: string | null = null;
+      if (line.ean) {
+        const hasDlc = line.dlc !== null;
+        productId = await upsertProductForLine(
+          ctx,
+          line.ean,
+          line.raw_name,
+          hasDlc
+        );
+      }
 
       lineRows.push({
         delivery_id: deliveryId,
         product_id: productId,
-        raw_name: line.name,
+        raw_name: line.raw_name,
         ean: line.ean,
         expected_qty: line.expected_qty,
         scanned_qty: 0,
         dlc: line.dlc,
+        needs_review: line.needs_review,
       });
     }
 
@@ -122,7 +128,6 @@ export async function analyzeBL(
     const { error: updateDeliveryError } = await ctx.db
       .from("deliveries")
       .update({
-        status: "scanning",
         bl_file_path: storagePath,
       })
       .eq("id", deliveryId)
@@ -132,11 +137,14 @@ export async function analyzeBL(
       return { success: false, error: updateDeliveryError.message };
     }
 
+    const needsReviewCount = lineRows.filter((l) => l.needs_review).length;
+
     const result = AnalyzeBLResultSchema.parse({
       deliveryId,
-      status: "scanning",
+      status: "draft",
       lineCount: lineRows.length,
       blFilePath: storagePath,
+      needsReviewCount,
     });
 
     return { success: true, data: result };

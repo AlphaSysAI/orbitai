@@ -403,10 +403,11 @@ export interface DeliveryLineRow {
   delivery_id: string;
   product_id: string | null;
   raw_name: string;
-  ean: string;
+  ean: string | null;
   expected_qty: number;
   scanned_qty: number;
   dlc: string | null;
+  needs_review: boolean;
 }
 
 export interface StockBatchRow {
@@ -529,15 +530,20 @@ export interface Database {
         DeliveryLineRow,
         Pick<
           DeliveryLineRow,
-          "delivery_id" | "raw_name" | "ean" | "expected_qty"
+          "delivery_id" | "raw_name" | "expected_qty"
         > & {
           id?: string;
           product_id?: string | null;
+          ean?: string | null;
           scanned_qty?: number;
           dlc?: string | null;
+          needs_review?: boolean;
         },
         Partial<
-          Pick<DeliveryLineRow, "product_id" | "scanned_qty" | "dlc">
+          Pick<
+            DeliveryLineRow,
+            "product_id" | "scanned_qty" | "dlc" | "ean" | "needs_review"
+          >
         >
       >;
       stock_batches: TableDef<

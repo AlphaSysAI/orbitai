@@ -63,7 +63,7 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
     const supabase = createClient();
     const { data, error: fetchError } = await supabase
       .from("deliveries")
-      .select("id, status, suppliers(name)")
+      .select("id, status, bl_file_path, suppliers(name)")
       .eq("id", resumeDeliveryId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -83,7 +83,15 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
       return;
     }
     if (status === "draft") {
-      setStep("capture");
+      if (data.bl_file_path) {
+        const { count } = await supabase
+          .from("delivery_lines")
+          .select("id", { count: "exact", head: true })
+          .eq("delivery_id", data.id);
+        setStep(count && count > 0 ? "review" : "capture");
+      } else {
+        setStep("capture");
+      }
     }
   }, [resumeDeliveryId, organizationId, router]);
 

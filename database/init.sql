@@ -1423,10 +1423,11 @@ CREATE TABLE IF NOT EXISTS delivery_lines (
   delivery_id UUID NOT NULL REFERENCES deliveries(id) ON DELETE CASCADE,
   product_id UUID REFERENCES products(id) ON DELETE SET NULL,
   raw_name TEXT NOT NULL,
-  ean TEXT NOT NULL,
+  ean TEXT,
   expected_qty INTEGER NOT NULL CHECK (expected_qty >= 0),
   scanned_qty INTEGER NOT NULL DEFAULT 0 CHECK (scanned_qty >= 0),
-  dlc DATE
+  dlc DATE,
+  needs_review BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX IF NOT EXISTS idx_delivery_lines_delivery_id ON delivery_lines(delivery_id);

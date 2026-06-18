@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CheckCircle2, Copy, Mail, AlertTriangle } from "lucide-react";
 
 import type { FinalizeDeliveryReport } from "@/features/regiaire/reception/schemas";
+import { formatEanForReport } from "@/features/regiaire/reception/schemas";
 
 export function FinalizeReportView({
   report,
@@ -68,8 +69,9 @@ export function FinalizeReportView({
         <ReportSection title="Manquants / surplus (BL)">
           <ul className="space-y-2 text-sm">
             {report.discrepancies.map((d) => (
-              <li key={`${d.ean}-${d.kind}`} className="text-slate-300">
-                <span className="text-white">{d.rawName}</span> ({d.ean}) —{" "}
+              <li key={`${d.ean ?? d.rawName}-${d.kind}`} className="text-slate-300">
+                <span className="text-white">{d.rawName}</span> (
+                {formatEanForReport(d.ean)}) —{" "}
                 {d.kind === "missing" ? "manque" : "surplus"} : attendu{" "}
                 {d.expectedQty}, scanné {d.scannedQty}
               </li>
