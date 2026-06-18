@@ -384,6 +384,7 @@ export interface ProductRow {
   ean: string;
   name: string;
   has_dlc: boolean;
+  category: string | null;
   created_at: string;
 }
 
@@ -455,6 +456,42 @@ export interface ShiftClosureRow {
   completion_pct: number;
   missing_labels: string[];
   note: string | null;
+}
+
+export interface RegiaireStationSettingsRow {
+  id: string;
+  organization_id: string;
+  lat: number;
+  lon: number;
+  city: string | null;
+  school_zone: string;
+  order_days: number[];
+  updated_at: string;
+}
+
+export interface SalesHistoryRow {
+  id: string;
+  organization_id: string;
+  product_id: string;
+  sale_date: string;
+  quantity: number;
+}
+
+export interface TrafficSignalRow {
+  id: string;
+  organization_id: string;
+  signal_date: string;
+  footfall_index: number;
+}
+
+export interface VerdictRunRow {
+  id: string;
+  organization_id: string;
+  run_date: string;
+  signals: Json;
+  recommendation: Json;
+  created_by: string;
+  created_at: string;
 }
 
 /** Schéma des tables public pour le client Supabase (typage générique) */
@@ -548,7 +585,7 @@ export interface Database {
           has_dlc?: boolean;
           created_at?: string;
         },
-        Partial<Pick<ProductRow, "name" | "has_dlc">>
+        Partial<Pick<ProductRow, "name" | "has_dlc" | "category">>
       >;
       deliveries: TableDef<
         DeliveryRow,
@@ -638,6 +675,53 @@ export interface Database {
           note?: string | null;
         },
         Partial<Pick<ShiftClosureRow, "note">>
+      >;
+      regiaire_station_settings: TableDef<
+        RegiaireStationSettingsRow,
+        Pick<
+          RegiaireStationSettingsRow,
+          "organization_id" | "lat" | "lon" | "school_zone"
+        > & {
+          id?: string;
+          city?: string | null;
+          order_days?: number[];
+          updated_at?: string;
+        },
+        Partial<
+          Pick<
+            RegiaireStationSettingsRow,
+            "lat" | "lon" | "city" | "school_zone" | "order_days" | "updated_at"
+          >
+        >
+      >;
+      sales_history: TableDef<
+        SalesHistoryRow,
+        Pick<
+          SalesHistoryRow,
+          "organization_id" | "product_id" | "sale_date" | "quantity"
+        > & { id?: string },
+        Partial<Pick<SalesHistoryRow, "quantity">>
+      >;
+      traffic_signals: TableDef<
+        TrafficSignalRow,
+        Pick<
+          TrafficSignalRow,
+          "organization_id" | "signal_date" | "footfall_index"
+        > & { id?: string },
+        Partial<Pick<TrafficSignalRow, "footfall_index">>
+      >;
+      verdict_runs: TableDef<
+        VerdictRunRow,
+        Pick<
+          VerdictRunRow,
+          "organization_id" | "run_date" | "created_by"
+        > & {
+          id?: string;
+          signals?: Json;
+          recommendation?: Json;
+          created_at?: string;
+        },
+        Partial<Pick<VerdictRunRow, "signals" | "recommendation">>
       >;
     };
     Views: Record<string, never>;
