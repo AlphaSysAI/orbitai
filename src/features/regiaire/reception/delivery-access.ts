@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { BLExtractedLine } from "@/features/regiaire/reception/schemas";
 import type { RegiaireContext } from "@/lib/regiaire/require-context";
 import type { DeliveryStatus } from "@/features/regiaire/reception/schemas";
 
@@ -19,6 +20,14 @@ export type SupplierRow = {
   organization_id: string;
   name: string;
   email: string | null;
+};
+
+export type ProductRow = {
+  id: string;
+  organization_id: string;
+  ean: string;
+  name: string;
+  has_dlc: boolean;
 };
 
 export async function getDeliveryInOrg(
@@ -80,10 +89,40 @@ export async function upsertProductForLine(
   return (data as { id: string }).id;
 }
 
+export async function getProductByEanInOrg(
+  ctx: RegiaireContext,
+  ean: string
+): Promise<ProductRow | null> {
+  const { data, error } = await ctx.db
+    .from("products")
+    .select("id, organization_id, ean, name, has_dlc")
+    .eq("organization_id", ctx.organizationId)
+    .eq("ean", ean)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as ProductRow;
+}
+
+export async function getProductByIdInOrg(
+  ctx: RegiaireContext,
+  productId: string
+): Promise<ProductRow | null> {
+  const { data, error } = await ctx.db
+    .from("products")
+    .select("id, organization_id, ean, name, has_dlc")
+    .eq("organization_id", ctx.organizationId)
+    .eq("id", productId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data as ProductRow;
+}
+
 const DELIVERY_LINE_SELECT =
   "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc";
 
-/** Ligne BL appartenant à une livraison de l'org courante (ownership via join deliveries). */
+/** Ligne BL appartenant à une livraison de l'org courante. */
 export async function getDeliveryLineInOrg(
   ctx: RegiaireContext,
   deliveryId: string,
@@ -98,6 +137,9 @@ export async function getDeliveryLineInOrg(
   scanned_qty: number;
   dlc: string | null;
 } | null> {
+  const delivery = await getDeliveryInOrg(ctx, deliveryId);
+  if (!delivery) return null;
+
   const { data, error } = await ctx.db
     .from("delivery_lines")
     .select(DELIVERY_LINE_SELECT)
@@ -106,9 +148,6 @@ export async function getDeliveryLineInOrg(
     .maybeSingle();
 
   if (error || !data) return null;
-
-  const delivery = await getDeliveryInOrg(ctx, deliveryId);
-  if (!delivery) return null;
 
   return data as {
     id: string;
@@ -122,58 +161,33 @@ export async function getDeliveryLineInOrg(
   };
 }
 
-/**
- * EAN absent du BL : produit créé au scan (pas à l'analyse), ligne ad hoc expected_qty=0.
- * Le premier incrément utilise allow_extra=true (RPC : 0 < 0 est faux).
- */
-export async function createAdHocScanLine(
-  ctx: RegiaireContext,
-  deliveryId: string,
-  ean: string,
-  dlc?: string
-): Promise<{
-  id: string;
-  delivery_id: string;
-  product_id: string | null;
-  raw_name: string;
-  ean: string;
-  expected_qty: number;
-  scanned_qty: number;
-  dlc: string | null;
-}> {
-  const productId = await upsertProductForLine(
-    ctx,
-    ean,
-    `Produit ${ean}`,
-    Boolean(dlc)
-  );
+/** Fusionne les lignes extraites du BL par EAN (somme des quantités attendues). */
+export function aggregateBlLinesByEan(
+  lines: BLExtractedLine[]
+): Array<{ ean: string; name: string; expected_qty: number; dlc: string | null }> {
+  const byEan = new Map<
+    string,
+    { name: string; expected_qty: number; dlc: string | null }
+  >();
 
-  const { data, error } = await ctx.db
-    .from("delivery_lines")
-    .insert({
-      delivery_id: deliveryId,
-      product_id: productId,
-      raw_name: `Produit ${ean}`,
-      ean,
-      expected_qty: 0,
-      scanned_qty: 0,
-      dlc: dlc ?? null,
-    })
-    .select(DELIVERY_LINE_SELECT)
-    .single();
-
-  if (error || !data) {
-    throw new Error(error?.message ?? "Impossible de créer la ligne de scan");
+  for (const line of lines) {
+    const existing = byEan.get(line.ean);
+    if (existing) {
+      existing.expected_qty += line.expected_qty;
+      if (line.dlc && !existing.dlc) {
+        existing.dlc = line.dlc;
+      }
+    } else {
+      byEan.set(line.ean, {
+        name: line.name,
+        expected_qty: line.expected_qty,
+        dlc: line.dlc,
+      });
+    }
   }
 
-  return data as {
-    id: string;
-    delivery_id: string;
-    product_id: string | null;
-    raw_name: string;
-    ean: string;
-    expected_qty: number;
-    scanned_qty: number;
-    dlc: string | null;
-  };
+  return Array.from(byEan.entries()).map(([ean, value]) => ({
+    ean,
+    ...value,
+  }));
 }

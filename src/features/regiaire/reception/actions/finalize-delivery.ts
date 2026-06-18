@@ -2,9 +2,10 @@
 
 import {
   DeliveryLineRowSchema,
-  FinalizeDeliveryResultSchema,
+  FinalizeDeliveryReportSchema,
   type DiscrepancyLine,
-  type FinalizeDeliveryResult,
+  type FinalizeDeliveryReport,
+  type UnexpectedLine,
 } from "@/features/regiaire/reception/schemas";
 import {
   getDeliveryInOrg,
@@ -16,7 +17,7 @@ import {
 } from "@/lib/regiaire/require-context";
 
 export type FinalizeDeliveryActionResult =
-  | { success: true; data: FinalizeDeliveryResult }
+  | { success: true; data: FinalizeDeliveryReport }
   | { success: false; error: string; code?: string };
 
 type FinalizeRpcRow = {
@@ -24,17 +25,28 @@ type FinalizeRpcRow = {
   batches_created: number;
 };
 
-function buildDiscrepancies(
-  lines: Array<{
-    ean: string;
-    raw_name: string;
-    expected_qty: number;
-    scanned_qty: number;
-  }>
-): DiscrepancyLine[] {
+function buildFinalizeReport(lines: Array<{
+  ean: string;
+  raw_name: string;
+  expected_qty: number;
+  scanned_qty: number;
+}>): {
+  discrepancies: DiscrepancyLine[];
+  unexpected: UnexpectedLine[];
+} {
   const discrepancies: DiscrepancyLine[] = [];
+  const unexpected: UnexpectedLine[] = [];
 
   for (const line of lines) {
+    if (line.expected_qty === 0 && line.scanned_qty > 0) {
+      unexpected.push({
+        ean: line.ean,
+        rawName: line.raw_name,
+        scannedQty: line.scanned_qty,
+      });
+      continue;
+    }
+
     if (line.scanned_qty < line.expected_qty) {
       discrepancies.push({
         ean: line.ean,
@@ -54,7 +66,7 @@ function buildDiscrepancies(
     }
   }
 
-  return discrepancies;
+  return { discrepancies, unexpected };
 }
 
 function buildSupplierEmailDraft(params: {
@@ -62,6 +74,7 @@ function buildSupplierEmailDraft(params: {
   supplierEmail: string | null;
   deliveryId: string;
   discrepancies: DiscrepancyLine[];
+  unexpected: UnexpectedLine[];
 }): { to: string | null; subject: string; body: string } {
   const missing = params.discrepancies.filter((d) => d.kind === "missing");
   const surplus = params.discrepancies.filter((d) => d.kind === "surplus");
@@ -84,11 +97,19 @@ function buildSupplierEmailDraft(params: {
   }
 
   if (surplus.length > 0) {
-    lines.push(`--- Surplus ---`);
+    lines.push(`--- Surplus (BL) ---`);
     for (const row of surplus) {
       lines.push(
         `• ${row.rawName} (EAN ${row.ean}) : attendu ${row.expectedQty}, reçu ${row.scannedQty}`
       );
+    }
+    lines.push(``);
+  }
+
+  if (params.unexpected.length > 0) {
+    lines.push(`--- Produits non prévus au BL ---`);
+    for (const row of params.unexpected) {
+      lines.push(`• ${row.rawName} (EAN ${row.ean}) : ${row.scannedQty} unité(s) reçue(s)`);
     }
     lines.push(``);
   }
@@ -126,8 +147,8 @@ async function loadDeliveryLines(
 }
 
 /**
- * Finalise une réception : transition + stock via RPC atomique ;
- * écarts et brouillon email calculés en TS sur le résultat.
+ * Finalise une réception : stock toujours (RPC), rapport écarts en TS.
+ * États terminaux : completed | discrepancy — second appel → already_finalized.
  */
 export async function finalizeDelivery(
   deliveryId: string
@@ -140,10 +161,10 @@ export async function finalizeDelivery(
       return { success: false, error: "Livraison introuvable" };
     }
 
-    if (delivery.status !== "scanning" && delivery.status !== "discrepancy") {
+    if (delivery.status !== "scanning") {
       return {
         success: false,
-        error: "Cette livraison ne peut pas être finalisée dans son état actuel",
+        error: "Cette livraison a déjà été finalisée ou n'est pas en scan",
       };
     }
 
@@ -180,38 +201,35 @@ export async function finalizeDelivery(
       };
     }
 
-    if (rpcResult.outcome === "discrepancy") {
-      const lines = await loadDeliveryLines(ctx, deliveryId);
-      const discrepancies = buildDiscrepancies(lines);
+    const lines = await loadDeliveryLines(ctx, deliveryId);
+    const { discrepancies, unexpected } = buildFinalizeReport(lines);
+
+    const needsEmail =
+      rpcResult.outcome === "discrepancy" &&
+      (discrepancies.length > 0 || unexpected.length > 0);
+
+    let draftEmail: { to: string | null; subject: string; body: string } | undefined;
+    if (needsEmail) {
       const supplier = await getSupplierInOrg(ctx, delivery.supplier_id);
-      const draftEmail = buildSupplierEmailDraft({
+      draftEmail = buildSupplierEmailDraft({
         supplierName: supplier?.name ?? "Fournisseur",
         supplierEmail: supplier?.email ?? null,
         deliveryId,
         discrepancies,
+        unexpected,
       });
-
-      const result = FinalizeDeliveryResultSchema.parse({
-        status: "discrepancy",
-        deliveryId,
-        discrepancies,
-        draftEmail,
-      });
-
-      return { success: true, data: result };
     }
 
-    if (rpcResult.outcome === "completed") {
-      const result = FinalizeDeliveryResultSchema.parse({
-        status: "completed",
-        deliveryId,
-        batchesCreated: rpcResult.batches_created,
-      });
+    const report = FinalizeDeliveryReportSchema.parse({
+      status: rpcResult.outcome,
+      deliveryId,
+      batchesCreated: rpcResult.batches_created,
+      discrepancies,
+      unexpected,
+      draftEmail,
+    });
 
-      return { success: true, data: result };
-    }
-
-    return { success: false, error: `Résultat RPC inconnu : ${rpcResult.outcome}` };
+    return { success: true, data: report };
   } catch (error) {
     if (error instanceof RegiaireContextError) {
       return { success: false, error: error.message, code: error.code };

@@ -1432,6 +1432,8 @@ CREATE TABLE IF NOT EXISTS delivery_lines (
 CREATE INDEX IF NOT EXISTS idx_delivery_lines_delivery_id ON delivery_lines(delivery_id);
 CREATE INDEX IF NOT EXISTS idx_delivery_lines_ean ON delivery_lines(ean);
 CREATE INDEX IF NOT EXISTS idx_delivery_lines_product_id ON delivery_lines(product_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_delivery_lines_delivery_ean_unique
+  ON delivery_lines(delivery_id, ean);
 
 CREATE TABLE IF NOT EXISTS stock_batches (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1701,7 +1703,7 @@ BEGIN
     RAISE EXCEPTION 'delivery_not_found';
   END IF;
 
-  IF v_status NOT IN ('scanning', 'discrepancy') THEN
+  IF v_status <> 'scanning' THEN
     outcome := 'already_finalized';
     batches_created := 0;
     RETURN NEXT;
@@ -1719,24 +1721,14 @@ BEGIN
     FROM delivery_lines dl
     WHERE dl.delivery_id = p_delivery_id
   LOOP
-    IF v_line.expected_qty IS DISTINCT FROM v_line.scanned_qty
-       OR (v_line.scanned_qty > 0 AND v_line.product_id IS NULL)
-    THEN
+    IF v_line.scanned_qty > 0 AND v_line.product_id IS NULL THEN
       v_has_discrepancy := true;
-      EXIT;
+    ELSIF v_line.expected_qty = 0 AND v_line.scanned_qty > 0 THEN
+      v_has_discrepancy := true;
+    ELSIF v_line.expected_qty > 0 AND v_line.scanned_qty IS DISTINCT FROM v_line.expected_qty THEN
+      v_has_discrepancy := true;
     END IF;
   END LOOP;
-
-  IF v_has_discrepancy THEN
-    UPDATE deliveries
-    SET status = 'discrepancy'
-    WHERE id = p_delivery_id;
-
-    outcome := 'discrepancy';
-    batches_created := 0;
-    RETURN NEXT;
-    RETURN;
-  END IF;
 
   INSERT INTO stock_batches (organization_id, product_id, quantity, dlc, delivery_id)
   SELECT v_org_id, dl.product_id, dl.scanned_qty, dl.dlc, p_delivery_id
@@ -1751,19 +1743,29 @@ BEGIN
     RAISE EXCEPTION 'no_scanned_stock';
   END IF;
 
-  UPDATE deliveries
-  SET status = 'completed',
-      completed_at = NOW()
-  WHERE id = p_delivery_id;
+  IF v_has_discrepancy THEN
+    UPDATE deliveries
+    SET status = 'discrepancy',
+        completed_at = NOW()
+    WHERE id = p_delivery_id;
 
-  outcome := 'completed';
+    outcome := 'discrepancy';
+  ELSE
+    UPDATE deliveries
+    SET status = 'completed',
+        completed_at = NOW()
+    WHERE id = p_delivery_id;
+
+    outcome := 'completed';
+  END IF;
+
   batches_created := v_batches;
   RETURN NEXT;
 END;
 $$;
 
 COMMENT ON FUNCTION regiaire_finalize_delivery(uuid) IS
-  'Finalise une réception en une transaction : écart → discrepancy, conforme → stock_batches + completed.';
+  'Finalise depuis scanning : stock_batches toujours, completed ou discrepancy (terminal).';
 
 -- ============================================
 -- FIN DU SCRIPT D'INITIALISATION

@@ -7,7 +7,6 @@ import {
   type RecordScanResult,
 } from "@/features/regiaire/reception/schemas";
 import {
-  createAdHocScanLine,
   getDeliveryInOrg,
   getDeliveryLineInOrg,
 } from "@/features/regiaire/reception/delivery-access";
@@ -22,6 +21,7 @@ export type RecordScanActionResult =
 
 /**
  * Enregistre un scan EAN sur une livraison en cours (incrément atomique via RPC).
+ * EAN absent du BL → { status: "not_in_bl" } sans création de ligne.
  */
 export async function recordScan(
   deliveryId: string,
@@ -50,13 +50,17 @@ export async function recordScan(
       };
     }
 
-    let line = await getDeliveryLineInOrg(ctx, parsed.deliveryId, parsed.ean);
-    let allowExtra = parsed.extra;
+    const line = await getDeliveryLineInOrg(ctx, parsed.deliveryId, parsed.ean);
 
     if (!line) {
-      line = await createAdHocScanLine(ctx, parsed.deliveryId, parsed.ean, parsed.dlc);
-      allowExtra = true;
+      const notInBl = RecordScanResultSchema.parse({
+        status: "not_in_bl",
+        ean: parsed.ean,
+      });
+      return { success: true, data: notInBl };
     }
+
+    const allowExtra = parsed.extra || line.expected_qty === 0;
 
     const { data: updatedRows, error: rpcError } = await ctx.db.rpc(
       "regiaire_increment_scan",
@@ -82,6 +86,7 @@ export async function recordScan(
     const updated = DeliveryLineRowSchema.parse(rows[0]);
 
     const result = RecordScanResultSchema.parse({
+      status: "scanned",
       deliveryId: parsed.deliveryId,
       lineId: updated.id,
       ean: updated.ean,

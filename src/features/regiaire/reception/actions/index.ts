@@ -4,3 +4,9 @@ export {
   finalizeDelivery,
   type FinalizeDeliveryActionResult,
 } from "./finalize-delivery";
+export {
+  lookupProductByEan,
+  addUnexpectedLine,
+  type LookupProductByEanResult,
+  type AddUnexpectedLineResult,
+} from "./unexpected-line";
