@@ -21,10 +21,11 @@ export type ConfirmReviewActionResult =
  * Refuse si une ligne a encore needs_review ou nom/qté invalides.
  */
 export async function confirmReview(
+  aireId: string,
   deliveryId: string
 ): Promise<ConfirmReviewActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
 
     const delivery = await getDeliveryInOrg(ctx, deliveryId);
     if (!delivery) {

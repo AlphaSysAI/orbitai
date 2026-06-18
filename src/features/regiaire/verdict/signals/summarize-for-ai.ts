@@ -65,25 +65,7 @@ export function buildSignalsSnapshot(params: {
   });
 }
 
-const WEATHER_CODE_LABELS: Record<number, string> = {
-  0: "ciel dégagé",
-  1: "principalement dégagé",
-  2: "partiellement nuageux",
-  3: "couvert",
-  45: "brouillard",
-  48: "brouillard givrant",
-  51: "bruine légère",
-  61: "pluie modérée",
-  63: "pluie",
-  80: "averses",
-  95: "orages",
-};
-
-function weatherDayLabel(code: number): string {
-  return WEATHER_CODE_LABELS[code] ?? `code ${code}`;
-}
-
-/** Résumé compact pour le prompt IA (pas de dump brut). */
+import { weatherDayLabel } from "@/features/regiaire/verdict/lib/weather-labels";
 export function buildVerdictPromptContext(snapshot: VerdictSignalsSnapshot): string {
   const lines: string[] = [
     `Date de service : ${snapshot.runDate}`,

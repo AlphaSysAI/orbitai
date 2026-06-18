@@ -26,10 +26,11 @@ export type LookupProductByEanResult =
  * Recherche un produit catalogue par EAN dans l'organisation courante.
  */
 export async function lookupProductByEan(
+  aireId: string,
   ean: string
 ): Promise<LookupProductByEanResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const trimmed = ean.trim();
     if (!trimmed) {
       return { success: false, error: "EAN requis" };
@@ -77,12 +78,13 @@ export type AddUnexpectedLineResult =
  * scanned_qty initial = 1. Produit lié via productId existant ou newName (upsert).
  */
 export async function addUnexpectedLine(
+  aireId: string,
   deliveryId: string,
   ean: string,
   options: { productId?: string; newName?: string }
 ): Promise<AddUnexpectedLineResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
 
     const parsed = AddUnexpectedLineInputSchema.parse({
       deliveryId,

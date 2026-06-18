@@ -24,9 +24,11 @@ export type GetCurrentServiceActionResult =
   | { success: true; data: ReturnType<typeof serviceContext> }
   | { success: false; error: string; code?: string };
 
-export async function getCurrentServiceContext(): Promise<GetCurrentServiceActionResult> {
+export async function getCurrentServiceContext(
+  aireId: string
+): Promise<GetCurrentServiceActionResult> {
   try {
-    await requireRegiaireContext();
+    await requireRegiaireContext(aireId);
     return { success: true, data: serviceContext() };
   } catch (error) {
     if (error instanceof RegiaireContextError) {
@@ -37,11 +39,12 @@ export async function getCurrentServiceContext(): Promise<GetCurrentServiceActio
 }
 
 export async function listShiftTasks(
+  aireId: string,
   shift?: ShiftPeriod,
   service_date?: string
 ): Promise<ListShiftTasksActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const svc =
       shift && service_date
         ? { shift: ShiftPeriodSchema.parse(shift), service_date }

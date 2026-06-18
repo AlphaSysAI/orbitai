@@ -9,10 +9,13 @@ import {
 } from "lucide-react";
 import { PILLARS, type PillarId } from "../types";
 import {
-  STATION_NAV_LINKS,
+  buildStationNavLinks,
+  extractAireIdFromPath,
   filterNavLinksByModules,
 } from "@/lib/organizations/navigation";
 import { isModuleEnabled, type EnabledOrgModule } from "@/lib/organizations/types";
+import { resolveSaasBrandFromModules } from "@/lib/organizations/saas-branding";
+import { SaasBrandTitle } from "@/components/branding/SaasBrandTitle";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useOrgRole } from "@/features/organization/hooks/useOrgRole";
 import * as Icons from "lucide-react";
@@ -56,12 +59,17 @@ export function ContextualNavigation({
   enabledModules = [],
 }: ContextualNavigationProps) {
   const pathname = usePathname();
+  const isStationRoute = pathname.startsWith("/station");
+  const aireId = extractAireIdFromPath(pathname);
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
   const { isAdmin } = useIsAdmin();
   const { isOrgAdmin } = useOrgRole();
   const activePillarConfig = PILLARS.find((p) => p.id === activePillar);
-  const stationLinks = filterNavLinksByModules(STATION_NAV_LINKS, enabledModules);
-  const hasRegiaire = stationLinks.length > 0;
+  const stationLinks = aireId
+    ? filterNavLinksByModules(buildStationNavLinks(aireId), enabledModules)
+    : [];
+  const hasRegiaire = isModuleEnabled(enabledModules, "regiaire_core");
+  const saasBrand = resolveSaasBrandFromModules(enabledModules);
 
   const visiblePillars = PILLARS.filter((pillar) => {
     if (!pillar.enabled) return false;
@@ -111,12 +119,16 @@ export function ContextualNavigation({
 
   const pillarNav = getPillarNavigation();
 
-  // Déterminer si on est sur le dashboard global (pas de navigation contextuelle)
-  const isGlobalDashboard = activeTab === "dashboard" && 
-    activePillar !== "copilot-transmission" && 
-    activePillar !== "decision-simulation" &&
-    activePillar !== "detection-automation" &&
-    activePillar !== "client-synthesis";
+  // Navigation contextuelle du pilier actif — masquée sur dashboard global et réglages
+  const showPillarNavigation =
+    activeTab !== "settings" &&
+    !(
+      activeTab === "dashboard" &&
+      activePillar !== "copilot-transmission" &&
+      activePillar !== "decision-simulation" &&
+      activePillar !== "detection-automation" &&
+      activePillar !== "client-synthesis"
+    );
 
   return (
     <aside className="w-72 border-r border-slate-800 bg-[#0f172a] flex flex-col z-30 shadow-2xl text-white overflow-hidden">
@@ -125,8 +137,8 @@ export function ContextualNavigation({
         <div className="bg-purple-600 p-2 rounded-lg">
           <Orbit size={20} className="text-white" />
         </div>
-        <h2 className="text-xl font-bold tracking-tighter text-white uppercase italic">
-          OrbitAI
+        <h2 className="leading-none">
+          <SaasBrandTitle brand={saasBrand} size="md" />
         </h2>
       </div>
 
@@ -142,7 +154,11 @@ export function ContextualNavigation({
             }
           }}
           className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all mb-3 ${
-            activeTab === "dashboard" && activePillar !== "copilot-transmission" && activePillar !== "decision-simulation" && activePillar !== "client-synthesis"
+            activeTab === "dashboard" &&
+            !isStationRoute &&
+            activePillar !== "copilot-transmission" &&
+            activePillar !== "decision-simulation" &&
+            activePillar !== "client-synthesis"
               ? "bg-purple-600/20 border border-purple-500/40 text-purple-400"
               : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
           }`}
@@ -226,14 +242,28 @@ export function ContextualNavigation({
       {/* RégiAire — liens filtrés par module org */}
       {hasRegiaire && (
         <div className="border-b border-slate-800 bg-slate-900/30 p-3 flex-shrink-0">
-          <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 px-2 flex items-center gap-2">
+          <p className="text-[8px] font-black uppercase tracking-[0.3em] mb-3 px-2 flex items-center gap-2 text-slate-500">
             <Fuel size={10} className="text-amber-500" />
-            RégiAire
+            <SaasBrandTitle brand={saasBrand} size="sm" />
           </p>
           <div className="flex flex-col gap-2">
+            <Link
+              href="/station"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname === "/station" || pathname === "/station/aires"
+                  ? "bg-amber-600/20 border border-amber-500/40 text-amber-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <Fuel size={18} />
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                Mes aires
+              </span>
+            </Link>
             {stationLinks.map((link) => {
               const Icon = link.icon;
-              const isActive = pathname === link.href;
+              const isActive =
+                pathname === link.href || pathname.startsWith(`${link.href}/`);
               return (
                 <Link
                   key={link.href}
@@ -254,7 +284,7 @@ export function ContextualNavigation({
       )}
 
       {/* Navigation contextuelle du pilier actif - Affichée juste sous les piliers (masquée sur dashboard global) */}
-      {pillarNav.length > 0 && !isGlobalDashboard && (
+      {showPillarNavigation && pillarNav.length > 0 && (
         <div className="border-b border-slate-800 bg-slate-900/20 p-3 flex-shrink-0">
           <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2 px-2">
             Navigation

@@ -24,12 +24,13 @@ export type RecordScanActionResult =
  * EAN absent du BL → { status: "not_in_bl" } sans création de ligne.
  */
 export async function recordScan(
+  aireId: string,
   deliveryId: string,
   ean: string,
   options?: { dlc?: string; extra?: boolean }
 ): Promise<RecordScanActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
 
     const parsed = RecordScanInputSchema.parse({
       deliveryId,

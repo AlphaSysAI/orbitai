@@ -29,12 +29,13 @@ export type CloseShiftActionResult =
   | { success: false; error: string; code?: string };
 
 export async function closeShift(
+  aireId: string,
   shift: ShiftPeriod,
   service_date: string,
   note?: string | null
 ): Promise<CloseShiftActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const parsed = CloseInputSchema.parse({ shift, service_date, note });
 
     const existing = await getShiftClosure(

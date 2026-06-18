@@ -3,11 +3,12 @@
 import {
   DeliveryLineRowSchema,
   FinalizeDeliveryReportSchema,
-  formatEanForReport,
-  type DiscrepancyLine,
   type FinalizeDeliveryReport,
-  type UnexpectedLine,
 } from "@/features/regiaire/reception/schemas";
+import {
+  buildDeliveryReportFromLines,
+  buildSupplierEmailDraft,
+} from "@/features/regiaire/reception/delivery-report";
 import {
   getDeliveryInOrg,
   getSupplierInOrg,
@@ -25,110 +26,6 @@ type FinalizeRpcRow = {
   outcome: string;
   batches_created: number;
 };
-
-function buildFinalizeReport(lines: Array<{
-  ean: string | null;
-  raw_name: string;
-  expected_qty: number;
-  scanned_qty: number;
-}>): {
-  discrepancies: DiscrepancyLine[];
-  unexpected: UnexpectedLine[];
-} {
-  const discrepancies: DiscrepancyLine[] = [];
-  const unexpected: UnexpectedLine[] = [];
-
-  for (const line of lines) {
-    if (line.expected_qty === 0 && line.scanned_qty > 0) {
-      if (!line.ean) continue;
-      unexpected.push({
-        ean: line.ean,
-        rawName: line.raw_name,
-        scannedQty: line.scanned_qty,
-      });
-      continue;
-    }
-
-    if (line.scanned_qty < line.expected_qty) {
-      discrepancies.push({
-        ean: line.ean,
-        rawName: line.raw_name,
-        expectedQty: line.expected_qty,
-        scannedQty: line.scanned_qty,
-        kind: "missing",
-      });
-    } else if (line.scanned_qty > line.expected_qty) {
-      discrepancies.push({
-        ean: line.ean,
-        rawName: line.raw_name,
-        expectedQty: line.expected_qty,
-        scannedQty: line.scanned_qty,
-        kind: "surplus",
-      });
-    }
-  }
-
-  return { discrepancies, unexpected };
-}
-
-function buildSupplierEmailDraft(params: {
-  supplierName: string;
-  supplierEmail: string | null;
-  deliveryId: string;
-  discrepancies: DiscrepancyLine[];
-  unexpected: UnexpectedLine[];
-}): { to: string | null; subject: string; body: string } {
-  const missing = params.discrepancies.filter((d) => d.kind === "missing");
-  const surplus = params.discrepancies.filter((d) => d.kind === "surplus");
-
-  const lines: string[] = [
-    `Bonjour,`,
-    ``,
-    `Suite à la réception du bon de livraison (réf. ${params.deliveryId}), nous constatons les écarts suivants :`,
-    ``,
-  ];
-
-  if (missing.length > 0) {
-    lines.push(`--- Manquants ---`);
-    for (const row of missing) {
-      lines.push(
-        `• ${row.rawName} (EAN ${formatEanForReport(row.ean)}) : attendu ${row.expectedQty}, reçu ${row.scannedQty}`
-      );
-    }
-    lines.push(``);
-  }
-
-  if (surplus.length > 0) {
-    lines.push(`--- Surplus (BL) ---`);
-    for (const row of surplus) {
-      lines.push(
-        `• ${row.rawName} (EAN ${formatEanForReport(row.ean)}) : attendu ${row.expectedQty}, reçu ${row.scannedQty}`
-      );
-    }
-    lines.push(``);
-  }
-
-  if (params.unexpected.length > 0) {
-    lines.push(`--- Produits non prévus au BL ---`);
-    for (const row of params.unexpected) {
-      lines.push(`• ${row.rawName} (EAN ${row.ean}) : ${row.scannedQty} unité(s) reçue(s)`);
-    }
-    lines.push(``);
-  }
-
-  lines.push(
-    `Merci de nous confirmer les actions correctives.`,
-    ``,
-    `Cordialement,`,
-    `Réception ${params.supplierName}`
-  );
-
-  return {
-    to: params.supplierEmail,
-    subject: `Écart de livraison — BL ${params.deliveryId.slice(0, 8)}`,
-    body: lines.join("\n"),
-  };
-}
 
 async function loadDeliveryLines(
   ctx: Awaited<ReturnType<typeof requireRegiaireContext>>,
@@ -153,10 +50,11 @@ async function loadDeliveryLines(
  * États terminaux : completed | discrepancy — second appel → already_finalized.
  */
 export async function finalizeDelivery(
+  aireId: string,
   deliveryId: string
 ): Promise<FinalizeDeliveryActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
 
     const delivery = await getDeliveryInOrg(ctx, deliveryId);
     if (!delivery) {
@@ -204,7 +102,7 @@ export async function finalizeDelivery(
     }
 
     const lines = await loadDeliveryLines(ctx, deliveryId);
-    const { discrepancies, unexpected } = buildFinalizeReport(lines);
+    const { discrepancies, unexpected } = buildDeliveryReportFromLines(lines);
 
     const needsEmail =
       rpcResult.outcome === "discrepancy" &&

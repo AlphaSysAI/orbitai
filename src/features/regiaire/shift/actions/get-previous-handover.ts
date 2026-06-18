@@ -26,9 +26,11 @@ export type GetPreviousShiftHandoverResult =
   | { success: false; error: string; code?: string };
 
 /** Note de passation du quart précédent — accessible aux membres. */
-export async function getPreviousShiftHandover(): Promise<GetPreviousShiftHandoverResult> {
+export async function getPreviousShiftHandover(
+  aireId: string
+): Promise<GetPreviousShiftHandoverResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const prev = getPreviousServiceContext();
     const closure = await getShiftClosure(ctx, prev.shift, prev.service_date);
 

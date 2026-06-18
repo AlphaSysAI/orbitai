@@ -81,10 +81,11 @@ async function findCachedVerdict(
  * Génère ou renvoie le Verdict IA du jour (cache verdict_runs par org + run_date).
  */
 export async function generateVerdict(
+  aireId: string,
   targetDate?: string
 ): Promise<GenerateVerdictActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const runDate = targetDate
       ? IsoDateSchema.parse(targetDate)
       : todayParisIso();

@@ -21,13 +21,14 @@ export type ToggleTaskCheckActionResult =
   | { success: false; error: string; code?: string };
 
 export async function toggleTaskCheck(
+  aireId: string,
   shift: ShiftPeriod,
   service_date: string,
   taskDefId: string,
   checked: boolean
 ): Promise<ToggleTaskCheckActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const parsed = ToggleInputSchema.parse({
       shift,
       service_date,

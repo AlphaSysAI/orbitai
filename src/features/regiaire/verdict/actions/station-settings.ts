@@ -23,9 +23,11 @@ export type UpsertStationSettingsActionResult =
   | { success: true; data: StationSettings }
   | { success: false; error: string; code?: string };
 
-export async function getStationSettingsAction(): Promise<GetStationSettingsActionResult> {
+export async function getStationSettingsAction(
+  aireId: string
+): Promise<GetStationSettingsActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const settings = await getStationSettings(ctx);
     return { success: true, data: settings };
   } catch (error) {
@@ -36,15 +38,18 @@ export async function getStationSettingsAction(): Promise<GetStationSettingsActi
   }
 }
 
-export async function upsertStationSettings(input: {
+export async function upsertStationSettings(
+  aireId: string,
+  input: {
   lat: number;
   lon: number;
   city?: string;
   schoolZone: string;
   orderDays: number[];
-}): Promise<UpsertStationSettingsActionResult> {
+}
+): Promise<UpsertStationSettingsActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     await requireOrgAdminContext();
 
     const schoolZone = SchoolZoneSchema.parse(input.schoolZone);

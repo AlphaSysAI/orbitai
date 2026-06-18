@@ -58,11 +58,12 @@ async function assertLineInScanningDelivery(
  * 0 ligne touchée = rien à annuler.
  */
 export async function decrementScan(
+  aireId: string,
   deliveryId: string,
   lineId: string
 ): Promise<DecrementScanActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const check = await assertLineInScanningDelivery(ctx, deliveryId, lineId);
     if (!check.ok) {
       return { success: false, error: check.error };
@@ -100,12 +101,13 @@ export async function decrementScan(
  * Pose une quantité scannée précise (>= 0). Dépassement de l'attendu autorisé (surplus).
  */
 export async function setLineScannedQty(
+  aireId: string,
   deliveryId: string,
   lineId: string,
   qty: number
 ): Promise<SetLineScannedQtyActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const parsed = SetLineScannedQtyInputSchema.parse({ lineId, qty });
 
     const check = await assertLineInScanningDelivery(

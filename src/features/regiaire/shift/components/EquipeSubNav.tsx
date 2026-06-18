@@ -3,23 +3,33 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/station/equipe", label: "Passation", adminOnly: false },
-  {
-    href: "/station/equipe/historique",
-    labelAdmin: "Historique",
-    labelMember: "Passation préc.",
-    adminOnly: false,
-  },
-  { href: "/station/equipe/config", label: "Config", adminOnly: true },
-] as const;
+function buildLinks(aireId: string) {
+  const base = `/station/${aireId}/equipe`;
+  return [
+    { href: base, label: "Passation", adminOnly: false },
+    {
+      href: `${base}/historique`,
+      labelAdmin: "Historique",
+      labelMember: "Passation préc.",
+      adminOnly: false,
+    },
+    { href: `${base}/config`, label: "Config", adminOnly: true },
+  ] as const;
+}
 
-export function EquipeSubNav({ isAdmin }: { isAdmin?: boolean }) {
+export function EquipeSubNav({
+  aireId,
+  isAdmin,
+}: {
+  aireId: string;
+  isAdmin?: boolean;
+}) {
   const pathname = usePathname();
+  const links = buildLinks(aireId);
 
   return (
     <nav className="flex gap-2 overflow-x-auto pb-1">
-      {LINKS.filter((l) => !l.adminOnly || isAdmin).map((link) => {
+      {links.filter((l) => !l.adminOnly || isAdmin).map((link) => {
         const label =
           "labelAdmin" in link
             ? isAdmin
