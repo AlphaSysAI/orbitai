@@ -12,3 +12,9 @@ export {
 } from "./unexpected-line";
 export { confirmReview, type ConfirmReviewActionResult } from "./confirm-review";
 export { bindEanToLine, type BindEanToLineActionResult } from "./bind-ean-to-line";
+export {
+  decrementScan,
+  setLineScannedQty,
+  type DecrementScanActionResult,
+  type SetLineScannedQtyActionResult,
+} from "./scan-correction";

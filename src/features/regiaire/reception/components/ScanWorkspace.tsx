@@ -18,6 +18,7 @@ import {
   ScanHeader,
   ScanLineList,
   type ScanLineView,
+  type SessionScanType,
 } from "@/features/regiaire/reception/components/ScanLineList";
 import {
   ScanFeedbackToast,
@@ -26,9 +27,11 @@ import {
 import {
   addUnexpectedLine,
   bindEanToLine,
+  decrementScan,
   finalizeDelivery,
   lookupProductByEan,
   recordScan,
+  setLineScannedQty,
 } from "@/features/regiaire/reception/actions";
 import type {
   DeliveryStatus,
@@ -50,6 +53,11 @@ type ScanWorkspaceProps = {
 };
 
 type FeedbackState = { kind: ScanFeedbackKind; message: string } | null;
+
+type SessionScanEntry = {
+  lineId: string;
+  type: SessionScanType;
+};
 
 export function ScanWorkspace({
   deliveryId,
@@ -78,8 +86,15 @@ export function ScanWorkspace({
     productName: string;
   } | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
+  const [sessionScans, setSessionScans] = useState<SessionScanEntry[]>([]);
+  const [isUndoing, setIsUndoing] = useState(false);
+  const [adjustingLineId, setAdjustingLineId] = useState<string | null>(null);
 
   const terminal = isTerminalStatus(status);
+
+  const pushSessionScan = (entry: SessionScanEntry) => {
+    setSessionScans((prev) => [...prev, entry]);
+  };
 
   const loadLines = useCallback(async () => {
     const supabase = createClient();
@@ -221,7 +236,64 @@ export function ScanWorkspace({
 
     showFeedback("success", `Scanné ${data.scannedQty} / ${data.expectedQty}`);
     unknownCountsRef.current.delete(ean);
+    pushSessionScan({
+      lineId: data.lineId,
+      type: data.expectedQty === 0 ? "extra" : "match",
+    });
     setIsScanning(false);
+  };
+
+  const handleUndoLastScan = async () => {
+    if (terminal || isUndoing || sessionScans.length === 0) return;
+
+    const last = sessionScans[sessionScans.length - 1]!;
+    setIsUndoing(true);
+
+    const result = await decrementScan(deliveryId, last.lineId);
+    setIsUndoing(false);
+
+    if (!result.success) {
+      playScanError();
+      showFeedback("error", result.error);
+      return;
+    }
+
+    playScanSuccess();
+    setSessionScans((prev) => prev.slice(0, -1));
+    await loadLines();
+    showFeedback("success", "Dernier scan annulé");
+  };
+
+  const handleAdjustQty = async (lineId: string, qty: number) => {
+    if (terminal) return;
+    setAdjustingLineId(lineId);
+    const result = await setLineScannedQty(deliveryId, lineId, qty);
+    setAdjustingLineId(null);
+
+    if (!result.success) {
+      playScanError();
+      showFeedback("error", result.error);
+      return;
+    }
+
+    await loadLines();
+  };
+
+  const handleResetLine = async (lineId: string) => {
+    if (terminal) return;
+    setAdjustingLineId(lineId);
+    const result = await setLineScannedQty(deliveryId, lineId, 0);
+    setAdjustingLineId(null);
+
+    if (!result.success) {
+      playScanError();
+      showFeedback("error", result.error);
+      return;
+    }
+
+    playScanSuccess();
+    await loadLines();
+    showFeedback("success", "Référence réinitialisée");
   };
 
   const handleBindInstanceLine = async (lineId: string) => {
@@ -261,6 +333,7 @@ export function ScanWorkspace({
       "success",
       `EAN lié — scanné ${res.data.scannedQty} / ${res.data.expectedQty}`
     );
+    pushSessionScan({ lineId: res.data.lineId, type: "bind" });
   };
 
   const handleInstancePickUnexpected = () => {
@@ -300,6 +373,7 @@ export function ScanWorkspace({
     setKnownProduct(null);
     unknownCountsRef.current.delete(pendingUnknownEan);
     await loadLines();
+    pushSessionScan({ lineId: res.line.id, type: "extra" });
     showFeedback("success", "Ligne non-attendue ajoutée");
   };
 
@@ -320,6 +394,7 @@ export function ScanWorkspace({
     setPendingUnknownEan(null);
     unknownCountsRef.current.delete(pendingUnknownEan);
     await loadLines();
+    pushSessionScan({ lineId: res.line.id, type: "extra" });
     showFeedback("success", "Produit créé et ajouté");
   };
 
@@ -385,7 +460,12 @@ export function ScanWorkspace({
 
   return (
     <div className="min-h-screen pb-24">
-      <ScanHeader lines={lines} />
+      <ScanHeader
+        lines={lines}
+        canUndo={sessionScans.length > 0}
+        onUndo={() => void handleUndoLastScan()}
+        isUndoing={isUndoing}
+      />
 
       <div className="mx-auto max-w-lg space-y-4 px-4 py-4">
         <div className="flex items-center justify-between">
@@ -420,7 +500,13 @@ export function ScanWorkspace({
           <Loader2 className="animate-spin text-amber-400" />
         </div>
       ) : (
-        <ScanLineList lines={lines} />
+        <ScanLineList
+          lines={lines}
+          disabled={isScanning || isUndoing}
+          adjustingLineId={adjustingLineId}
+          onAdjustQty={(lineId, qty) => void handleAdjustQty(lineId, qty)}
+          onResetLine={(lineId) => void handleResetLine(lineId)}
+        />
       )}
 
       {!terminal && (
