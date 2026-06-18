@@ -46,7 +46,15 @@ export const RecordScanInputSchema = z.object({
   extra: z.boolean().optional().default(false),
 });
 
-export const RecordScanResultSchema = z.object({
+export const RecordScanNotInBlSchema = z.object({
+  status: z.literal("not_in_bl"),
+  ean: z.string(),
+});
+
+export type RecordScanNotInBl = z.infer<typeof RecordScanNotInBlSchema>;
+
+export const RecordScanSuccessSchema = z.object({
+  status: z.literal("scanned"),
   deliveryId: z.string().uuid(),
   lineId: z.string().uuid(),
   ean: z.string(),
@@ -54,6 +62,13 @@ export const RecordScanResultSchema = z.object({
   expectedQty: z.number().int().nonnegative(),
   dlc: z.string().nullable(),
 });
+
+export type RecordScanSuccess = z.infer<typeof RecordScanSuccessSchema>;
+
+export const RecordScanResultSchema = z.discriminatedUnion("status", [
+  RecordScanNotInBlSchema,
+  RecordScanSuccessSchema,
+]);
 
 export type RecordScanResult = z.infer<typeof RecordScanResultSchema>;
 
@@ -67,31 +82,39 @@ export const DiscrepancyLineSchema = z.object({
 
 export type DiscrepancyLine = z.infer<typeof DiscrepancyLineSchema>;
 
+export const UnexpectedLineSchema = z.object({
+  ean: z.string(),
+  rawName: z.string(),
+  scannedQty: z.number().int().positive(),
+});
+
+export type UnexpectedLine = z.infer<typeof UnexpectedLineSchema>;
+
 export const SupplierEmailDraftSchema = z.object({
   to: z.string().email().nullable(),
   subject: z.string(),
   body: z.string(),
 });
 
-export const FinalizeDeliveryCompletedSchema = z.object({
-  status: z.literal("completed"),
+export const FinalizeDeliveryReportSchema = z.object({
+  status: z.enum(["completed", "discrepancy"]),
   deliveryId: z.string().uuid(),
   batchesCreated: z.number().int().nonnegative(),
-});
-
-export const FinalizeDeliveryDiscrepancySchema = z.object({
-  status: z.literal("discrepancy"),
-  deliveryId: z.string().uuid(),
   discrepancies: z.array(DiscrepancyLineSchema),
-  draftEmail: SupplierEmailDraftSchema,
+  unexpected: z.array(UnexpectedLineSchema),
+  draftEmail: SupplierEmailDraftSchema.optional(),
 });
 
-export const FinalizeDeliveryResultSchema = z.discriminatedUnion("status", [
-  FinalizeDeliveryCompletedSchema,
-  FinalizeDeliveryDiscrepancySchema,
-]);
+export type FinalizeDeliveryReport = z.infer<typeof FinalizeDeliveryReportSchema>;
 
-export type FinalizeDeliveryResult = z.infer<typeof FinalizeDeliveryResultSchema>;
+export const ProductLookupSchema = z.object({
+  id: z.string().uuid(),
+  ean: z.string(),
+  name: z.string(),
+  has_dlc: z.boolean(),
+});
+
+export type ProductLookup = z.infer<typeof ProductLookupSchema>;
 
 export const DeliveryLineRowSchema = z.object({
   id: z.string().uuid(),
@@ -105,3 +128,7 @@ export const DeliveryLineRowSchema = z.object({
 });
 
 export type DeliveryLineRow = z.infer<typeof DeliveryLineRowSchema>;
+
+/** @deprecated Utiliser FinalizeDeliveryReportSchema */
+export const FinalizeDeliveryResultSchema = FinalizeDeliveryReportSchema;
+export type FinalizeDeliveryResult = FinalizeDeliveryReport;

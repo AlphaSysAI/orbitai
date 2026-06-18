@@ -5,6 +5,7 @@ import {
   type AnalyzeBLResult,
 } from "@/features/regiaire/reception/schemas";
 import {
+  aggregateBlLinesByEan,
   getDeliveryInOrg,
   upsertProductForLine,
 } from "@/features/regiaire/reception/delivery-access";
@@ -26,6 +27,7 @@ export type AnalyzeBLActionResult =
 
 /**
  * Analyse IA d'un bon de livraison : upload storage org-scoped + extraction lignes.
+ * Les lignes sont fusionnées par EAN avant insert (une ligne par EAN par livraison).
  */
 export async function analyzeBL(
   deliveryId: string,
@@ -57,6 +59,7 @@ export async function analyzeBL(
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const extraction = await parseBlDocument(buffer, file.type, file.name);
+    const mergedLines = aggregateBlLinesByEan(extraction.lines);
 
     const storagePath = buildBlStoragePath(
       ctx.organizationId,
@@ -88,9 +91,8 @@ export async function analyzeBL(
     }
 
     const lineRows = [];
-    for (const line of extraction.lines) {
+    for (const line of mergedLines) {
       const hasDlc = line.dlc !== null;
-      // Produit lié dès l'analyse BL (EAN présent sur le document).
       const productId = await upsertProductForLine(
         ctx,
         line.ean,
