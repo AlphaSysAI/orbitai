@@ -3,6 +3,7 @@
 import {
   DeliveryLineRowSchema,
   FinalizeDeliveryReportSchema,
+  formatEanForReport,
   type DiscrepancyLine,
   type FinalizeDeliveryReport,
   type UnexpectedLine,
@@ -26,7 +27,7 @@ type FinalizeRpcRow = {
 };
 
 function buildFinalizeReport(lines: Array<{
-  ean: string;
+  ean: string | null;
   raw_name: string;
   expected_qty: number;
   scanned_qty: number;
@@ -39,6 +40,7 @@ function buildFinalizeReport(lines: Array<{
 
   for (const line of lines) {
     if (line.expected_qty === 0 && line.scanned_qty > 0) {
+      if (!line.ean) continue;
       unexpected.push({
         ean: line.ean,
         rawName: line.raw_name,
@@ -90,7 +92,7 @@ function buildSupplierEmailDraft(params: {
     lines.push(`--- Manquants ---`);
     for (const row of missing) {
       lines.push(
-        `• ${row.rawName} (EAN ${row.ean}) : attendu ${row.expectedQty}, reçu ${row.scannedQty}`
+        `• ${row.rawName} (EAN ${formatEanForReport(row.ean)}) : attendu ${row.expectedQty}, reçu ${row.scannedQty}`
       );
     }
     lines.push(``);
@@ -100,7 +102,7 @@ function buildSupplierEmailDraft(params: {
     lines.push(`--- Surplus (BL) ---`);
     for (const row of surplus) {
       lines.push(
-        `• ${row.rawName} (EAN ${row.ean}) : attendu ${row.expectedQty}, reçu ${row.scannedQty}`
+        `• ${row.rawName} (EAN ${formatEanForReport(row.ean)}) : attendu ${row.expectedQty}, reçu ${row.scannedQty}`
       );
     }
     lines.push(``);
@@ -135,7 +137,7 @@ async function loadDeliveryLines(
   const { data: linesRaw, error: linesError } = await ctx.db
     .from("delivery_lines")
     .select(
-      "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc"
+      "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc, needs_review"
     )
     .eq("delivery_id", deliveryId);
 

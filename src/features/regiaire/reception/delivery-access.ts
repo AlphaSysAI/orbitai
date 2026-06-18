@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { BLExtractedLine } from "@/features/regiaire/reception/schemas";
 import type { RegiaireContext } from "@/lib/regiaire/require-context";
 import type { DeliveryStatus } from "@/features/regiaire/reception/schemas";
 
@@ -120,7 +119,7 @@ export async function getProductByIdInOrg(
 }
 
 const DELIVERY_LINE_SELECT =
-  "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc";
+  "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc, needs_review";
 
 /** Ligne BL appartenant à une livraison de l'org courante. */
 export async function getDeliveryLineInOrg(
@@ -132,10 +131,11 @@ export async function getDeliveryLineInOrg(
   delivery_id: string;
   product_id: string | null;
   raw_name: string;
-  ean: string;
+  ean: string | null;
   expected_qty: number;
   scanned_qty: number;
   dlc: string | null;
+  needs_review: boolean;
 } | null> {
   const delivery = await getDeliveryInOrg(ctx, deliveryId);
   if (!delivery) return null;
@@ -154,16 +154,118 @@ export async function getDeliveryLineInOrg(
     delivery_id: string;
     product_id: string | null;
     raw_name: string;
-    ean: string;
+    ean: string | null;
     expected_qty: number;
     scanned_qty: number;
     dlc: string | null;
+    needs_review: boolean;
   };
 }
 
-/** Fusionne les lignes extraites du BL par EAN (somme des quantités attendues). */
+export async function getDeliveryLineByIdInOrg(
+  ctx: RegiaireContext,
+  deliveryId: string,
+  lineId: string
+): Promise<{
+  id: string;
+  delivery_id: string;
+  product_id: string | null;
+  raw_name: string;
+  ean: string | null;
+  expected_qty: number;
+  scanned_qty: number;
+  dlc: string | null;
+  needs_review: boolean;
+} | null> {
+  const delivery = await getDeliveryInOrg(ctx, deliveryId);
+  if (!delivery) return null;
+
+  const { data, error } = await ctx.db
+    .from("delivery_lines")
+    .select(DELIVERY_LINE_SELECT)
+    .eq("delivery_id", deliveryId)
+    .eq("id", lineId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return data as {
+    id: string;
+    delivery_id: string;
+    product_id: string | null;
+    raw_name: string;
+    ean: string | null;
+    expected_qty: number;
+    scanned_qty: number;
+    dlc: string | null;
+    needs_review: boolean;
+  };
+}
+
+/** Fusionne les lignes normalisées : par EAN si connu, sinon une entrée par ligne. */
+export function aggregateBlLines(
+  lines: Array<{
+    raw_name: string;
+    ean: string | null;
+    expected_qty: number;
+    dlc: string | null;
+    needs_review: boolean;
+  }>
+): Array<{
+  raw_name: string;
+  ean: string | null;
+  expected_qty: number;
+  dlc: string | null;
+  needs_review: boolean;
+}> {
+  const byEan = new Map<
+    string,
+    {
+      raw_name: string;
+      expected_qty: number;
+      dlc: string | null;
+      needs_review: boolean;
+    }
+  >();
+  const instanceLines: typeof lines = [];
+
+  for (const line of lines) {
+    if (!line.ean) {
+      instanceLines.push(line);
+      continue;
+    }
+
+    const existing = byEan.get(line.ean);
+    if (existing) {
+      existing.expected_qty += line.expected_qty;
+      if (line.dlc && !existing.dlc) {
+        existing.dlc = line.dlc;
+      }
+      existing.needs_review = existing.needs_review || line.needs_review;
+    } else {
+      byEan.set(line.ean, {
+        raw_name: line.raw_name,
+        expected_qty: line.expected_qty,
+        dlc: line.dlc,
+        needs_review: line.needs_review,
+      });
+    }
+  }
+
+  const merged = Array.from(byEan.entries()).map(([ean, value]) => ({
+    ean,
+    raw_name: value.raw_name,
+    expected_qty: value.expected_qty,
+    dlc: value.dlc,
+    needs_review: value.needs_review,
+  }));
+
+  return [...merged, ...instanceLines];
+}
+
+/** @deprecated Utiliser aggregateBlLines */
 export function aggregateBlLinesByEan(
-  lines: BLExtractedLine[]
+  lines: Array<{ ean: string; name: string; expected_qty: number; dlc: string | null }>
 ): Array<{ ean: string; name: string; expected_qty: number; dlc: string | null }> {
   const byEan = new Map<
     string,

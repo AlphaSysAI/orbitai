@@ -14,6 +14,7 @@ type DeliveryListItem = {
   status: DeliveryStatus;
   created_at: string;
   supplierName: string;
+  bl_file_path: string | null;
 };
 
 function deliveryHref(item: DeliveryListItem): string {
@@ -47,7 +48,7 @@ export function DeliveriesList() {
     const supabase = createClient();
     const { data, error: fetchError } = await supabase
       .from("deliveries")
-      .select("id, status, created_at, suppliers(name)")
+      .select("id, status, created_at, bl_file_path, suppliers(name)")
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false });
 
@@ -64,6 +65,7 @@ export function DeliveriesList() {
         status: row.status as DeliveryStatus,
         created_at: row.created_at,
         supplierName: supplier?.name ?? "Fournisseur",
+        bl_file_path: row.bl_file_path,
       };
     });
 

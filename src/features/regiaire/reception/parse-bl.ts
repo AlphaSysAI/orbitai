@@ -4,8 +4,8 @@ import { generateObject } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 import {
-  BLExtractionSchema,
-  type BLExtraction,
+  BLUncertainExtractionSchema,
+  type BLUncertainExtraction,
 } from "@/features/regiaire/reception/schemas";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -21,13 +21,17 @@ const IMAGE_MIME_TYPES = new Set([
 
 const BL_EXTRACTION_PROMPT = `Tu es un assistant de réception en station-service / shop.
 Extrais les lignes du bon de livraison (BL) fourni.
-Pour chaque ligne produit, retourne :
-- name : libellé produit
-- ean : code EAN/GTIN (chiffres uniquement, sans espaces)
-- expected_qty : quantité attendue (entier positif)
-- dlc : date limite de consommation au format YYYY-MM-DD, ou null si absente / non applicable
 
-Ignore les lignes sans quantité identifiable. Ne invente pas de produits absents du document.`;
+RÈGLES STRICTES — NE JAMAIS DEVINER :
+- Pour chaque champ (name, ean, expected_qty, dlc), retourne { value, confident }.
+- confident = true UNIQUEMENT si la valeur est clairement lisible sur le document.
+- Si un champ est absent, illisible ou ambigu : value = null et confident = false.
+- N'invente JAMAIS de produit, EAN, quantité ou date absents du document.
+- expected_qty : entier positif uniquement si explicitement indiqué.
+- ean : chiffres GTIN/EAN uniquement (sans espaces) si lisible ; sinon null.
+- dlc : format YYYY-MM-DD si date DLC/DDM clairement lisible ; sinon null.
+
+Retourne une entrée par ligne produit identifiable (même partiellement).`;
 
 function normalizeMimeType(mimeType: string, fileName: string): string {
   const lower = fileName.toLowerCase();
@@ -39,7 +43,7 @@ function normalizeMimeType(mimeType: string, fileName: string): string {
   return mimeType;
 }
 
-async function extractFromPdf(buffer: Buffer): Promise<BLExtraction> {
+async function extractFromPdf(buffer: Buffer): Promise<BLUncertainExtraction> {
   const parsed = await pdfParse(buffer);
   const text = parsed.text?.trim();
   if (!text) {
@@ -48,17 +52,17 @@ async function extractFromPdf(buffer: Buffer): Promise<BLExtraction> {
 
   const { object } = await generateObject({
     model: openai("gpt-4o"),
-    schema: BLExtractionSchema,
+    schema: BLUncertainExtractionSchema,
     prompt: `${BL_EXTRACTION_PROMPT}\n\n--- CONTENU BL (texte extrait) ---\n${text.slice(0, 120_000)}`,
   });
 
-  return BLExtractionSchema.parse(object);
+  return BLUncertainExtractionSchema.parse(object);
 }
 
-async function extractFromImage(buffer: Buffer): Promise<BLExtraction> {
+async function extractFromImage(buffer: Buffer): Promise<BLUncertainExtraction> {
   const { object } = await generateObject({
     model: openai("gpt-4o"),
-    schema: BLExtractionSchema,
+    schema: BLUncertainExtractionSchema,
     messages: [
       {
         role: "user",
@@ -73,14 +77,14 @@ async function extractFromImage(buffer: Buffer): Promise<BLExtraction> {
     ],
   });
 
-  return BLExtractionSchema.parse(object);
+  return BLUncertainExtractionSchema.parse(object);
 }
 
 export async function parseBlDocument(
   buffer: Buffer,
   mimeType: string,
   fileName: string
-): Promise<BLExtraction> {
+): Promise<BLUncertainExtraction> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY manquante");
   }

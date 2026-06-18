@@ -76,6 +76,64 @@ export function UnknownEanNewProductModal({
   );
 }
 
+export function InstanceLinePickModal({
+  ean,
+  lines,
+  onPickLine,
+  onPickUnexpected,
+  onCancel,
+  isLoading,
+}: {
+  ean: string;
+  lines: Array<{ id: string; raw_name: string }>;
+  onPickLine: (lineId: string) => void;
+  onPickUnexpected: () => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}) {
+  return (
+    <ModalShell title="Associer l'EAN scanné">
+      <p className="text-sm text-slate-300">
+        EAN <span className="font-mono text-amber-400">{ean}</span> absent des lignes
+        résolues.
+      </p>
+      <p className="mt-2 text-xs text-slate-500">
+        C&apos;est lequel des produits en instance ?
+      </p>
+      <ul className="mt-4 space-y-2">
+        {lines.map((line) => (
+          <li key={line.id}>
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={() => onPickLine(line.id)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-left text-sm font-medium text-white hover:border-amber-500/50 disabled:opacity-50"
+            >
+              {line.raw_name}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        disabled={isLoading}
+        onClick={onPickUnexpected}
+        className="mt-3 w-full rounded-xl border border-dashed border-orange-500/50 py-3 text-sm font-bold text-orange-400 disabled:opacity-50"
+      >
+        Nouveau produit non-attendu
+      </button>
+      <button
+        type="button"
+        disabled={isLoading}
+        onClick={onCancel}
+        className="mt-2 w-full py-2 text-xs font-bold uppercase text-slate-500"
+      >
+        Annuler
+      </button>
+    </ModalShell>
+  );
+}
+
 export function DlcPromptModal({
   productName,
   onConfirm,

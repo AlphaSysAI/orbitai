@@ -10,6 +10,7 @@ import { FinalizeReportView } from "@/features/regiaire/reception/components/Fin
 import { ManualEanInput } from "@/features/regiaire/reception/components/ManualEanInput";
 import {
   DlcPromptModal,
+  InstanceLinePickModal,
   UnknownEanKnownProductModal,
   UnknownEanNewProductModal,
 } from "@/features/regiaire/reception/components/ReceptionModals";
@@ -24,6 +25,7 @@ import {
 } from "@/features/regiaire/reception/components/ScanFeedbackToast";
 import {
   addUnexpectedLine,
+  bindEanToLine,
   finalizeDelivery,
   lookupProductByEan,
   recordScan,
@@ -67,6 +69,10 @@ export function ScanWorkspace({
   const [pendingUnknownEan, setPendingUnknownEan] = useState<string | null>(null);
   const [knownProduct, setKnownProduct] = useState<ProductLookup | null>(null);
   const [showNewProductModal, setShowNewProductModal] = useState(false);
+  const [instancePick, setInstancePick] = useState<{
+    ean: string;
+    lines: Array<{ id: string; raw_name: string }>;
+  } | null>(null);
   const [dlcPrompt, setDlcPrompt] = useState<{
     lineId: string;
     productName: string;
@@ -80,7 +86,7 @@ export function ScanWorkspace({
     const { data, error } = await supabase
       .from("delivery_lines")
       .select(
-        "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc, products(has_dlc)"
+        "id, delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc, needs_review, products(has_dlc)"
       )
       .eq("delivery_id", deliveryId)
       .order("raw_name");
@@ -151,6 +157,21 @@ export function ScanWorkspace({
 
     if (data.status === "not_in_bl") {
       playScanWarning();
+      const instanceLines = lines.filter((l) => !l.ean);
+
+      if (instanceLines.length > 0) {
+        setInstancePick({
+          ean,
+          lines: instanceLines.map((l) => ({
+            id: l.id,
+            raw_name: l.raw_name,
+          })),
+        });
+        showFeedback("warning", "Choisissez la ligne en instance correspondante");
+        setIsScanning(false);
+        return;
+      }
+
       const count = (unknownCountsRef.current.get(ean) ?? 0) + 1;
       unknownCountsRef.current.set(ean, count);
       showFeedback(
@@ -200,6 +221,65 @@ export function ScanWorkspace({
     showFeedback("success", `Scanné ${data.scannedQty} / ${data.expectedQty}`);
     unknownCountsRef.current.delete(ean);
     setIsScanning(false);
+  };
+
+  const handleBindInstanceLine = async (lineId: string) => {
+    if (!instancePick) return;
+    setModalLoading(true);
+    const res = await bindEanToLine(deliveryId, lineId, instancePick.ean);
+    setModalLoading(false);
+
+    if (!res.success) {
+      playScanError();
+      showFeedback("error", res.error);
+      return;
+    }
+
+    playScanSuccess();
+    setInstancePick(null);
+    await loadLines();
+
+    if (!res.data.dlc) {
+      const supabase = createClient();
+      const { data: freshLine } = await supabase
+        .from("delivery_lines")
+        .select("id, raw_name, dlc, products(has_dlc)")
+        .eq("id", res.data.lineId)
+        .single();
+
+      const prod = freshLine?.products as { has_dlc?: boolean } | null;
+      if (prod?.has_dlc && !freshLine?.dlc) {
+        setDlcPrompt({
+          lineId: res.data.lineId,
+          productName: freshLine?.raw_name ?? res.data.ean,
+        });
+      }
+    }
+
+    showFeedback(
+      "success",
+      `EAN lié — scanné ${res.data.scannedQty} / ${res.data.expectedQty}`
+    );
+  };
+
+  const handleInstancePickUnexpected = () => {
+    if (!instancePick) return;
+    const ean = instancePick.ean;
+    setPendingUnknownEan(ean);
+    setInstancePick(null);
+    void (async () => {
+      const lookup = await lookupProductByEan(ean);
+      if (!lookup.success) {
+        playScanError();
+        showFeedback("error", lookup.error);
+        return;
+      }
+      if (lookup.product) {
+        setKnownProduct(lookup.product);
+      } else {
+        setShowNewProductModal(true);
+      }
+    })();
   };
 
   const handleAddKnownProduct = async () => {
@@ -354,6 +434,17 @@ export function ScanWorkspace({
             Finaliser la réception
           </button>
         </div>
+      )}
+
+      {instancePick && (
+        <InstanceLinePickModal
+          ean={instancePick.ean}
+          lines={instancePick.lines}
+          onPickLine={(lineId) => void handleBindInstanceLine(lineId)}
+          onPickUnexpected={handleInstancePickUnexpected}
+          onCancel={() => setInstancePick(null)}
+          isLoading={modalLoading}
+        />
       )}
 
       {pendingUnknownEan && knownProduct && (

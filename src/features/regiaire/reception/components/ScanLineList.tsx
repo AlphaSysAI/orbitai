@@ -53,7 +53,9 @@ export function ScanLineList({ lines }: { lines: ScanLineView[] }) {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate font-medium text-white">{line.raw_name}</p>
-                <p className="font-mono text-xs text-slate-500">{line.ean}</p>
+                <p className="font-mono text-xs text-slate-500">
+                  {line.ean ?? "EAN au scan"}
+                </p>
               </div>
               <span className={`shrink-0 text-[10px] font-bold uppercase ${state.className}`}>
                 {state.label}
