@@ -40,6 +40,7 @@ export async function getExpiringStock(
       .from("stock_batches")
       .select("quantity, dlc, product_id, products(id, name, category)")
       .eq("organization_id", ctx.organizationId)
+      .eq("aire_id", ctx.aireId)
       .not("dlc", "is", null)
       .lte("dlc", horizon)
       .gt("quantity", 0)

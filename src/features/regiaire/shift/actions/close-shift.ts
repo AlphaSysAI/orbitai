@@ -58,6 +58,7 @@ export async function closeShift(
       .from("shift_task_checks")
       .select("task_def_id, checked")
       .eq("organization_id", ctx.organizationId)
+      .eq("aire_id", ctx.aireId)
       .eq("shift", parsed.shift)
       .eq("service_date", parsed.service_date);
 
@@ -92,6 +93,7 @@ export async function closeShift(
       .from("shift_closures")
       .insert({
         organization_id: ctx.organizationId,
+        aire_id: ctx.aireId,
         shift: parsed.shift,
         service_date: parsed.service_date,
         closed_by: ctx.userId,

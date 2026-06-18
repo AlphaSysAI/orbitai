@@ -40,6 +40,7 @@ export async function getShiftClosure(
       "id, organization_id, shift, service_date, closed_by, closed_at, total_tasks, checked_tasks, completion_pct, missing_labels, note"
     )
     .eq("organization_id", ctx.organizationId)
+    .eq("aire_id", ctx.aireId)
     .eq("shift", shift)
     .eq("service_date", service_date)
     .maybeSingle();
