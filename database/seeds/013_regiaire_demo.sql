@@ -16,6 +16,7 @@ DECLARE
   v_product_eau UUID;
   v_delivery_scanning UUID;
   v_delivery_draft UUID;
+  v_aire_id UUID;
 BEGIN
   SELECT om.organization_id INTO v_org_id
   FROM organization_modules om
@@ -83,6 +84,26 @@ BEGIN
   SELECT id INTO v_product_eau FROM products
   WHERE organization_id = v_org_id AND ean = '3401560012345';
 
+  SELECT a.id INTO v_aire_id
+  FROM aires a
+  WHERE a.organization_id = v_org_id
+  ORDER BY a.created_at ASC
+  LIMIT 1;
+
+  IF v_aire_id IS NULL THEN
+    INSERT INTO aires (organization_id, name, lat, lon, city, school_zone, order_days)
+    VALUES (
+      v_org_id,
+      'Aire principale',
+      43.212800,
+      2.353700,
+      'Carcassonne',
+      'C',
+      ARRAY[1, 3, 5]
+    )
+    RETURNING id INTO v_aire_id;
+  END IF;
+
   -- Livraison #1 : scanning + lignes (test recordScan / finalize sans matériel)
   IF NOT EXISTS (
     SELECT 1 FROM deliveries
@@ -91,8 +112,8 @@ BEGIN
       AND status = 'scanning'
       AND bl_file_path IS NULL
   ) THEN
-    INSERT INTO deliveries (organization_id, supplier_id, status, created_by)
-    VALUES (v_org_id, v_supplier_id, 'scanning', v_owner_id)
+    INSERT INTO deliveries (organization_id, aire_id, supplier_id, status, created_by)
+    VALUES (v_org_id, v_aire_id, v_supplier_id, 'scanning', v_owner_id)
     RETURNING id INTO v_delivery_scanning;
 
     INSERT INTO delivery_lines (delivery_id, product_id, raw_name, ean, expected_qty, scanned_qty, dlc)
@@ -109,8 +130,8 @@ BEGIN
       AND supplier_id = v_supplier_id
       AND status = 'draft'
   ) THEN
-    INSERT INTO deliveries (organization_id, supplier_id, status, created_by)
-    VALUES (v_org_id, v_supplier_id, 'draft', v_owner_id)
+    INSERT INTO deliveries (organization_id, aire_id, supplier_id, status, created_by)
+    VALUES (v_org_id, v_aire_id, v_supplier_id, 'draft', v_owner_id)
     RETURNING id INTO v_delivery_draft;
   END IF;
 

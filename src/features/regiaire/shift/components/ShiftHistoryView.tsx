@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
+import { useRegiaireAireId } from "@/features/regiaire/hooks/useRegiaireAireId";
 import {
   getPreviousShiftHandover,
   getShiftMemberRole,
@@ -28,6 +29,7 @@ function closureForShift(
 }
 
 export function ShiftHistoryView() {
+  const aireId = useRegiaireAireId();
   const [selectedDate, setSelectedDate] = useState(
     () => serviceContext().service_date
   );
@@ -51,14 +53,14 @@ export function ShiftHistoryView() {
     setIsAdmin(roleRes.isAdmin);
 
     if (roleRes.isAdmin) {
-      const res = await listClosuresForDate(selectedDate);
+      const res = await listClosuresForDate(aireId, selectedDate);
       if (!res.success) {
         setError(res.error);
       } else {
         setClosures(res.data);
       }
     } else {
-      const res = await getPreviousShiftHandover();
+      const res = await getPreviousShiftHandover(aireId);
       if (!res.success) {
         setError(res.error);
       } else {
@@ -67,7 +69,7 @@ export function ShiftHistoryView() {
     }
 
     setIsLoading(false);
-  }, [selectedDate]);
+  }, [selectedDate, aireId]);
 
   useEffect(() => {
     void load();
@@ -86,7 +88,7 @@ export function ShiftHistoryView() {
               : "Note laissée par l'équipe du quart précédent."}
           </p>
         </div>
-        <EquipeSubNav isAdmin={isAdmin} />
+        <EquipeSubNav aireId={aireId} isAdmin={isAdmin} />
       </header>
 
       {isAdmin && (

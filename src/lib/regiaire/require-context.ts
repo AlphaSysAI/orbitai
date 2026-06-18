@@ -12,8 +12,8 @@ export type RegiaireContextErrorCode =
   | "unauthenticated"
   | "no_organization"
   | "module_disabled"
-  | "invalid_aire"
-  | "no_aire";
+  | "missing_aire"
+  | "invalid_aire";
 
 export class RegiaireContextError extends Error {
   readonly code: RegiaireContextErrorCode;
@@ -29,7 +29,6 @@ export type RegiaireContext = {
   userId: string;
   userEmail: string | undefined;
   organizationId: string;
-  /** Aire résolue (explicite ou aire par défaut de l'org). */
   aireId: string;
   supabase: ServerSupabaseClient;
   db: ReturnType<typeof forWrite>;
@@ -39,59 +38,37 @@ const ERROR_MESSAGES: Record<RegiaireContextErrorCode, string> = {
   unauthenticated: "Authentification requise",
   no_organization: "Aucune organisation associée",
   module_disabled: "Module RégiAire non activé pour votre organisation",
+  missing_aire: "Identifiant d'aire requis",
   invalid_aire: "Aire invalide ou inaccessible",
-  no_aire: "Aucune aire configurée pour votre organisation",
 };
-
-async function resolveDefaultAireId(
-  db: ReturnType<typeof forWrite>,
-  organizationId: string
-): Promise<string | null> {
-  const { data, error } = await db
-    .from("aires")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data?.id) return null;
-  return data.id as string;
-}
 
 async function resolveAireId(
   db: ReturnType<typeof forWrite>,
   organizationId: string,
-  aireId?: string
+  aireId: string | undefined
 ): Promise<string> {
-  if (aireId) {
-    const { data, error } = await db
-      .from("aires")
-      .select("id, organization_id")
-      .eq("id", aireId)
-      .maybeSingle();
-
-    if (error || !data || data.organization_id !== organizationId) {
-      throw new RegiaireContextError("invalid_aire", ERROR_MESSAGES.invalid_aire);
-    }
-
-    return data.id as string;
+  if (!aireId?.trim()) {
+    throw new RegiaireContextError("missing_aire", ERROR_MESSAGES.missing_aire);
   }
 
-  const defaultId = await resolveDefaultAireId(db, organizationId);
-  if (!defaultId) {
-    throw new RegiaireContextError("no_aire", ERROR_MESSAGES.no_aire);
+  const { data, error } = await db
+    .from("aires")
+    .select("id, organization_id")
+    .eq("id", aireId)
+    .maybeSingle();
+
+  if (error || !data || data.organization_id !== organizationId) {
+    throw new RegiaireContextError("invalid_aire", ERROR_MESSAGES.invalid_aire);
   }
 
-  return defaultId;
+  return data.id as string;
 }
 
 /**
- * Contexte serveur RégiAire : session + org + module + aire.
- * Sans aireId → aire par défaut (1ʳᵉ de l'org) pour compat UI legacy (retiré étape 2).
+ * Contexte serveur RégiAire : session + org + module + aire (obligatoire).
  */
 export async function requireRegiaireContext(
-  aireId?: string
+  aireId: string
 ): Promise<RegiaireContext> {
   const access = await requireRegiaireAccess();
   if (!access.allowed) {

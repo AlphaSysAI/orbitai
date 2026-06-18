@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
 import { confirmReview } from "@/features/regiaire/reception/actions";
+import { useRegiaireAireId } from "@/features/regiaire/hooks/useRegiaireAireId";
 import {
   UNREADABLE_LINE_NAME,
   type DeliveryLineRow,
@@ -18,6 +19,7 @@ export function BlReviewEditor({
   deliveryId: string;
   onConfirmed: () => void;
 }) {
+  const aireId = useRegiaireAireId();
   const [lines, setLines] = useState<DeliveryLineRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -100,7 +102,7 @@ export function BlReviewEditor({
       }
     }
 
-    const result = await confirmReview(deliveryId);
+    const result = await confirmReview(aireId, deliveryId);
     setIsSaving(false);
 
     if (!result.success) {

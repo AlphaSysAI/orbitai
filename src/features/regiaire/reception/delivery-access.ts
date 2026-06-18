@@ -40,6 +40,7 @@ export async function getDeliveryInOrg(
     )
     .eq("id", deliveryId)
     .eq("organization_id", ctx.organizationId)
+    .eq("aire_id", ctx.aireId)
     .maybeSingle();
 
   if (error || !data) return null;

@@ -5,28 +5,33 @@ import {
   WeatherSignalSchema,
   type WeatherSignal,
 } from "@/features/regiaire/verdict/schemas";
+import {
+  aggregateOwmForecastToDays,
+  type OwmForecastItem,
+} from "@/features/regiaire/verdict/lib/owm-aggregate";
+import { getOwmApiKey } from "@/features/regiaire/verdict/lib/owm-api-key";
 import { fetchWithTimeout } from "@/features/regiaire/verdict/lib/fetch-with-timeout";
 import { getStationSettings } from "@/features/regiaire/verdict/station-settings-access";
 import type { RegiaireContext } from "@/lib/regiaire/require-context";
 
-const OPEN_METEO_FORECAST = "https://api.open-meteo.com/v1/forecast";
+const OWM_FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast";
 const SIGNAL_TIMEOUT_MS = 3_000;
 
-type OpenMeteoDaily = {
-  time?: string[];
-  weather_code?: number[];
-  temperature_2m_max?: number[];
-  temperature_2m_min?: number[];
-  precipitation_sum?: number[];
-  precipitation_probability_max?: (number | null)[];
+type OwmForecastResponse = {
+  cod?: string | number;
+  message?: string | number;
+  list?: OwmForecastItem[];
 };
 
-type OpenMeteoResponse = {
-  daily?: OpenMeteoDaily;
-};
+function owmErrorMessage(raw: OwmForecastResponse, status: number): string {
+  if (typeof raw.message === "string" && raw.message.length > 0) {
+    return raw.message;
+  }
+  return `OpenWeatherMap indisponible (${status})`;
+}
 
 /**
- * Prévision météo J0 → J+3 via Open-Meteo (gratuit, sans clé).
+ * Prévision météo J0 → J+3 via OpenWeatherMap (forecast 2.5, agrégation journalière).
  * Timeout ~3 s + fallback { available: false } — ne bloque jamais le Verdict.
  */
 export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
@@ -38,52 +43,59 @@ export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
     });
   }
 
+  const apiKey = getOwmApiKey();
+  if (!apiKey) {
+    return WeatherSignalSchema.parse({
+      available: false,
+      reason: "Clé OpenWeatherMap manquante (OWM_API_KEY)",
+    });
+  }
+
   const params = new URLSearchParams({
-    latitude: String(settings.lat),
-    longitude: String(settings.lon),
-    daily: [
-      "weather_code",
-      "temperature_2m_max",
-      "temperature_2m_min",
-      "precipitation_sum",
-      "precipitation_probability_max",
-    ].join(","),
-    timezone: "Europe/Paris",
-    forecast_days: "4",
+    lat: String(settings.lat),
+    lon: String(settings.lon),
+    appid: apiKey,
+    units: "metric",
+    lang: "fr",
   });
 
   try {
     const response = await fetchWithTimeout(
-      `${OPEN_METEO_FORECAST}?${params.toString()}`,
+      `${OWM_FORECAST_URL}?${params.toString()}`,
       { next: { revalidate: 3600 }, timeoutMs: SIGNAL_TIMEOUT_MS }
     );
+
+    const raw = (await response.json()) as OwmForecastResponse;
 
     if (!response.ok) {
       return WeatherSignalSchema.parse({
         available: false,
-        reason: `Open-Meteo indisponible (${response.status})`,
+        reason: owmErrorMessage(raw, response.status),
       });
     }
 
-    const raw = (await response.json()) as OpenMeteoResponse;
-    const daily = raw.daily;
-
-    if (!daily?.time?.length) {
+    const cod = String(raw.cod ?? "");
+    if (cod && cod !== "200") {
       return WeatherSignalSchema.parse({
         available: false,
-        reason: "Réponse Open-Meteo invalide",
+        reason: owmErrorMessage(raw, response.status),
       });
     }
 
-    const days = daily.time.slice(0, 4).map((date, index) => ({
-      date,
-      weatherCode: daily.weather_code?.[index] ?? 0,
-      tempMaxC: daily.temperature_2m_max?.[index] ?? 0,
-      tempMinC: daily.temperature_2m_min?.[index] ?? 0,
-      precipitationMm: daily.precipitation_sum?.[index] ?? 0,
-      precipitationProbMax:
-        daily.precipitation_probability_max?.[index] ?? null,
-    }));
+    if (!raw.list?.length) {
+      return WeatherSignalSchema.parse({
+        available: false,
+        reason: "Réponse OpenWeatherMap invalide",
+      });
+    }
+
+    const days = aggregateOwmForecastToDays(raw.list);
+    if (days.length === 0) {
+      return WeatherSignalSchema.parse({
+        available: false,
+        reason: "Aucune prévision sur la période J0→J+3",
+      });
+    }
 
     const forecast = WeatherForecastSchema.parse({
       location: {
@@ -99,7 +111,7 @@ export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
   } catch (error) {
     const reason =
       error instanceof Error && error.name === "AbortError"
-        ? "Open-Meteo timeout (>3s)"
+        ? "OpenWeatherMap timeout (>3s)"
         : error instanceof Error
           ? error.message
           : "Erreur météo";

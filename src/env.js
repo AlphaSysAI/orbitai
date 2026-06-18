@@ -34,6 +34,8 @@ export const env = createEnv({
         : z.string().min(32).optional(),
     /** Emails autorisés à accéder à /admin (séparés par des virgules) */
     ORBIT_ADMIN_EMAILS: z.string().optional(),
+    /** OpenWeatherMap — météo RégiAire (serveur uniquement) */
+    OWM_API_KEY: z.string().optional(),
   },
 
   /**
@@ -68,6 +70,7 @@ export const env = createEnv({
     REVIEW_POLLING_TOKEN: process.env.REVIEW_POLLING_TOKEN,
     TRACKER_SIGNING_SECRET: process.env.TRACKER_SIGNING_SECRET,
     ORBIT_ADMIN_EMAILS: process.env.ORBIT_ADMIN_EMAILS,
+    OWM_API_KEY: process.env.OWM_API_KEY,
     NEXT_PUBLIC_OPENCLAW_ENABLED: process.env.NEXT_PUBLIC_OPENCLAW_ENABLED,
   },
   /**

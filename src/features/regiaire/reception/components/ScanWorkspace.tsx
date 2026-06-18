@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Loader2, Lock } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { BarcodeScanner } from "@/features/regiaire/reception/components/BarcodeScanner";
 import { DeliveryStatusBadge } from "@/features/regiaire/reception/components/DeliveryStatusBadge";
@@ -29,10 +29,12 @@ import {
   bindEanToLine,
   decrementScan,
   finalizeDelivery,
+  getDeliveryReport,
   lookupProductByEan,
   recordScan,
   setLineScannedQty,
 } from "@/features/regiaire/reception/actions";
+import { useRegiaireAireId } from "@/features/regiaire/hooks/useRegiaireAireId";
 import type {
   DeliveryStatus,
   FinalizeDeliveryReport,
@@ -64,6 +66,7 @@ export function ScanWorkspace({
   initialStatus,
   supplierName,
 }: ScanWorkspaceProps) {
+  const aireId = useRegiaireAireId();
   const [status, setStatus] = useState(initialStatus);
   const [lines, setLines] = useState<ScanLineView[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +74,8 @@ export function ScanWorkspace({
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackState>(null);
   const [report, setReport] = useState<FinalizeDeliveryReport | null>(null);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportLoadError, setReportLoadError] = useState<string | null>(null);
   const [finalizeError, setFinalizeError] = useState<string | null>(null);
 
   const unknownCountsRef = useRef<Map<string, number>>(new Map());
@@ -91,6 +96,30 @@ export function ScanWorkspace({
   const [adjustingLineId, setAdjustingLineId] = useState<string | null>(null);
 
   const terminal = isTerminalStatus(status);
+
+  useEffect(() => {
+    if (!terminal || report) return;
+
+    let cancelled = false;
+    const loadReport = async () => {
+      setIsLoadingReport(true);
+      setReportLoadError(null);
+      const result = await getDeliveryReport(aireId, deliveryId);
+      if (cancelled) return;
+
+      if (!result.success) {
+        setReportLoadError(result.error);
+      } else {
+        setReport(result.data);
+      }
+      setIsLoadingReport(false);
+    };
+
+    void loadReport();
+    return () => {
+      cancelled = true;
+    };
+  }, [terminal, deliveryId, report, aireId]);
 
   const pushSessionScan = (entry: SessionScanEntry) => {
     setSessionScans((prev) => [...prev, entry]);
@@ -160,7 +189,7 @@ export function ScanWorkspace({
     if (terminal || isScanning) return;
     setIsScanning(true);
 
-    const result = await recordScan(deliveryId, ean);
+    const result = await recordScan(aireId, deliveryId, ean);
 
     if (!result.success) {
       playScanError();
@@ -198,7 +227,7 @@ export function ScanWorkspace({
       );
 
       if (count >= 2) {
-        const lookup = await lookupProductByEan(ean);
+        const lookup = await lookupProductByEan(aireId, ean);
         if (!lookup.success) {
           playScanError();
           showFeedback("error", lookup.error);
@@ -249,7 +278,7 @@ export function ScanWorkspace({
     const last = sessionScans[sessionScans.length - 1]!;
     setIsUndoing(true);
 
-    const result = await decrementScan(deliveryId, last.lineId);
+    const result = await decrementScan(aireId, deliveryId, last.lineId);
     setIsUndoing(false);
 
     if (!result.success) {
@@ -267,7 +296,7 @@ export function ScanWorkspace({
   const handleAdjustQty = async (lineId: string, qty: number) => {
     if (terminal) return;
     setAdjustingLineId(lineId);
-    const result = await setLineScannedQty(deliveryId, lineId, qty);
+    const result = await setLineScannedQty(aireId, deliveryId, lineId, qty);
     setAdjustingLineId(null);
 
     if (!result.success) {
@@ -282,7 +311,7 @@ export function ScanWorkspace({
   const handleResetLine = async (lineId: string) => {
     if (terminal) return;
     setAdjustingLineId(lineId);
-    const result = await setLineScannedQty(deliveryId, lineId, 0);
+    const result = await setLineScannedQty(aireId, deliveryId, lineId, 0);
     setAdjustingLineId(null);
 
     if (!result.success) {
@@ -299,7 +328,7 @@ export function ScanWorkspace({
   const handleBindInstanceLine = async (lineId: string) => {
     if (!instancePick) return;
     setModalLoading(true);
-    const res = await bindEanToLine(deliveryId, lineId, instancePick.ean);
+    const res = await bindEanToLine(aireId, deliveryId, lineId, instancePick.ean);
     setModalLoading(false);
 
     if (!res.success) {
@@ -342,7 +371,7 @@ export function ScanWorkspace({
     setPendingUnknownEan(ean);
     setInstancePick(null);
     void (async () => {
-      const lookup = await lookupProductByEan(ean);
+      const lookup = await lookupProductByEan(aireId, ean);
       if (!lookup.success) {
         playScanError();
         showFeedback("error", lookup.error);
@@ -359,7 +388,7 @@ export function ScanWorkspace({
   const handleAddKnownProduct = async () => {
     if (!pendingUnknownEan || !knownProduct) return;
     setModalLoading(true);
-    const res = await addUnexpectedLine(deliveryId, pendingUnknownEan, {
+    const res = await addUnexpectedLine(aireId, deliveryId, pendingUnknownEan, {
       productId: knownProduct.id,
     });
     setModalLoading(false);
@@ -380,7 +409,7 @@ export function ScanWorkspace({
   const handleAddNewProduct = async (name: string) => {
     if (!pendingUnknownEan) return;
     setModalLoading(true);
-    const res = await addUnexpectedLine(deliveryId, pendingUnknownEan, {
+    const res = await addUnexpectedLine(aireId, deliveryId, pendingUnknownEan, {
       newName: name,
     });
     setModalLoading(false);
@@ -402,7 +431,7 @@ export function ScanWorkspace({
     if (terminal) return;
     setIsFinalizing(true);
     setFinalizeError(null);
-    const result = await finalizeDelivery(deliveryId);
+    const result = await finalizeDelivery(aireId, deliveryId);
     setIsFinalizing(false);
 
     if (!result.success) {
@@ -431,28 +460,60 @@ export function ScanWorkspace({
     return <FinalizeReportView report={report} supplierName={supplierName} />;
   }
 
-  if (status === "draft") {
+  if (terminal && isLoadingReport) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-12 text-center">
-        <p className="text-slate-400">Cette livraison n&apos;a pas encore de BL analysé.</p>
-        <Link
-          href={`/station/deliveries/new?deliveryId=${deliveryId}`}
-          className="mt-4 inline-block text-amber-400 underline"
+      <div className="flex justify-center py-16">
+        <Loader2 className="animate-spin text-amber-400" size={32} />
+      </div>
+    );
+  }
+
+  if (terminal && reportLoadError) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 px-4 py-12 text-center">
+        <p className="text-red-300">{reportLoadError}</p>
+        <button
+          type="button"
+          onClick={() => {
+            setReportLoadError(null);
+            setIsLoadingReport(true);
+            void getDeliveryReport(aireId, deliveryId).then((result) => {
+              setIsLoadingReport(false);
+              if (result.success) {
+                setReport(result.data);
+              } else {
+                setReportLoadError(result.error);
+              }
+            });
+          }}
+          className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white"
         >
-          Analyser le bon de livraison
+          Réessayer
+        </button>
+        <Link href={`/station/${aireId}/deliveries`} className="block text-amber-400 underline">
+          Retour à la liste
         </Link>
       </div>
     );
   }
 
-  if (terminal && !report) {
+  if (terminal) {
     return (
-      <div className="mx-auto max-w-lg space-y-4 px-4 py-12 text-center">
-        <Lock className="mx-auto text-slate-500" size={32} />
-        <p className="font-bold text-white">Réception déjà finalisée</p>
-        <DeliveryStatusBadge status={status} />
-        <Link href="/station/deliveries" className="block text-amber-400 underline">
-          Retour à la liste
+      <div className="flex justify-center py-16">
+        <Loader2 className="animate-spin text-amber-400" size={32} />
+      </div>
+    );
+  }
+
+  if (status === "draft") {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-12 text-center">
+        <p className="text-slate-400">Cette livraison n&apos;a pas encore de BL analysé.</p>
+        <Link
+          href={`/station/${aireId}/deliveries/new?deliveryId=${deliveryId}`}
+          className="mt-4 inline-block text-amber-400 underline"
+        >
+          Analyser le bon de livraison
         </Link>
       </div>
     );

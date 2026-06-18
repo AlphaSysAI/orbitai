@@ -29,10 +29,11 @@ function urgencyFromDays(joursRestants: number): "perime" | "j1" | "j2" | "j3" {
  * Source : stock_batches réel (org-scoped).
  */
 export async function getExpiringStock(
+  aireId: string,
   targetDate?: string
 ): Promise<GetExpiringStockActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const date = targetDate ? IsoDateSchema.parse(targetDate) : todayParisIso();
     const horizon = addDaysIso(date, 3);
 

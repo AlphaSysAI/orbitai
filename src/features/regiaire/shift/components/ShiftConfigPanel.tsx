@@ -17,6 +17,7 @@ import {
   reorderTaskDefs,
   upsertTaskDef,
 } from "@/features/regiaire/shift/actions";
+import { useRegiaireAireId } from "@/features/regiaire/hooks/useRegiaireAireId";
 import { EquipeSubNav } from "@/features/regiaire/shift/components/EquipeSubNav";
 import {
   ALL_SHIFT_PERIODS,
@@ -26,6 +27,7 @@ import {
 } from "@/features/regiaire/shift/schemas";
 
 export function ShiftConfigPanel() {
+  const aireId = useRegiaireAireId();
   const [defs, setDefs] = useState<ShiftTaskDef[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -46,14 +48,14 @@ export function ShiftConfigPanel() {
     }
     setIsAdmin(true);
 
-    const res = await listTaskDefsConfig();
+    const res = await listTaskDefsConfig(aireId);
     if (!res.success) {
       setError(res.error);
     } else {
       setDefs(res.data.filter((d) => d.active));
     }
     setIsLoading(false);
-  }, []);
+  }, [aireId]);
 
   useEffect(() => {
     void load();
@@ -68,7 +70,7 @@ export function ShiftConfigPanel() {
   const handleCreate = async () => {
     if (!newLabel.trim() || newShifts.length === 0) return;
     setIsSaving(true);
-    const res = await upsertTaskDef({
+    const res = await upsertTaskDef(aireId, {
       label: newLabel.trim(),
       shifts: newShifts,
       active: true,
@@ -84,7 +86,7 @@ export function ShiftConfigPanel() {
 
   const handleDelete = async (id: string) => {
     setIsSaving(true);
-    const res = await deleteTaskDef(id);
+    const res = await deleteTaskDef(aireId, id);
     setIsSaving(false);
     if (!res.success) {
       setError(res.error);
@@ -101,7 +103,7 @@ export function ShiftConfigPanel() {
     reordered[index] = reordered[next]!;
     reordered[next] = tmp;
     setDefs(reordered);
-    await reorderTaskDefs(reordered.map((d) => d.id));
+    await reorderTaskDefs(aireId, reordered.map((d) => d.id));
   };
 
   const toggleDefShift = async (def: ShiftTaskDef, shift: ShiftPeriod) => {
@@ -110,7 +112,7 @@ export function ShiftConfigPanel() {
       : [...def.shifts, shift];
     if (shifts.length === 0) return;
     setIsSaving(true);
-    const res = await upsertTaskDef({
+    const res = await upsertTaskDef(aireId, {
       id: def.id,
       label: def.label,
       shifts,
@@ -136,7 +138,7 @@ export function ShiftConfigPanel() {
     return (
       <div className="mx-auto max-w-lg px-4 py-12 text-center">
         <p className="text-red-300">Accès réservé aux administrateurs.</p>
-        <Link href="/station/equipe" className="mt-4 inline-block text-amber-400 underline">
+        <Link href={`/station/${aireId}/equipe`} className="mt-4 inline-block text-amber-400 underline">
           Retour passation
         </Link>
       </div>
@@ -154,7 +156,7 @@ export function ShiftConfigPanel() {
             Tâches par quart — owner / admin uniquement.
           </p>
         </div>
-        <EquipeSubNav isAdmin={isAdmin} />
+        <EquipeSubNav aireId={aireId} isAdmin={isAdmin} />
       </header>
 
       {error && (

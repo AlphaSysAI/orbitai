@@ -2156,7 +2156,7 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION regiaire_default_aire_id(UUID) IS
-  'Aire par défaut d''une org (la plus ancienne). Fallback UI legacy.';
+  'Aire par défaut d''une org (utilitaire listing / redirect UI). Plus de fallback insert.';
 
 -- ---------------------------------------------------------------------------
 -- Backfill aires depuis station_settings (+ orgs RégiAire sans settings)
@@ -2289,27 +2289,9 @@ ALTER TABLE shift_closures
   ADD CONSTRAINT shift_closures_aire_shift_date_key
   UNIQUE (aire_id, shift, service_date);
 
--- Trigger : inserts client legacy sans aire_id (ex. wizard réception)
-CREATE OR REPLACE FUNCTION trg_regiaire_set_default_aire_id()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  IF NEW.aire_id IS NULL AND NEW.organization_id IS NOT NULL THEN
-    NEW.aire_id := regiaire_default_aire_id(NEW.organization_id);
-  END IF;
-  IF NEW.aire_id IS NULL THEN
-    RAISE EXCEPTION 'regiaire_no_aire_for_org';
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
+-- 023 — RégiAire multi-aires étape 2/2 : suppression fallback aire_id à l'insert
 DROP TRIGGER IF EXISTS deliveries_set_default_aire_id ON deliveries;
-CREATE TRIGGER deliveries_set_default_aire_id
-  BEFORE INSERT ON deliveries
-  FOR EACH ROW
-  EXECUTE FUNCTION trg_regiaire_set_default_aire_id();
+DROP FUNCTION IF EXISTS trg_regiaire_set_default_aire_id();
 
 -- ---------------------------------------------------------------------------
 -- RPC finalisation — stock_batches avec aire_id

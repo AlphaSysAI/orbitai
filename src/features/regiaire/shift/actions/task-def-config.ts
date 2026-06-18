@@ -34,9 +34,11 @@ export type ReorderTaskDefsActionResult =
   | { success: true }
   | { success: false; error: string; code?: string };
 
-export async function listTaskDefsConfig(): Promise<ListTaskDefsActionResult> {
+export async function listTaskDefsConfig(
+  aireId: string
+): Promise<ListTaskDefsActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const admin = await requireOrgAdmin(ctx);
     if (!admin.ok) {
       return { success: false, error: admin.error };
@@ -56,10 +58,11 @@ export async function listTaskDefsConfig(): Promise<ListTaskDefsActionResult> {
 }
 
 export async function upsertTaskDef(
+  aireId: string,
   input: z.infer<typeof UpsertTaskDefInputSchema>
 ): Promise<UpsertTaskDefActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const admin = await requireOrgAdmin(ctx);
     if (!admin.ok) {
       return { success: false, error: admin.error };
@@ -119,9 +122,12 @@ export async function upsertTaskDef(
   }
 }
 
-export async function deleteTaskDef(taskDefId: string): Promise<DeleteTaskDefActionResult> {
+export async function deleteTaskDef(
+  aireId: string,
+  taskDefId: string
+): Promise<DeleteTaskDefActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const admin = await requireOrgAdmin(ctx);
     if (!admin.ok) {
       return { success: false, error: admin.error };
@@ -151,10 +157,11 @@ const ReorderInputSchema = z.object({
 });
 
 export async function reorderTaskDefs(
+  aireId: string,
   orderedIds: string[]
 ): Promise<ReorderTaskDefsActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const admin = await requireOrgAdmin(ctx);
     if (!admin.ok) {
       return { success: false, error: admin.error };

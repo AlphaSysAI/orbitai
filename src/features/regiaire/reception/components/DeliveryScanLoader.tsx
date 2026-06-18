@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
+import { useRegiaireAireId } from "@/features/regiaire/hooks/useRegiaireAireId";
 import { ScanWorkspace } from "@/features/regiaire/reception/components/ScanWorkspace";
 import { useRegiaireOrg } from "@/features/regiaire/reception/hooks/useRegiaireOrg";
 import type { DeliveryStatus } from "@/features/regiaire/reception/schemas";
 import { createClient } from "@/utils/supabase/client";
 
 export function DeliveryScanLoader({ deliveryId }: { deliveryId: string }) {
+  const aireId = useRegiaireAireId();
   const { organizationId, isLoading: orgLoading, error: orgError } = useRegiaireOrg();
   const [status, setStatus] = useState<DeliveryStatus | null>(null);
   const [supplierName, setSupplierName] = useState<string>("");
@@ -36,9 +38,10 @@ export function DeliveryScanLoader({ deliveryId }: { deliveryId: string }) {
         return;
       }
 
-      const supplier = data.suppliers as { name: string } | null;
+      const rawSupplier = data.suppliers;
+      const supplier = Array.isArray(rawSupplier) ? rawSupplier[0] : rawSupplier;
       setStatus(data.status as DeliveryStatus);
-      setSupplierName(supplier?.name ?? "Fournisseur");
+      setSupplierName((supplier as { name?: string } | null)?.name ?? "Fournisseur");
       setIsLoading(false);
     };
 
@@ -57,7 +60,7 @@ export function DeliveryScanLoader({ deliveryId }: { deliveryId: string }) {
     return (
       <div className="mx-auto max-w-lg px-4 py-12 text-center">
         <p className="text-red-300">{orgError ?? error ?? "Livraison introuvable"}</p>
-        <Link href="/station/deliveries" className="mt-4 inline-block text-amber-400 underline">
+        <Link href={`/station/${aireId}/deliveries`} className="mt-4 inline-block text-amber-400 underline">
           Retour à la liste
         </Link>
       </div>

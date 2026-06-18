@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Loader2, Lock } from "lucide-react";
 
+import { useRegiaireAireId } from "@/features/regiaire/hooks/useRegiaireAireId";
 import { useRegiaireOrg } from "@/features/regiaire/reception/hooks/useRegiaireOrg";
 import {
   closeShift,
@@ -20,6 +21,7 @@ import {
 } from "@/features/regiaire/shift/schemas";
 
 export function ShiftBoard() {
+  const aireId = useRegiaireAireId();
   const [data, setData] = useState<ListShiftTasksResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,8 +40,8 @@ export function ShiftBoard() {
     setError(null);
 
     const [svcRes, tasksRes, roleRes] = await Promise.all([
-      getCurrentServiceContext(),
-      listShiftTasks(),
+      getCurrentServiceContext(aireId),
+      listShiftTasks(aireId),
       getShiftMemberRole(),
     ]);
 
@@ -64,7 +66,7 @@ export function ShiftBoard() {
       setNote(tasksRes.data.closure.note);
     }
     setIsLoading(false);
-  }, []);
+  }, [aireId]);
 
   useEffect(() => {
     void load();
@@ -75,6 +77,7 @@ export function ShiftBoard() {
     setTogglingId(taskDefId);
 
     const result = await toggleTaskCheck(
+      aireId,
       data.shift,
       data.service_date,
       taskDefId,
@@ -106,7 +109,7 @@ export function ShiftBoard() {
     setIsClosing(true);
     setError(null);
 
-    const result = await closeShift(data.shift, data.service_date, note || null);
+    const result = await closeShift(aireId, data.shift, data.service_date, note || null);
     setIsClosing(false);
 
     if (!result.success) {
@@ -156,7 +159,7 @@ export function ShiftBoard() {
             {formatServiceDateFr(data.service_date)}
           </p>
         </div>
-        <EquipeSubNav isAdmin={isAdmin} />
+        <EquipeSubNav aireId={aireId} isAdmin={isAdmin} />
       </header>
 
       {data.isClosed && data.closure && (

@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 import { analyzeBL } from "@/features/regiaire/reception/actions";
 import { BlCaptureForm } from "@/features/regiaire/reception/components/BlCaptureForm";
 import { BlReviewEditor } from "@/features/regiaire/reception/components/BlReviewEditor";
+import { useRegiaireAireId } from "@/features/regiaire/hooks/useRegiaireAireId";
 import { useRegiaireOrg } from "@/features/regiaire/reception/hooks/useRegiaireOrg";
 import type { DeliveryStatus } from "@/features/regiaire/reception/schemas";
 import { createClient } from "@/utils/supabase/client";
@@ -22,6 +23,7 @@ type WizardStep = "supplier" | "capture" | "review";
 
 export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: string }) {
   const router = useRouter();
+  const aireId = useRegiaireAireId();
   const { organizationId, userId, isLoading: orgLoading, error: orgError } = useRegiaireOrg();
 
   const [step, setStep] = useState<WizardStep>("supplier");
@@ -73,13 +75,14 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
       return;
     }
 
-    const supplier = data.suppliers as { name: string } | null;
+    const rawSupplier = data.suppliers;
+    const supplier = Array.isArray(rawSupplier) ? rawSupplier[0] : rawSupplier;
     setDeliveryId(data.id);
-    setSupplierName(supplier?.name ?? null);
+    setSupplierName((supplier as { name?: string } | null)?.name ?? null);
 
     const status = data.status as DeliveryStatus;
     if (status === "scanning") {
-      router.replace(`/station/deliveries/${data.id}/scan`);
+      router.replace(`/station/${aireId}/deliveries/${data.id}/scan`);
       return;
     }
     if (status === "draft") {
@@ -93,7 +96,7 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
         setStep("capture");
       }
     }
-  }, [resumeDeliveryId, organizationId, router]);
+  }, [resumeDeliveryId, organizationId, router, aireId]);
 
   useEffect(() => {
     if (organizationId) {
@@ -158,6 +161,7 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
       .from("deliveries")
       .insert({
         organization_id: organizationId,
+        aire_id: aireId,
         supplier_id: supplierId,
         status: "draft",
         created_by: userId,
@@ -190,7 +194,7 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
     const formData = new FormData();
     formData.set("file", file);
 
-    const result = await analyzeBL(deliveryId, formData);
+    const result = await analyzeBL(aireId, deliveryId, formData);
     setIsAnalyzing(false);
 
     if (!result.success) {
@@ -203,7 +207,7 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
 
   const handleReviewConfirmed = () => {
     if (deliveryId) {
-      router.push(`/station/deliveries/${deliveryId}/scan`);
+      router.push(`/station/${aireId}/deliveries/${deliveryId}/scan`);
     }
   };
 
@@ -226,7 +230,7 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
       <Link
-        href="/station/deliveries"
+        href={`/station/${aireId}/deliveries`}
         className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300"
       >
         <ArrowLeft size={14} />

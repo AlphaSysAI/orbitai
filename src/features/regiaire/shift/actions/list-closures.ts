@@ -46,12 +46,13 @@ export async function getShiftMemberRole(): Promise<GetMemberRoleActionResult> {
 }
 
 export async function listClosures(
+  aireId: string,
   from: string,
   to: string
 ): Promise<ListClosuresActionResult> {
   try {
     await requireOrgAdminContext();
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const range = DateRangeSchema.parse({ from, to });
 
     const { data, error } = await ctx.db
@@ -93,7 +94,8 @@ export async function listClosures(
 
 /** Clôtures pour une date de service (les 3 quarts du jour). */
 export async function listClosuresForDate(
+  aireId: string,
   service_date: string
 ): Promise<ListClosuresActionResult> {
-  return listClosures(service_date, service_date);
+  return listClosures(aireId, service_date, service_date);
 }

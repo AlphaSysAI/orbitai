@@ -24,12 +24,13 @@ export type BindEanToLineActionResult =
  * Lie un EAN scanné à une ligne en instance (ean NULL), puis compte le 1er scan.
  */
 export async function bindEanToLine(
+  aireId: string,
   deliveryId: string,
   lineId: string,
   ean: string
 ): Promise<BindEanToLineActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
     const trimmedEan = ean.replace(/\D/g, "");
 
     if (!trimmedEan || !isValidEan13(trimmedEan)) {

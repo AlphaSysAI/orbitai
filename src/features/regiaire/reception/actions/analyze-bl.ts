@@ -31,11 +31,12 @@ export type AnalyzeBLActionResult =
  * Écrit les lignes en statut draft (revue requise avant scan).
  */
 export async function analyzeBL(
+  aireId: string,
   deliveryId: string,
   formData: FormData
 ): Promise<AnalyzeBLActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireRegiaireContext(aireId);
 
     const delivery = await getDeliveryInOrg(ctx, deliveryId);
     if (!delivery) {

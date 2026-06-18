@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import { ModuleDisabled } from "@/features/regiaire/components/ModuleDisabled";
-import { StationSubNav } from "@/features/regiaire/components/StationSubNav";
 import { requireRegiaireAccess } from "@/lib/organizations/access";
 
 export default async function StationLayout({
@@ -19,9 +18,8 @@ export default async function StationLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#020617] text-slate-200">
-      <StationSubNav />
-      <main className="flex-1">{children}</main>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex-1 overflow-y-auto">{children}</div>
     </div>
   );
 }
