@@ -55,3 +55,29 @@ export function serviceContext(now: Date = new Date()): ServiceContext {
 
   return ServiceContextSchema.parse({ shift, service_date });
 }
+
+/** Quart précédent (pour note de passation visible aux membres). */
+export function getPreviousServiceContext(
+  now: Date = new Date()
+): ServiceContext {
+  const current = serviceContext(now);
+
+  if (current.shift === "matin") {
+    return ServiceContextSchema.parse({
+      shift: "nuit",
+      service_date: addDays(current.service_date, -1),
+    });
+  }
+
+  if (current.shift === "apres_midi") {
+    return ServiceContextSchema.parse({
+      shift: "matin",
+      service_date: current.service_date,
+    });
+  }
+
+  return ServiceContextSchema.parse({
+    shift: "apres_midi",
+    service_date: current.service_date,
+  });
+}

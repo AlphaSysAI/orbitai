@@ -14,6 +14,7 @@ import {
 } from "@/lib/organizations/navigation";
 import { isModuleEnabled, type EnabledOrgModule } from "@/lib/organizations/types";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useOrgRole } from "@/features/organization/hooks/useOrgRole";
 import * as Icons from "lucide-react";
 
 interface Thread {
@@ -57,6 +58,7 @@ export function ContextualNavigation({
   const pathname = usePathname();
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
   const { isAdmin } = useIsAdmin();
+  const { isOrgAdmin } = useOrgRole();
   const activePillarConfig = PILLARS.find((p) => p.id === activePillar);
   const stationLinks = filterNavLinksByModules(STATION_NAV_LINKS, enabledModules);
   const hasRegiaire = stationLinks.length > 0;
@@ -365,20 +367,22 @@ export function ContextualNavigation({
                 <span className="font-black text-[10px] uppercase tracking-widest">Administration</span>
               </Link>
             )}
-            <button
-              onClick={() => {
-                onTabChange("settings");
-                setIsSystemMenuOpen(false);
-              }}
-              className={`w-full flex items-center gap-4 p-3 rounded-xl transition-all text-left ${
-                activeTab === "settings"
-                  ? "bg-purple-600/15 text-purple-400"
-                  : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
-              }`}
-            >
-              <Settings size={16} />
-              <span className="font-black text-[10px] uppercase tracking-widest">Réglages</span>
-            </button>
+            {isOrgAdmin && (
+              <button
+                onClick={() => {
+                  onTabChange("settings");
+                  setIsSystemMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-4 p-3 rounded-xl transition-all text-left ${
+                  activeTab === "settings"
+                    ? "bg-purple-600/15 text-purple-400"
+                    : "text-slate-500 hover:bg-white/5 hover:text-slate-200"
+                }`}
+              >
+                <Settings size={16} />
+                <span className="font-black text-[10px] uppercase tracking-widest">Réglages</span>
+              </button>
+            )}
           </div>
         )}
 

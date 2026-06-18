@@ -5,13 +5,12 @@ import { z } from "zod";
 import {
   ShiftClosureSchema,
   type ShiftClosure,
-  type ShiftPeriod,
 } from "@/features/regiaire/shift/schemas";
-import { getMemberRole } from "@/features/regiaire/shift/shift-access";
 import {
-  RegiaireContextError,
-  requireRegiaireContext,
-} from "@/lib/regiaire/require-context";
+  OrgContextError,
+  requireOrgAdminContext,
+  requireOrgContext,
+} from "@/lib/organizations/org-context";
 
 const DateRangeSchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -28,18 +27,14 @@ export type GetMemberRoleActionResult =
 
 export async function getShiftMemberRole(): Promise<GetMemberRoleActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
-    const role = await getMemberRole(ctx);
-    if (!role) {
-      return { success: false, error: "Membre introuvable" };
-    }
+    const ctx = await requireOrgContext();
     return {
       success: true,
-      role,
-      isAdmin: role === "owner" || role === "admin",
+      role: ctx.role,
+      isAdmin: ctx.isOrgAdmin,
     };
   } catch (error) {
-    if (error instanceof RegiaireContextError) {
+    if (error instanceof OrgContextError) {
       return { success: false, error: error.message, code: error.code };
     }
     return { success: false, error: "Erreur serveur" };
@@ -51,7 +46,7 @@ export async function listClosures(
   to: string
 ): Promise<ListClosuresActionResult> {
   try {
-    const ctx = await requireRegiaireContext();
+    const ctx = await requireOrgAdminContext();
     const range = DateRangeSchema.parse({ from, to });
 
     const { data, error } = await ctx.db
@@ -80,7 +75,7 @@ export async function listClosures(
 
     return { success: true, data: closures };
   } catch (error) {
-    if (error instanceof RegiaireContextError) {
+    if (error instanceof OrgContextError) {
       return { success: false, error: error.message, code: error.code };
     }
     return { success: false, error: "Erreur lors du chargement" };
@@ -93,5 +88,3 @@ export async function listClosuresForDate(
 ): Promise<ListClosuresActionResult> {
   return listClosures(service_date, service_date);
 }
-
-export type { ShiftPeriod };

@@ -4,10 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const LINKS = [
-  { href: "/station/equipe", label: "Passation" },
-  { href: "/station/equipe/historique", label: "Historique" },
+  { href: "/station/equipe", label: "Passation", adminOnly: false },
+  {
+    href: "/station/equipe/historique",
+    labelAdmin: "Historique",
+    labelMember: "Passation préc.",
+    adminOnly: false,
+  },
   { href: "/station/equipe/config", label: "Config", adminOnly: true },
-];
+] as const;
 
 export function EquipeSubNav({ isAdmin }: { isAdmin?: boolean }) {
   const pathname = usePathname();
@@ -15,6 +20,12 @@ export function EquipeSubNav({ isAdmin }: { isAdmin?: boolean }) {
   return (
     <nav className="flex gap-2 overflow-x-auto pb-1">
       {LINKS.filter((l) => !l.adminOnly || isAdmin).map((link) => {
+        const label =
+          "labelAdmin" in link
+            ? isAdmin
+              ? link.labelAdmin
+              : link.labelMember
+            : link.label;
         const active = pathname === link.href;
         return (
           <Link
@@ -26,7 +37,7 @@ export function EquipeSubNav({ isAdmin }: { isAdmin?: boolean }) {
                 : "text-slate-500 hover:text-slate-300"
             }`}
           >
-            {link.label}
+            {label}
           </Link>
         );
       })}

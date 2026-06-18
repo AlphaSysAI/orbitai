@@ -4,8 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import {
+  getPreviousShiftHandover,
   getShiftMemberRole,
   listClosuresForDate,
+  type PreviousShiftHandover,
 } from "@/features/regiaire/shift/actions";
 import { EquipeSubNav } from "@/features/regiaire/shift/components/EquipeSubNav";
 import {
@@ -30,6 +32,7 @@ export function ShiftHistoryView() {
     () => serviceContext().service_date
   );
   const [closures, setClosures] = useState<ShiftClosure[]>([]);
+  const [handover, setHandover] = useState<PreviousShiftHandover | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -39,16 +42,30 @@ export function ShiftHistoryView() {
     setError(null);
 
     const roleRes = await getShiftMemberRole();
-    if (roleRes.success) {
-      setIsAdmin(roleRes.isAdmin);
+    if (!roleRes.success) {
+      setError(roleRes.error);
+      setIsLoading(false);
+      return;
     }
 
-    const res = await listClosuresForDate(selectedDate);
-    if (!res.success) {
-      setError(res.error);
+    setIsAdmin(roleRes.isAdmin);
+
+    if (roleRes.isAdmin) {
+      const res = await listClosuresForDate(selectedDate);
+      if (!res.success) {
+        setError(res.error);
+      } else {
+        setClosures(res.data);
+      }
     } else {
-      setClosures(res.data);
+      const res = await getPreviousShiftHandover();
+      if (!res.success) {
+        setError(res.error);
+      } else {
+        setHandover(res.data);
+      }
     }
+
     setIsLoading(false);
   }, [selectedDate]);
 
@@ -61,30 +78,36 @@ export function ShiftHistoryView() {
       <header className="space-y-3">
         <div>
           <h1 className="text-2xl font-extrabold uppercase italic tracking-tighter text-white">
-            Historique
+            {isAdmin ? "Historique" : "Passation précédente"}
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Clôtures par date de service.
+            {isAdmin
+              ? "Clôtures par date de service."
+              : "Note laissée par l'équipe du quart précédent."}
           </p>
         </div>
         <EquipeSubNav isAdmin={isAdmin} />
       </header>
 
-      <label className="block">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          Date de service
-        </span>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
-        />
-      </label>
+      {isAdmin && (
+        <>
+          <label className="block">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Date de service
+            </span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
+            />
+          </label>
 
-      <p className="text-xs text-slate-500">
-        Journée du {formatServiceDateFr(selectedDate)}
-      </p>
+          <p className="text-xs text-slate-500">
+            Journée du {formatServiceDateFr(selectedDate)}
+          </p>
+        </>
+      )}
 
       {error && (
         <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
@@ -96,7 +119,7 @@ export function ShiftHistoryView() {
         <div className="flex justify-center py-8">
           <Loader2 className="animate-spin text-amber-400" />
         </div>
-      ) : (
+      ) : isAdmin ? (
         <ul className="space-y-3">
           {ALL_SHIFT_PERIODS.map((shift) => {
             const closure = closureForShift(closures, shift);
@@ -149,7 +172,51 @@ export function ShiftHistoryView() {
             );
           })}
         </ul>
+      ) : (
+        <MemberHandoverCard handover={handover} />
       )}
     </div>
+  );
+}
+
+function MemberHandoverCard({
+  handover,
+}: {
+  handover: PreviousShiftHandover | null;
+}) {
+  if (!handover) {
+    return (
+      <p className="rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-6 text-sm text-slate-400">
+        Impossible de charger la passation.
+      </p>
+    );
+  }
+
+  return (
+    <article className="rounded-xl border border-slate-800 bg-slate-900/50 p-5">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        Quart précédent
+      </p>
+      <h2 className="mt-1 text-lg font-bold text-white">
+        {handover.shiftLabel}
+      </h2>
+      <p className="text-xs text-slate-500">
+        Journée du {handover.serviceDateLabel}
+      </p>
+
+      {!handover.hasClosure ? (
+        <p className="mt-4 text-sm text-slate-500">
+          Aucune clôture enregistrée pour ce quart.
+        </p>
+      ) : handover.note ? (
+        <p className="mt-4 rounded-lg bg-slate-950/50 p-4 text-sm leading-relaxed text-slate-300">
+          {handover.note}
+        </p>
+      ) : (
+        <p className="mt-4 text-sm text-slate-500 italic">
+          Aucune note de passation laissée.
+        </p>
+      )}
+    </article>
   );
 }

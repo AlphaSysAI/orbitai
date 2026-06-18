@@ -99,7 +99,7 @@ export async function provisionClient(
     const { error: memberError } = await db.from("organization_members").insert({
       organization_id: org.id,
       user_id: userId,
-      role: "owner",
+      role: "admin",
     });
 
     if (memberError) {

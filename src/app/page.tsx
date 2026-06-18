@@ -12,11 +12,14 @@ import { DecisionPillar } from "@/features/pillars/decision-simulation/DecisionP
 import { EmotionalPillar } from "@/features/pillars/emotional-ai/EmotionalPillar";
 import { ClientPillar } from "@/features/pillars/client-synthesis/ClientPillar";
 import { useOrganizationModules } from "@/hooks/useOrganizationModules";
+import { OrganizationSettingsPanel } from "@/features/organization/components/OrganizationSettingsPanel";
+import { useOrgRole } from "@/features/organization/hooks/useOrgRole";
 
 export default function OrbitDashboard() {
   const supabase = createClient();
   const router = useRouter();
   const { enabledModules } = useOrganizationModules();
+  const { isOrgAdmin, isLoading: isOrgRoleLoading } = useOrgRole();
 
   const [user, setUser] = useState<any>(null);
   // Initialiser avec un pilier qui affiche le dashboard global par défaut
@@ -110,9 +113,15 @@ export default function OrbitDashboard() {
               <h1 className="text-4xl font-extrabold mb-12 text-white italic tracking-tighter uppercase">
                 Réglages
               </h1>
-              <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50">
-                <p className="text-slate-400">Les paramètres seront disponibles prochainement.</p>
-              </div>
+              {isOrgRoleLoading ? null : isOrgAdmin ? (
+                <OrganizationSettingsPanel />
+              ) : (
+                <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50">
+                  <p className="text-slate-400">
+                    Accès réservé aux administrateurs de votre organisation.
+                  </p>
+                </div>
+              )}
             </div>
           </main>
         </div>

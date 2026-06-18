@@ -26,3 +26,8 @@ export {
   type ListClosuresActionResult,
   type GetMemberRoleActionResult,
 } from "./list-closures";
+export {
+  getPreviousShiftHandover,
+  type GetPreviousShiftHandoverResult,
+  type PreviousShiftHandover,
+} from "./get-previous-handover";
