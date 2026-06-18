@@ -571,6 +571,18 @@ export interface Database {
         Args: { p_organization_id: string };
         Returns: boolean;
       };
+      regiaire_increment_scan: {
+        Args: {
+          p_line_id: string;
+          p_allow_extra: boolean;
+          p_dlc: string | null;
+        };
+        Returns: DeliveryLineRow[];
+      };
+      regiaire_finalize_delivery: {
+        Args: { p_delivery_id: string };
+        Returns: { outcome: string; batches_created: number }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
