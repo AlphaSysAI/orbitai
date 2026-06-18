@@ -26,8 +26,8 @@ export const STATION_NAV_LINKS: StationNavLink[] = [
     requiredModule: "regiaire_core",
   },
   {
-    href: "/station/teams",
-    label: "Équipes & check-lists",
+    href: "/station/equipe",
+    label: "Équipe",
     icon: Users,
     requiredModule: "regiaire_core",
   },
