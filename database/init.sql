@@ -1395,6 +1395,7 @@ CREATE TABLE IF NOT EXISTS products (
   ean TEXT NOT NULL,
   name TEXT NOT NULL,
   has_dlc BOOLEAN NOT NULL DEFAULT false,
+  category TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (organization_id, ean)
 );
@@ -1941,6 +1942,154 @@ CREATE POLICY "Org admins can update organization"
   ON organizations FOR UPDATE
   USING (is_org_admin(id))
   WITH CHECK (is_org_admin(id));
+
+-- ============================================
+-- 020 — RégiAire Verdict IA (étape 1) : socle données + signaux
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS regiaire_station_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL UNIQUE REFERENCES organizations(id) ON DELETE CASCADE,
+  lat NUMERIC(9, 6) NOT NULL,
+  lon NUMERIC(9, 6) NOT NULL,
+  city TEXT,
+  school_zone TEXT NOT NULL CHECK (school_zone IN ('A', 'B', 'C')),
+  order_days INT[] NOT NULL DEFAULT ARRAY[1, 2, 3, 4, 5],
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_regiaire_station_settings_org
+  ON regiaire_station_settings(organization_id);
+
+ALTER TABLE products
+  ADD COLUMN IF NOT EXISTS category TEXT;
+
+CREATE TABLE IF NOT EXISTS sales_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  sale_date DATE NOT NULL,
+  quantity INT NOT NULL CHECK (quantity >= 0)
+);
+
+CREATE INDEX IF NOT EXISTS idx_sales_history_org_date
+  ON sales_history(organization_id, sale_date);
+
+CREATE INDEX IF NOT EXISTS idx_sales_history_org_product_date
+  ON sales_history(organization_id, product_id, sale_date);
+
+CREATE TABLE IF NOT EXISTS traffic_signals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  signal_date DATE NOT NULL,
+  footfall_index NUMERIC(8, 2) NOT NULL CHECK (footfall_index >= 0),
+  UNIQUE (organization_id, signal_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_traffic_signals_org_date
+  ON traffic_signals(organization_id, signal_date DESC);
+
+CREATE TABLE IF NOT EXISTS verdict_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  run_date DATE NOT NULL,
+  signals JSONB NOT NULL DEFAULT '{}'::jsonb,
+  recommendation JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_verdict_runs_org_date
+  ON verdict_runs(organization_id, run_date DESC);
+
+ALTER TABLE regiaire_station_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sales_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE traffic_signals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verdict_runs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "regiaire_station_settings_select" ON regiaire_station_settings;
+CREATE POLICY "regiaire_station_settings_select"
+  ON regiaire_station_settings FOR SELECT
+  USING (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_station_settings_insert" ON regiaire_station_settings;
+CREATE POLICY "regiaire_station_settings_insert"
+  ON regiaire_station_settings FOR INSERT
+  WITH CHECK (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_station_settings_update" ON regiaire_station_settings;
+CREATE POLICY "regiaire_station_settings_update"
+  ON regiaire_station_settings FOR UPDATE
+  USING (is_org_member(organization_id))
+  WITH CHECK (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_station_settings_delete" ON regiaire_station_settings;
+CREATE POLICY "regiaire_station_settings_delete"
+  ON regiaire_station_settings FOR DELETE
+  USING (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_sales_history_select" ON sales_history;
+CREATE POLICY "regiaire_sales_history_select"
+  ON sales_history FOR SELECT
+  USING (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_sales_history_insert" ON sales_history;
+CREATE POLICY "regiaire_sales_history_insert"
+  ON sales_history FOR INSERT
+  WITH CHECK (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_sales_history_update" ON sales_history;
+CREATE POLICY "regiaire_sales_history_update"
+  ON sales_history FOR UPDATE
+  USING (is_org_member(organization_id))
+  WITH CHECK (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_sales_history_delete" ON sales_history;
+CREATE POLICY "regiaire_sales_history_delete"
+  ON sales_history FOR DELETE
+  USING (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_traffic_signals_select" ON traffic_signals;
+CREATE POLICY "regiaire_traffic_signals_select"
+  ON traffic_signals FOR SELECT
+  USING (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_traffic_signals_insert" ON traffic_signals;
+CREATE POLICY "regiaire_traffic_signals_insert"
+  ON traffic_signals FOR INSERT
+  WITH CHECK (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_traffic_signals_update" ON traffic_signals;
+CREATE POLICY "regiaire_traffic_signals_update"
+  ON traffic_signals FOR UPDATE
+  USING (is_org_member(organization_id))
+  WITH CHECK (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_traffic_signals_delete" ON traffic_signals;
+CREATE POLICY "regiaire_traffic_signals_delete"
+  ON traffic_signals FOR DELETE
+  USING (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_verdict_runs_select" ON verdict_runs;
+CREATE POLICY "regiaire_verdict_runs_select"
+  ON verdict_runs FOR SELECT
+  USING (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_verdict_runs_insert" ON verdict_runs;
+CREATE POLICY "regiaire_verdict_runs_insert"
+  ON verdict_runs FOR INSERT
+  WITH CHECK (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_verdict_runs_update" ON verdict_runs;
+CREATE POLICY "regiaire_verdict_runs_update"
+  ON verdict_runs FOR UPDATE
+  USING (is_org_member(organization_id))
+  WITH CHECK (is_org_member(organization_id));
+
+DROP POLICY IF EXISTS "regiaire_verdict_runs_delete" ON verdict_runs;
+CREATE POLICY "regiaire_verdict_runs_delete"
+  ON verdict_runs FOR DELETE
+  USING (is_org_member(organization_id));
 
 -- ============================================
 -- FIN DU SCRIPT D'INITIALISATION
