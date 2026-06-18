@@ -391,6 +391,7 @@ export interface ProductRow {
 export interface DeliveryRow {
   id: string;
   organization_id: string;
+  aire_id: string;
   supplier_id: string;
   status: DeliveryStatus;
   bl_file_path: string | null;
@@ -414,6 +415,7 @@ export interface DeliveryLineRow {
 export interface StockBatchRow {
   id: string;
   organization_id: string;
+  aire_id: string;
   product_id: string;
   quantity: number;
   dlc: string | null;
@@ -436,6 +438,7 @@ export interface ShiftTaskDefRow {
 export interface ShiftTaskCheckRow {
   id: string;
   organization_id: string;
+  aire_id: string;
   shift: ShiftPeriod;
   service_date: string;
   task_def_id: string;
@@ -447,6 +450,7 @@ export interface ShiftTaskCheckRow {
 export interface ShiftClosureRow {
   id: string;
   organization_id: string;
+  aire_id: string;
   shift: ShiftPeriod;
   service_date: string;
   closed_by: string;
@@ -469,9 +473,22 @@ export interface RegiaireStationSettingsRow {
   updated_at: string;
 }
 
+export interface AireRow {
+  id: string;
+  organization_id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  city: string | null;
+  school_zone: string;
+  order_days: number[];
+  created_at: string;
+}
+
 export interface SalesHistoryRow {
   id: string;
   organization_id: string;
+  aire_id: string;
   product_id: string;
   sale_date: string;
   quantity: number;
@@ -480,6 +497,7 @@ export interface SalesHistoryRow {
 export interface TrafficSignalRow {
   id: string;
   organization_id: string;
+  aire_id: string;
   signal_date: string;
   footfall_index: number;
 }
@@ -487,6 +505,7 @@ export interface TrafficSignalRow {
 export interface VerdictRunRow {
   id: string;
   organization_id: string;
+  aire_id: string;
   run_date: string;
   signals: Json;
   recommendation: Json;
@@ -591,6 +610,7 @@ export interface Database {
         DeliveryRow,
         Pick<DeliveryRow, "organization_id" | "supplier_id" | "created_by"> & {
           id?: string;
+          aire_id?: string;
           status?: DeliveryStatus;
           bl_file_path?: string | null;
           created_at?: string;
@@ -624,7 +644,7 @@ export interface Database {
         StockBatchRow,
         Pick<
           StockBatchRow,
-          "organization_id" | "product_id" | "quantity" | "delivery_id"
+          "organization_id" | "aire_id" | "product_id" | "quantity" | "delivery_id"
         > & {
           id?: string;
           dlc?: string | null;
@@ -646,7 +666,7 @@ export interface Database {
         ShiftTaskCheckRow,
         Pick<
           ShiftTaskCheckRow,
-          "organization_id" | "shift" | "service_date" | "task_def_id"
+          "organization_id" | "aire_id" | "shift" | "service_date" | "task_def_id"
         > & {
           id?: string;
           checked?: boolean;
@@ -662,6 +682,7 @@ export interface Database {
         Pick<
           ShiftClosureRow,
           | "organization_id"
+          | "aire_id"
           | "shift"
           | "service_date"
           | "closed_by"
@@ -694,11 +715,29 @@ export interface Database {
           >
         >
       >;
+      aires: TableDef<
+        AireRow,
+        Pick<
+          AireRow,
+          "organization_id" | "name" | "lat" | "lon" | "school_zone"
+        > & {
+          id?: string;
+          city?: string | null;
+          order_days?: number[];
+          created_at?: string;
+        },
+        Partial<
+          Pick<
+            AireRow,
+            "name" | "lat" | "lon" | "city" | "school_zone" | "order_days"
+          >
+        >
+      >;
       sales_history: TableDef<
         SalesHistoryRow,
         Pick<
           SalesHistoryRow,
-          "organization_id" | "product_id" | "sale_date" | "quantity"
+          "organization_id" | "aire_id" | "product_id" | "sale_date" | "quantity"
         > & { id?: string },
         Partial<Pick<SalesHistoryRow, "quantity">>
       >;
@@ -706,7 +745,7 @@ export interface Database {
         TrafficSignalRow,
         Pick<
           TrafficSignalRow,
-          "organization_id" | "signal_date" | "footfall_index"
+          "organization_id" | "aire_id" | "signal_date" | "footfall_index"
         > & { id?: string },
         Partial<Pick<TrafficSignalRow, "footfall_index">>
       >;
@@ -714,7 +753,7 @@ export interface Database {
         VerdictRunRow,
         Pick<
           VerdictRunRow,
-          "organization_id" | "run_date" | "created_by"
+          "organization_id" | "aire_id" | "run_date" | "created_by"
         > & {
           id?: string;
           signals?: Json;
@@ -741,6 +780,14 @@ export interface Database {
       is_org_member: {
         Args: { p_organization_id: string };
         Returns: boolean;
+      };
+      is_aire_member: {
+        Args: { p_aire_id: string };
+        Returns: boolean;
+      };
+      regiaire_default_aire_id: {
+        Args: { p_organization_id: string };
+        Returns: string;
       };
       regiaire_increment_scan: {
         Args: {

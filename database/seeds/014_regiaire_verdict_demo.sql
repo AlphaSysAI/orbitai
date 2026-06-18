@@ -11,6 +11,7 @@ BEGIN;
 DO $$
 DECLARE
   v_org_id UUID;
+  v_aire_id UUID;
   v_days INT := 400;
   v_date DATE;
   v_dow INT;
@@ -48,30 +49,41 @@ BEGIN
   UPDATE products SET category = COALESCE(category, 'Divers')
   WHERE organization_id = v_org_id AND category IS NULL;
 
-  -- Paramètres station — aire réelle près de Carcassonne (zone scolaire C)
-  INSERT INTO regiaire_station_settings (
-    organization_id, lat, lon, city, school_zone, order_days, updated_at
-  )
-  VALUES (
-    v_org_id,
-    43.212800,
-    2.353700,
-    'Aire du Lauragais — Carcassonne',
-    'C',
-    ARRAY[1, 3, 5],
-    NOW()
-  )
-  ON CONFLICT (organization_id) DO UPDATE SET
-    lat = EXCLUDED.lat,
-    lon = EXCLUDED.lon,
-    city = EXCLUDED.city,
-    school_zone = EXCLUDED.school_zone,
-    order_days = EXCLUDED.order_days,
-    updated_at = NOW();
+  -- Aire démo — près de Carcassonne (zone scolaire C)
+  SELECT a.id INTO v_aire_id
+  FROM aires a
+  WHERE a.organization_id = v_org_id
+  ORDER BY a.created_at ASC
+  LIMIT 1;
+
+  IF v_aire_id IS NULL THEN
+    INSERT INTO aires (
+      organization_id, name, lat, lon, city, school_zone, order_days
+    )
+    VALUES (
+      v_org_id,
+      'Aire du Lauragais — Carcassonne',
+      43.212800,
+      2.353700,
+      'Aire du Lauragais — Carcassonne',
+      'C',
+      ARRAY[1, 3, 5]
+    )
+    RETURNING id INTO v_aire_id;
+  ELSE
+    UPDATE aires SET
+      name = 'Aire du Lauragais — Carcassonne',
+      lat = 43.212800,
+      lon = 2.353700,
+      city = 'Aire du Lauragais — Carcassonne',
+      school_zone = 'C',
+      order_days = ARRAY[1, 3, 5]
+    WHERE id = v_aire_id;
+  END IF;
 
   -- Reset seed simulé (trafic + ventes) pour re-seed idempotent
-  DELETE FROM sales_history WHERE organization_id = v_org_id;
-  DELETE FROM traffic_signals WHERE organization_id = v_org_id;
+  DELETE FROM sales_history WHERE aire_id = v_aire_id;
+  DELETE FROM traffic_signals WHERE aire_id = v_aire_id;
 
   -- ~400 jours de trafic simulé (couvre N-1 pour tendances alignées)
   FOR i IN 0..(v_days - 1) LOOP
@@ -98,9 +110,9 @@ BEGIN
       2
     );
 
-    INSERT INTO traffic_signals (organization_id, signal_date, footfall_index)
-    VALUES (v_org_id, v_date, v_footfall)
-    ON CONFLICT (organization_id, signal_date) DO UPDATE SET
+    INSERT INTO traffic_signals (organization_id, aire_id, signal_date, footfall_index)
+    VALUES (v_org_id, v_aire_id, v_date, v_footfall)
+    ON CONFLICT (aire_id, signal_date) DO UPDATE SET
       footfall_index = EXCLUDED.footfall_index;
   END LOOP;
 
@@ -124,7 +136,7 @@ BEGIN
 
       SELECT ts.footfall_index INTO v_footfall
       FROM traffic_signals ts
-      WHERE ts.organization_id = v_org_id
+      WHERE ts.aire_id = v_aire_id
         AND ts.signal_date = v_date;
 
       IF v_footfall IS NULL THEN
@@ -138,8 +150,8 @@ BEGIN
         )::INT
       );
 
-      INSERT INTO sales_history (organization_id, product_id, sale_date, quantity)
-      VALUES (v_org_id, v_product.id, v_date, v_qty);
+      INSERT INTO sales_history (organization_id, aire_id, product_id, sale_date, quantity)
+      VALUES (v_org_id, v_aire_id, v_product.id, v_date, v_qty);
     END LOOP;
   END LOOP;
 

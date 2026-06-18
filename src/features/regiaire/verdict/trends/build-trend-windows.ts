@@ -51,6 +51,7 @@ async function loadSalesForDates(
     .from("sales_history")
     .select("product_id, sale_date, quantity, products(category)")
     .eq("organization_id", organizationId)
+    .eq("aire_id", ctx.aireId)
     .in("sale_date", dates);
 
   if (error) {

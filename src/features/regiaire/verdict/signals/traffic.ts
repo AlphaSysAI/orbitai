@@ -17,6 +17,7 @@ export async function getTrafficForDate(
     .from("traffic_signals")
     .select("footfall_index")
     .eq("organization_id", ctx.organizationId)
+    .eq("aire_id", ctx.aireId)
     .eq("signal_date", signalDate)
     .maybeSingle();
 

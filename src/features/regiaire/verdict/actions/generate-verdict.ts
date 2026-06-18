@@ -69,6 +69,7 @@ async function findCachedVerdict(
       "id, organization_id, run_date, signals, recommendation, created_by, created_at"
     )
     .eq("organization_id", ctx.organizationId)
+    .eq("aire_id", ctx.aireId)
     .eq("run_date", runDate)
     .maybeSingle();
 
@@ -127,6 +128,7 @@ export async function generateVerdict(
       .from("verdict_runs")
       .insert({
         organization_id: ctx.organizationId,
+        aire_id: ctx.aireId,
         run_date: runDate,
         signals: signalsSnapshot,
         recommendation: parsedRecommendation,

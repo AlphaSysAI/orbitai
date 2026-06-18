@@ -56,21 +56,19 @@ export async function upsertStationSettings(input: {
     const city = input.city?.trim() || null;
 
     const { data, error } = await ctx.db
-      .from("regiaire_station_settings")
-      .upsert(
-        {
-          organization_id: ctx.organizationId,
-          lat: input.lat,
-          lon: input.lon,
-          city,
-          school_zone: schoolZone,
-          order_days: orderDays,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "organization_id" }
-      )
+      .from("aires")
+      .update({
+        lat: input.lat,
+        lon: input.lon,
+        city,
+        name: city ?? "Aire principale",
+        school_zone: schoolZone,
+        order_days: orderDays,
+      })
+      .eq("id", ctx.aireId)
+      .eq("organization_id", ctx.organizationId)
       .select(
-        "organization_id, lat, lon, city, school_zone, order_days"
+        "organization_id, lat, lon, city, school_zone, order_days, name"
       )
       .single();
 
@@ -82,7 +80,7 @@ export async function upsertStationSettings(input: {
       organizationId: data.organization_id,
       lat: Number(data.lat),
       lon: Number(data.lon),
-      city: data.city,
+      city: data.city ?? data.name,
       schoolZone: data.school_zone,
       orderDays: data.order_days ?? orderDays,
     });

@@ -54,6 +54,7 @@ export async function listShiftTasks(
       .from("shift_task_checks")
       .select("task_def_id, checked, checked_by, checked_at")
       .eq("organization_id", ctx.organizationId)
+      .eq("aire_id", ctx.aireId)
       .eq("shift", svc.shift)
       .eq("service_date", svc.service_date);
 

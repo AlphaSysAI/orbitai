@@ -57,6 +57,7 @@ export async function toggleTaskCheck(
     const { error } = await ctx.db.from("shift_task_checks").upsert(
       {
         organization_id: ctx.organizationId,
+        aire_id: ctx.aireId,
         shift: parsed.shift,
         service_date: parsed.service_date,
         task_def_id: parsed.taskDefId,
@@ -64,7 +65,7 @@ export async function toggleTaskCheck(
         checked_by: parsed.checked ? ctx.userId : null,
         checked_at: parsed.checked ? now : null,
       },
-      { onConflict: "organization_id,shift,service_date,task_def_id" }
+      { onConflict: "aire_id,shift,service_date,task_def_id" }
     );
 
     if (error) {

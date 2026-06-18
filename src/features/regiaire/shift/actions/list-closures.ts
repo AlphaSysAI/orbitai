@@ -11,6 +11,10 @@ import {
   requireOrgAdminContext,
   requireOrgContext,
 } from "@/lib/organizations/org-context";
+import {
+  RegiaireContextError,
+  requireRegiaireContext,
+} from "@/lib/regiaire/require-context";
 
 const DateRangeSchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -46,7 +50,8 @@ export async function listClosures(
   to: string
 ): Promise<ListClosuresActionResult> {
   try {
-    const ctx = await requireOrgAdminContext();
+    await requireOrgAdminContext();
+    const ctx = await requireRegiaireContext();
     const range = DateRangeSchema.parse({ from, to });
 
     const { data, error } = await ctx.db
@@ -55,6 +60,7 @@ export async function listClosures(
         "id, organization_id, shift, service_date, closed_by, closed_at, total_tasks, checked_tasks, completion_pct, missing_labels, note"
       )
       .eq("organization_id", ctx.organizationId)
+      .eq("aire_id", ctx.aireId)
       .gte("service_date", range.from)
       .lte("service_date", range.to)
       .order("service_date", { ascending: false })
@@ -75,6 +81,9 @@ export async function listClosures(
 
     return { success: true, data: closures };
   } catch (error) {
+    if (error instanceof RegiaireContextError) {
+      return { success: false, error: error.message, code: error.code };
+    }
     if (error instanceof OrgContextError) {
       return { success: false, error: error.message, code: error.code };
     }
