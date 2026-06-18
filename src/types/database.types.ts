@@ -367,6 +367,58 @@ export interface AutomationPolicyUpdate {
   updated_at?: string;
 }
 
+/** RégiAire — statut livraison (013) */
+export type DeliveryStatus = "draft" | "scanning" | "discrepancy" | "completed";
+
+export interface SupplierRow {
+  id: string;
+  organization_id: string;
+  name: string;
+  email: string | null;
+  created_at: string;
+}
+
+export interface ProductRow {
+  id: string;
+  organization_id: string;
+  ean: string;
+  name: string;
+  has_dlc: boolean;
+  created_at: string;
+}
+
+export interface DeliveryRow {
+  id: string;
+  organization_id: string;
+  supplier_id: string;
+  status: DeliveryStatus;
+  bl_file_path: string | null;
+  created_by: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface DeliveryLineRow {
+  id: string;
+  delivery_id: string;
+  product_id: string | null;
+  raw_name: string;
+  ean: string;
+  expected_qty: number;
+  scanned_qty: number;
+  dlc: string | null;
+}
+
+export interface StockBatchRow {
+  id: string;
+  organization_id: string;
+  product_id: string;
+  quantity: number;
+  dlc: string | null;
+  delivery_id: string;
+  entered_at: string;
+}
+
 /** Schéma des tables public pour le client Supabase (typage générique) */
 type TableDef<Row, Insert, Update> = {
   Row: Row;
@@ -442,6 +494,64 @@ export interface Database {
         },
         Partial<Pick<OrganizationModuleRow, "is_enabled" | "updated_at">>
       >;
+      suppliers: TableDef<
+        SupplierRow,
+        Pick<SupplierRow, "organization_id" | "name"> & {
+          id?: string;
+          email?: string | null;
+          created_at?: string;
+        },
+        Partial<Pick<SupplierRow, "name" | "email">>
+      >;
+      products: TableDef<
+        ProductRow,
+        Pick<ProductRow, "organization_id" | "ean" | "name"> & {
+          id?: string;
+          has_dlc?: boolean;
+          created_at?: string;
+        },
+        Partial<Pick<ProductRow, "name" | "has_dlc">>
+      >;
+      deliveries: TableDef<
+        DeliveryRow,
+        Pick<DeliveryRow, "organization_id" | "supplier_id" | "created_by"> & {
+          id?: string;
+          status?: DeliveryStatus;
+          bl_file_path?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+        },
+        Partial<
+          Pick<DeliveryRow, "status" | "bl_file_path" | "completed_at">
+        >
+      >;
+      delivery_lines: TableDef<
+        DeliveryLineRow,
+        Pick<
+          DeliveryLineRow,
+          "delivery_id" | "raw_name" | "ean" | "expected_qty"
+        > & {
+          id?: string;
+          product_id?: string | null;
+          scanned_qty?: number;
+          dlc?: string | null;
+        },
+        Partial<
+          Pick<DeliveryLineRow, "product_id" | "scanned_qty" | "dlc">
+        >
+      >;
+      stock_batches: TableDef<
+        StockBatchRow,
+        Pick<
+          StockBatchRow,
+          "organization_id" | "product_id" | "quantity" | "delivery_id"
+        > & {
+          id?: string;
+          dlc?: string | null;
+          entered_at?: string;
+        },
+        Partial<Pick<StockBatchRow, "quantity" | "dlc">>
+      >;
     };
     Views: Record<string, never>;
     Functions: {
@@ -456,6 +566,10 @@ export interface Database {
       get_my_enabled_modules: {
         Args: Record<string, never>;
         Returns: { organization_id: string; module_name: string }[];
+      };
+      is_org_member: {
+        Args: { p_organization_id: string };
+        Returns: boolean;
       };
     };
     Enums: Record<string, never>;
