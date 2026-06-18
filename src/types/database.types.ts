@@ -420,6 +420,43 @@ export interface StockBatchRow {
   entered_at: string;
 }
 
+export type ShiftPeriod = "matin" | "apres_midi" | "nuit";
+
+export interface ShiftTaskDefRow {
+  id: string;
+  organization_id: string;
+  label: string;
+  shifts: ShiftPeriod[];
+  position: number;
+  active: boolean;
+  created_at: string;
+}
+
+export interface ShiftTaskCheckRow {
+  id: string;
+  organization_id: string;
+  shift: ShiftPeriod;
+  service_date: string;
+  task_def_id: string;
+  checked: boolean;
+  checked_by: string | null;
+  checked_at: string | null;
+}
+
+export interface ShiftClosureRow {
+  id: string;
+  organization_id: string;
+  shift: ShiftPeriod;
+  service_date: string;
+  closed_by: string;
+  closed_at: string;
+  total_tasks: number;
+  checked_tasks: number;
+  completion_pct: number;
+  missing_labels: string[];
+  note: string | null;
+}
+
 /** Schéma des tables public pour le client Supabase (typage générique) */
 type TableDef<Row, Insert, Update> = {
   Row: Row;
@@ -558,6 +595,50 @@ export interface Database {
         },
         Partial<Pick<StockBatchRow, "quantity" | "dlc">>
       >;
+      shift_task_defs: TableDef<
+        ShiftTaskDefRow,
+        Pick<ShiftTaskDefRow, "organization_id" | "label" | "shifts"> & {
+          id?: string;
+          position?: number;
+          active?: boolean;
+          created_at?: string;
+        },
+        Partial<Pick<ShiftTaskDefRow, "label" | "shifts" | "position" | "active">>
+      >;
+      shift_task_checks: TableDef<
+        ShiftTaskCheckRow,
+        Pick<
+          ShiftTaskCheckRow,
+          "organization_id" | "shift" | "service_date" | "task_def_id"
+        > & {
+          id?: string;
+          checked?: boolean;
+          checked_by?: string | null;
+          checked_at?: string | null;
+        },
+        Partial<
+          Pick<ShiftTaskCheckRow, "checked" | "checked_by" | "checked_at">
+        >
+      >;
+      shift_closures: TableDef<
+        ShiftClosureRow,
+        Pick<
+          ShiftClosureRow,
+          | "organization_id"
+          | "shift"
+          | "service_date"
+          | "closed_by"
+          | "total_tasks"
+          | "checked_tasks"
+          | "completion_pct"
+        > & {
+          id?: string;
+          closed_at?: string;
+          missing_labels?: string[];
+          note?: string | null;
+        },
+        Partial<Pick<ShiftClosureRow, "note">>
+      >;
     };
     Views: Record<string, never>;
     Functions: {
@@ -594,7 +675,9 @@ export interface Database {
         Returns: { outcome: string; batches_created: number }[];
       };
     };
-    Enums: Record<string, never>;
+    Enums: {
+      shift_period: ShiftPeriod;
+    };
     CompositeTypes: Record<string, never>;
   };
 }
