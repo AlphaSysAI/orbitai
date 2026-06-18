@@ -2091,6 +2091,9 @@ CREATE POLICY "regiaire_verdict_runs_delete"
   ON verdict_runs FOR DELETE
   USING (is_org_member(organization_id));
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_verdict_runs_org_run_date_unique
+  ON verdict_runs(organization_id, run_date);
+
 -- ============================================
 -- FIN DU SCRIPT D'INITIALISATION
 -- ============================================

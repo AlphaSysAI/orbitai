@@ -48,17 +48,17 @@ BEGIN
   UPDATE products SET category = COALESCE(category, 'Divers')
   WHERE organization_id = v_org_id AND category IS NULL;
 
-  -- Paramètres station (Paris, zone B)
+  -- Paramètres station — aire réelle près de Carcassonne (zone scolaire C)
   INSERT INTO regiaire_station_settings (
     organization_id, lat, lon, city, school_zone, order_days, updated_at
   )
   VALUES (
     v_org_id,
-    48.856600,
-    2.352200,
-    'Paris',
-    'B',
-    ARRAY[1, 2, 3, 4, 5],
+    43.212800,
+    2.353700,
+    'Aire du Lauragais — Carcassonne',
+    'C',
+    ARRAY[1, 3, 5],
     NOW()
   )
   ON CONFLICT (organization_id) DO UPDATE SET
