@@ -9,6 +9,9 @@ export {
   type GenerateVerdictActionResult,
 } from "./generate-verdict";
 export {
+  regenerateVerdict,
+} from "./regenerate-verdict";
+export {
   getExpiringStock,
   type GetExpiringStockActionResult,
 } from "./get-expiring-stock";
