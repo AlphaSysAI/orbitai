@@ -21,6 +21,7 @@ DECLARE
   v_product_nutella UUID;
   v_product_croissant UUID;
   v_product_eau UUID;
+  v_delivery_stock UUID;
   v_delivery_scanning UUID;
   v_days INT := 400;
   v_date DATE;
@@ -186,12 +187,34 @@ BEGIN
     END LOOP;
   END LOOP;
 
-  -- Stock réel (lots) — niveaux volontairement bas pour tester réappro
-  INSERT INTO stock_batches (organization_id, aire_id, product_id, quantity, dlc)
+  -- Stock réel (lots) — issu d'une livraison finalisée (delivery_id NOT NULL)
+  SELECT id INTO v_delivery_stock
+  FROM deliveries
+  WHERE organization_id = v_org_id
+    AND aire_id = v_aire_id
+    AND status = 'completed'
+    AND bl_file_path = 'seed:017_arzens_stock'
+  LIMIT 1;
+
+  IF v_delivery_stock IS NULL THEN
+    INSERT INTO deliveries (
+      organization_id, aire_id, supplier_id, status, created_by,
+      completed_at, bl_file_path
+    )
+    VALUES (
+      v_org_id, v_aire_id, v_supplier_id, 'completed', v_owner_id,
+      NOW(), 'seed:017_arzens_stock'
+    )
+    RETURNING id INTO v_delivery_stock;
+  END IF;
+
+  INSERT INTO stock_batches (
+    organization_id, aire_id, product_id, quantity, dlc, delivery_id
+  )
   VALUES
-    (v_org_id, v_aire_id, v_product_eau, 12, CURRENT_DATE + 90),
-    (v_org_id, v_aire_id, v_product_croissant, 8, CURRENT_DATE + 3),
-    (v_org_id, v_aire_id, v_product_nutella, 24, NULL);
+    (v_org_id, v_aire_id, v_product_eau, 12, CURRENT_DATE + 90, v_delivery_stock),
+    (v_org_id, v_aire_id, v_product_croissant, 8, CURRENT_DATE + 3, v_delivery_stock),
+    (v_org_id, v_aire_id, v_product_nutella, 24, NULL, v_delivery_stock);
 
   -- Livraison scanning (réception)
   IF NOT EXISTS (
