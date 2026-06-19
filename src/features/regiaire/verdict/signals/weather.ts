@@ -30,6 +30,14 @@ function owmErrorMessage(raw: OwmForecastResponse, status: number): string {
   return `OpenWeatherMap indisponible (${status})`;
 }
 
+function unavailableWeather(reason: string): WeatherSignal {
+  return WeatherSignalSchema.parse({
+    available: false,
+    forecast: null,
+    reason,
+  });
+}
+
 /**
  * Prévision météo J0 → J+6 via OpenWeatherMap (forecast 2.5, agrégation journalière).
  * Timeout ~3 s + fallback { available: false } — ne bloque jamais le Verdict.
@@ -37,18 +45,12 @@ function owmErrorMessage(raw: OwmForecastResponse, status: number): string {
 export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
   const settings = await getStationSettings(ctx);
   if (!settings) {
-    return WeatherSignalSchema.parse({
-      available: false,
-      reason: "Paramètres station manquants (lat/lon)",
-    });
+    return unavailableWeather("Paramètres station manquants (lat/lon)");
   }
 
   const apiKey = getOwmApiKey();
   if (!apiKey) {
-    return WeatherSignalSchema.parse({
-      available: false,
-      reason: "Clé OpenWeatherMap manquante (OWM_API_KEY)",
-    });
+    return unavailableWeather("Clé OpenWeatherMap manquante (OWM_API_KEY)");
   }
 
   const params = new URLSearchParams({
@@ -68,33 +70,21 @@ export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
     const raw = (await response.json()) as OwmForecastResponse;
 
     if (!response.ok) {
-      return WeatherSignalSchema.parse({
-        available: false,
-        reason: owmErrorMessage(raw, response.status),
-      });
+      return unavailableWeather(owmErrorMessage(raw, response.status));
     }
 
     const cod = String(raw.cod ?? "");
     if (cod && cod !== "200") {
-      return WeatherSignalSchema.parse({
-        available: false,
-        reason: owmErrorMessage(raw, response.status),
-      });
+      return unavailableWeather(owmErrorMessage(raw, response.status));
     }
 
     if (!raw.list?.length) {
-      return WeatherSignalSchema.parse({
-        available: false,
-        reason: "Réponse OpenWeatherMap invalide",
-      });
+      return unavailableWeather("Réponse OpenWeatherMap invalide");
     }
 
     const days = aggregateOwmForecastToDays(raw.list);
     if (days.length === 0) {
-      return WeatherSignalSchema.parse({
-        available: false,
-        reason: "Aucune prévision sur la période J0→J+6",
-      });
+      return unavailableWeather("Aucune prévision sur la période J0→J+6");
     }
 
     const forecast = WeatherForecastSchema.parse({
@@ -107,7 +97,11 @@ export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
       fetchedAt: new Date().toISOString(),
     });
 
-    return WeatherSignalSchema.parse({ available: true, forecast });
+    return WeatherSignalSchema.parse({
+      available: true,
+      forecast,
+      reason: null,
+    });
   } catch (error) {
     const reason =
       error instanceof Error && error.name === "AbortError"
@@ -115,7 +109,7 @@ export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
         : error instanceof Error
           ? error.message
           : "Erreur météo";
-    return WeatherSignalSchema.parse({ available: false, reason });
+    return unavailableWeather(reason);
   }
 }
 
