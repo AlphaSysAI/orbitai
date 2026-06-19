@@ -2110,16 +2110,24 @@ CREATE TABLE IF NOT EXISTS aires (
   lat NUMERIC(9, 6) NOT NULL,
   lon NUMERIC(9, 6) NOT NULL,
   city TEXT,
+  address TEXT,
+  bison_fute_zone SMALLINT CHECK (bison_fute_zone IS NULL OR (bison_fute_zone >= 1 AND bison_fute_zone <= 6)),
   school_zone TEXT NOT NULL CHECK (school_zone IN ('A', 'B', 'C')),
   order_days INT[] NOT NULL DEFAULT ARRAY[1, 2, 3, 4, 5],
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+COMMENT ON COLUMN aires.address IS
+  'Adresse postale complète (saisie assistée BAN) pour géolocalisation météo et trafic.';
+
+COMMENT ON COLUMN aires.bison_fute_zone IS
+  'Zone Bison Futé (1=IDF … 6=Arc méditerranéen) pour les prévisions trafic Verdict.';
+
 CREATE INDEX IF NOT EXISTS idx_aires_organization_id ON aires(organization_id);
 CREATE INDEX IF NOT EXISTS idx_aires_org_created ON aires(organization_id, created_at);
 
 COMMENT ON TABLE aires IS
-  'Aires / stations RégiAire (remplace regiaire_station_settings).';
+  'Aires / stations RégiAire. Lecture org ; écriture admin OrbitAI uniquement.';
 
 CREATE OR REPLACE FUNCTION is_aire_member(p_aire_id UUID)
 RETURNS BOOLEAN
@@ -2393,21 +2401,7 @@ CREATE POLICY "regiaire_aires_select"
   ON aires FOR SELECT
   USING (is_org_member(organization_id));
 
-DROP POLICY IF EXISTS "regiaire_aires_insert" ON aires;
-CREATE POLICY "regiaire_aires_insert"
-  ON aires FOR INSERT
-  WITH CHECK (is_org_member(organization_id));
-
-DROP POLICY IF EXISTS "regiaire_aires_update" ON aires;
-CREATE POLICY "regiaire_aires_update"
-  ON aires FOR UPDATE
-  USING (is_org_member(organization_id))
-  WITH CHECK (is_org_member(organization_id));
-
-DROP POLICY IF EXISTS "regiaire_aires_delete" ON aires;
-CREATE POLICY "regiaire_aires_delete"
-  ON aires FOR DELETE
-  USING (is_org_member(organization_id));
+-- Écriture aires : admin OrbitAI uniquement (service_role). Pas de policy INSERT/UPDATE/DELETE client.
 
 -- ---------------------------------------------------------------------------
 -- RLS aire-level → is_aire_member(aire_id)
@@ -2618,6 +2612,33 @@ DROP POLICY IF EXISTS "regiaire_shift_closures_delete" ON shift_closures;
 CREATE POLICY "regiaire_shift_closures_delete"
   ON shift_closures FOR DELETE
   USING (is_aire_member(aire_id));
+
+-- ============================================
+-- 026 — RégiAire Verdict : prévisions Bison Futé (référence nationale)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS bison_fute_forecast (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  forecast_date DATE NOT NULL,
+  zone SMALLINT NOT NULL CHECK (zone >= 1 AND zone <= 6),
+  direction TEXT NOT NULL CHECK (direction IN ('aller', 'retour')),
+  level TEXT NOT NULL CHECK (level IN ('vert', 'orange', 'rouge', 'noir')),
+  UNIQUE (forecast_date, zone, direction)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bison_fute_forecast_date_zone
+  ON bison_fute_forecast (forecast_date, zone);
+
+COMMENT ON TABLE bison_fute_forecast IS
+  'Prévisions nationales Bison Futé (jours colorés). Référence partagée, refresh cron service_role.';
+
+ALTER TABLE bison_fute_forecast ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "bison_fute_forecast_select_authenticated" ON bison_fute_forecast;
+CREATE POLICY "bison_fute_forecast_select_authenticated"
+  ON bison_fute_forecast FOR SELECT
+  TO authenticated
+  USING (auth.uid() IS NOT NULL);
 
 COMMIT;
 

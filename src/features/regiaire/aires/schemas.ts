@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { BisonFuteZoneSchema } from "@/features/regiaire/verdict/bison-fute/schemas";
 import { SchoolZoneSchema } from "@/features/regiaire/verdict/schemas";
 
 export const AireSchema = z.object({
@@ -11,6 +12,7 @@ export const AireSchema = z.object({
   city: z.string().nullable(),
   schoolZone: SchoolZoneSchema,
   orderDays: z.array(z.number().int().min(1).max(7)).min(1),
+  bisonFuteZone: BisonFuteZoneSchema.nullable(),
   createdAt: z.string(),
 });
 
@@ -23,6 +25,7 @@ export const AireInputSchema = z.object({
   lon: z.number().min(-180).max(180),
   schoolZone: SchoolZoneSchema,
   orderDays: z.array(z.number().int().min(1).max(7)).min(1),
+  bisonFuteZone: BisonFuteZoneSchema.nullable().optional(),
 });
 
 export type AireInput = z.infer<typeof AireInputSchema>;
@@ -32,6 +35,7 @@ export const AireListItemSchema = z.object({
   name: z.string(),
   city: z.string().nullable(),
   schoolZone: SchoolZoneSchema,
+  bisonFuteZone: BisonFuteZoneSchema.nullable().optional(),
 });
 
 export type AireListItem = z.infer<typeof AireListItemSchema>;

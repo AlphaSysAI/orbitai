@@ -10,6 +10,11 @@ import {
   updateAire,
 } from "@/features/regiaire/aires/actions";
 import type { AireInput, AireListItem } from "@/features/regiaire/aires/schemas";
+import {
+  BISON_FUTE_ZONE_LABELS,
+  BISON_FUTE_ZONES,
+  type BisonFuteZone,
+} from "@/features/regiaire/verdict/bison-fute/schemas";
 import type { SchoolZone } from "@/features/regiaire/verdict/schemas";
 
 const SCHOOL_ZONES: SchoolZone[] = ["A", "B", "C"];
@@ -30,6 +35,7 @@ const EMPTY_FORM: AireInput = {
   lon: 2.3522,
   schoolZone: "C",
   orderDays: [1, 2, 3, 4, 5],
+  bisonFuteZone: 5,
 };
 
 export function AiresAdminPanel() {
@@ -136,6 +142,7 @@ export function AiresAdminPanel() {
                   lon: 2.3522,
                   schoolZone: aire.schoolZone,
                   orderDays: [1, 2, 3, 4, 5],
+                  bisonFuteZone: aire.bisonFuteZone ?? null,
                 });
               }}
               className={`w-full rounded-xl border px-4 py-3 text-left transition-colors ${
@@ -147,6 +154,7 @@ export function AiresAdminPanel() {
               <p className="font-medium text-white">{aire.name}</p>
               <p className="text-xs text-slate-500">
                 {aire.city ?? "Ville non renseignée"} · zone {aire.schoolZone}
+                {aire.bisonFuteZone != null && ` · BF ${aire.bisonFuteZone}`}
               </p>
             </button>
           </li>
@@ -220,6 +228,45 @@ export function AiresAdminPanel() {
               className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white"
             />
           </label>
+        </div>
+
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Zone Bison Futé
+          </span>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, bisonFuteZone: null }))}
+              className={`rounded-lg px-2 py-1 text-[10px] font-bold uppercase ${
+                form.bisonFuteZone == null
+                  ? "bg-amber-600/30 text-amber-400 border border-amber-500/40"
+                  : "bg-slate-800 text-slate-500"
+              }`}
+            >
+              —
+            </button>
+            {BISON_FUTE_ZONES.map((zone) => (
+              <button
+                key={zone}
+                type="button"
+                title={BISON_FUTE_ZONE_LABELS[zone]}
+                onClick={() => setForm((prev) => ({ ...prev, bisonFuteZone: zone }))}
+                className={`rounded-lg px-2 py-1 text-[10px] font-bold ${
+                  form.bisonFuteZone === zone
+                    ? "bg-amber-600/30 text-amber-400 border border-amber-500/40"
+                    : "bg-slate-800 text-slate-500"
+                }`}
+              >
+                {zone}
+              </button>
+            ))}
+          </div>
+          {form.bisonFuteZone != null && (
+            <p className="mt-1 text-[10px] text-slate-500">
+              {BISON_FUTE_ZONE_LABELS[form.bisonFuteZone as BisonFuteZone]}
+            </p>
+          )}
         </div>
 
         <div>

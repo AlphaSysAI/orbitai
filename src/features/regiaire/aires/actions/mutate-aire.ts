@@ -36,9 +36,10 @@ export async function createAire(
         lon: parsed.lon,
         school_zone: parsed.schoolZone,
         order_days: parsed.orderDays,
+        bison_fute_zone: parsed.bisonFuteZone ?? null,
       })
       .select(
-        "id, organization_id, name, lat, lon, city, school_zone, order_days, created_at"
+        "id, organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone, created_at"
       )
       .single();
 
@@ -57,6 +58,7 @@ export async function createAire(
         city: data.city,
         schoolZone: data.school_zone,
         orderDays: data.order_days,
+        bisonFuteZone: data.bison_fute_zone ?? null,
         createdAt: data.created_at,
       }),
     };
@@ -89,10 +91,11 @@ export async function updateAire(
         lon: parsed.lon,
         school_zone: parsed.schoolZone,
         order_days: parsed.orderDays,
+        bison_fute_zone: parsed.bisonFuteZone ?? null,
       })
       .eq("id", ctx.aireId)
       .select(
-        "id, organization_id, name, lat, lon, city, school_zone, order_days, created_at"
+        "id, organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone, created_at"
       )
       .single();
 
@@ -111,6 +114,7 @@ export async function updateAire(
         city: data.city,
         schoolZone: data.school_zone,
         orderDays: data.order_days,
+        bisonFuteZone: data.bison_fute_zone ?? null,
         createdAt: data.created_at,
       }),
     };

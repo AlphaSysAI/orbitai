@@ -79,7 +79,7 @@ BEGIN
   LIMIT 1;
 
   IF v_aire_carcassonne IS NULL THEN
-    INSERT INTO aires (organization_id, name, lat, lon, city, school_zone, order_days)
+    INSERT INTO aires (organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone)
     VALUES (
       v_org_id,
       'Aire du Lauragais — Carcassonne',
@@ -87,7 +87,8 @@ BEGIN
       2.353700,
       'Carcassonne',
       'C',
-      ARRAY[1, 3, 5]
+      ARRAY[1, 3, 5],
+      5
     )
     RETURNING id INTO v_aire_carcassonne;
   END IF;
@@ -100,7 +101,7 @@ BEGIN
   LIMIT 1;
 
   IF v_aire_pamiers IS NULL THEN
-    INSERT INTO aires (organization_id, name, lat, lon, city, school_zone, order_days)
+    INSERT INTO aires (organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone)
     VALUES (
       v_org_id,
       'Aire de Pamiers',
@@ -108,7 +109,8 @@ BEGIN
       1.616700,
       'Pamiers',
       'A',
-      ARRAY[2, 4, 6]
+      ARRAY[2, 4, 6],
+      5
     )
     RETURNING id INTO v_aire_pamiers;
   END IF;
@@ -121,7 +123,7 @@ BEGIN
   LIMIT 1;
 
   IF v_aire_castelnaudary IS NULL THEN
-    INSERT INTO aires (organization_id, name, lat, lon, city, school_zone, order_days)
+    INSERT INTO aires (organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone)
     VALUES (
       v_org_id,
       'Aire de Castelnaudary',
@@ -129,7 +131,8 @@ BEGIN
       1.954000,
       'Castelnaudary',
       'B',
-      ARRAY[1, 2, 3, 4, 5]
+      ARRAY[1, 2, 3, 4, 5],
+      5
     )
     RETURNING id INTO v_aire_castelnaudary;
   END IF;

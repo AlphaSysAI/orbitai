@@ -7,8 +7,14 @@ import {
   type WeatherSignal,
   type SchoolHolidaySignal,
   type TrafficSignal,
+  type BisonFuteSignal,
   type StationSettings,
 } from "@/features/regiaire/verdict/schemas";
+import {
+  BISON_FUTE_LEVEL_LABELS,
+  BISON_FUTE_ZONE_LABELS,
+  type BisonFuteZone,
+} from "@/features/regiaire/verdict/bison-fute/schemas";
 
 export function summarizeTrendsByCategory(
   trends: TrendWindows
@@ -49,6 +55,7 @@ export function buildSignalsSnapshot(params: {
   weather: WeatherSignal;
   schoolHoliday: SchoolHolidaySignal;
   traffic: TrafficSignal;
+  bisonFute: BisonFuteSignal;
   trendsSummary: TrendCategorySummary[];
 }): VerdictSignalsSnapshot {
   return VerdictSignalsSnapshotSchema.parse({
@@ -61,6 +68,7 @@ export function buildSignalsSnapshot(params: {
     weather: params.weather,
     schoolHoliday: params.schoolHoliday,
     traffic: params.traffic,
+    bisonFute: params.bisonFute,
     trendsSummary: params.trendsSummary,
   });
 }
@@ -98,12 +106,42 @@ export function buildVerdictPromptContext(snapshot: VerdictSignalsSnapshot): str
     );
   }
 
+  if (snapshot.bisonFute.available && snapshot.bisonFute.level != null) {
+    const zone = snapshot.bisonFute.zone;
+    const zoneLabel =
+      zone != null
+        ? BISON_FUTE_ZONE_LABELS[zone as BisonFuteZone]
+        : "zone inconnue";
+    const levelLabel = BISON_FUTE_LEVEL_LABELS[snapshot.bisonFute.level];
+    lines.push(
+      `>>> PRÉVISION BISON FUTÉ (signal prioritaire affluence) : zone ${zone} (${zoneLabel}) — journée ${levelLabel.toUpperCase()} (aller ${snapshot.bisonFute.levelAller ?? "?"}, retour ${snapshot.bisonFute.levelRetour ?? "?"})`
+    );
+    if (
+      snapshot.bisonFute.level === "rouge" ||
+      snapshot.bisonFute.level === "noir"
+    ) {
+      lines.push(
+        "→ Affluence exceptionnelle attendue sur l'autoroute : privilégier affluence_attendue = forte."
+      );
+    } else if (snapshot.bisonFute.level === "orange") {
+      lines.push(
+        "→ Circulation chargée : affluence_attendue normale à forte selon les autres signaux."
+      );
+    }
+  } else {
+    lines.push(
+      `Bison Futé : indisponible (${snapshot.bisonFute.reason ?? "?"})`
+    );
+  }
+
   if (snapshot.traffic.available && snapshot.traffic.footfallIndex != null) {
     lines.push(
-      `Indice trafic du jour : ${snapshot.traffic.footfallIndex} (base 100)`
+      `Indice fréquentation historique (baseline) : ${snapshot.traffic.footfallIndex} (base 100)`
     );
   } else {
-    lines.push(`Trafic : indisponible (${snapshot.traffic.reason ?? "?"})`);
+    lines.push(
+      `Indice fréquentation historique : indisponible (${snapshot.traffic.reason ?? "?"})`
+    );
   }
 
   lines.push("Tendances 15 jours vs N-1 aligné (par rayon) :");

@@ -480,9 +480,19 @@ export interface AireRow {
   lat: number;
   lon: number;
   city: string | null;
+  address: string | null;
   school_zone: string;
   order_days: number[];
+  bison_fute_zone: number | null;
   created_at: string;
+}
+
+export interface BisonFuteForecastRow {
+  id: string;
+  forecast_date: string;
+  zone: number;
+  direction: string;
+  level: string;
 }
 
 export interface SalesHistoryRow {
@@ -723,15 +733,32 @@ export interface Database {
         > & {
           id?: string;
           city?: string | null;
+          address?: string | null;
           order_days?: number[];
+          bison_fute_zone?: number | null;
           created_at?: string;
         },
         Partial<
           Pick<
             AireRow,
-            "name" | "lat" | "lon" | "city" | "school_zone" | "order_days"
+            | "name"
+            | "lat"
+            | "lon"
+            | "city"
+            | "address"
+            | "school_zone"
+            | "order_days"
+            | "bison_fute_zone"
           >
         >
+      >;
+      bison_fute_forecast: TableDef<
+        BisonFuteForecastRow,
+        Pick<
+          BisonFuteForecastRow,
+          "forecast_date" | "zone" | "direction" | "level"
+        > & { id?: string },
+        Partial<Pick<BisonFuteForecastRow, "level">>
       >;
       sales_history: TableDef<
         SalesHistoryRow,
