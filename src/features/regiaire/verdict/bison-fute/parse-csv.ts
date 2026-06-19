@@ -66,6 +66,15 @@ export function parseBisonFuteCsvDate(raw: string): string | null {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+/** Développe une direction (6 zones) à partir d'un encodage Bison Futé. */
+export function expandBisonFuteDirection(
+  date: string,
+  direction: BisonFuteDirection,
+  encoding: string
+): BisonFuteForecastRow[] {
+  return expandDirection(date, direction, encoding);
+}
+
 function expandDirection(
   date: string,
   direction: BisonFuteDirection,
@@ -135,6 +144,25 @@ export function parseBisonFuteCsv(csvText: string): BisonFuteForecastRow[] {
   }
 
   return rows;
+}
+
+/**
+ * Import en masse : lignes `date,aller,retour` avec ou sans en-tête CSV.
+ */
+export function parseBisonFuteBulkLines(text: string): BisonFuteForecastRow[] {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+
+  const firstLine = trimmed.split(/\r?\n/)[0]!.toLowerCase();
+  if (
+    firstLine.includes("date") &&
+    firstLine.includes("aller") &&
+    firstLine.includes("retour")
+  ) {
+    return parseBisonFuteCsv(trimmed);
+  }
+
+  return parseBisonFuteCsv(`date,aller,retour\n${trimmed}`);
 }
 
 export function worstBisonFuteLevel(
