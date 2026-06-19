@@ -77,7 +77,8 @@ export async function bindEanToLine(
       ctx,
       trimmedEan,
       line.raw_name,
-      hasDlc
+      hasDlc,
+      delivery.supplier_id
     );
 
     const { data: boundRows, error: bindError } = await ctx.db

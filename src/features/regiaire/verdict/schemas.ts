@@ -7,6 +7,9 @@ export type SchoolZone = z.infer<typeof SchoolZoneSchema>;
 
 export const IsoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+export const SchoolZoneSchema = z.enum(["A", "B", "C"]);
+export type SchoolZone = z.infer<typeof SchoolZoneSchema>;
+
 export const WeatherDaySchema = z.object({
   date: IsoDateSchema,
   weatherCode: z.number().int(),
@@ -24,8 +27,8 @@ export const WeatherForecastSchema = z.object({
     lon: z.number(),
     city: z.string().nullable(),
   }),
-  /** Jour courant + J+1, J+2, J+3 */
-  days: z.array(WeatherDaySchema).min(1).max(4),
+  /** Jour courant + J+1 … J+6 */
+  days: z.array(WeatherDaySchema).min(1).max(7),
   fetchedAt: z.string().datetime(),
 });
 

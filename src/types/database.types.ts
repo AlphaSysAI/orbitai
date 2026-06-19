@@ -375,6 +375,7 @@ export interface SupplierRow {
   organization_id: string;
   name: string;
   email: string | null;
+  lead_time_days: number;
   created_at: string;
 }
 
@@ -385,6 +386,7 @@ export interface ProductRow {
   name: string;
   has_dlc: boolean;
   category: string | null;
+  supplier_id: string | null;
   created_at: string;
 }
 
@@ -603,18 +605,22 @@ export interface Database {
         Pick<SupplierRow, "organization_id" | "name"> & {
           id?: string;
           email?: string | null;
+          lead_time_days?: number;
           created_at?: string;
         },
-        Partial<Pick<SupplierRow, "name" | "email">>
+        Partial<Pick<SupplierRow, "name" | "email" | "lead_time_days">>
       >;
       products: TableDef<
         ProductRow,
         Pick<ProductRow, "organization_id" | "ean" | "name"> & {
           id?: string;
           has_dlc?: boolean;
+          supplier_id?: string | null;
           created_at?: string;
         },
-        Partial<Pick<ProductRow, "name" | "has_dlc" | "category">>
+        Partial<
+          Pick<ProductRow, "name" | "has_dlc" | "category" | "supplier_id">
+        >
       >;
       deliveries: TableDef<
         DeliveryRow,

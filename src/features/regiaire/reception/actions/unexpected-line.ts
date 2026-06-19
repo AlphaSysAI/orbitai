@@ -135,7 +135,13 @@ export async function addUnexpectedLine(
       rawName = product.name;
     } else {
       rawName = parsed.newName!;
-      productId = await upsertProductForLine(ctx, parsed.ean, rawName, false);
+      productId = await upsertProductForLine(
+        ctx,
+        parsed.ean,
+        rawName,
+        false,
+        delivery.supplier_id
+      );
     }
 
     const { data, error } = await ctx.db

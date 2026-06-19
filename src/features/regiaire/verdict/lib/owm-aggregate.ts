@@ -83,13 +83,15 @@ function bucketForecastByParisDate(
   return buckets;
 }
 
-/** Agrège le forecast 3h OWM en 4 jours calendaires (J0→J+3, Europe/Paris). */
+/** Agrège le forecast 3h OWM en 7 jours calendaires (J0→J+6, Europe/Paris). */
 export function aggregateOwmForecastToDays(
   list: OwmForecastItem[]
 ): WeatherDay[] {
   const buckets = bucketForecastByParisDate(list);
   const start = todayParisIso();
-  const targetDates = [0, 1, 2, 3].map((offset) => addDaysIso(start, offset));
+  const targetDates = [0, 1, 2, 3, 4, 5, 6].map((offset) =>
+    addDaysIso(start, offset)
+  );
 
   const days: WeatherDay[] = [];
 

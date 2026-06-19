@@ -102,7 +102,8 @@ export async function analyzeBL(
           ctx,
           line.ean,
           line.raw_name,
-          hasDlc
+          hasDlc,
+          delivery.supplier_id
         );
       }
 

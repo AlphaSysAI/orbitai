@@ -1,14 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, UserPlus, Users } from "lucide-react";
+import { Loader2, Truck, UserPlus, Users } from "lucide-react";
 
 import {
   createOrgMember,
   getOrgSettings,
+  getOrgSuppliers,
   updateOrgProfile,
+  updateSupplierLeadTime,
   type OrgMemberListItem,
   type OrgProfile,
+  type OrgSupplierListItem,
 } from "@/features/organization/actions";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -29,18 +32,34 @@ export function OrganizationSettingsPanel() {
   const [newPassword, setNewPassword] = useState("");
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
+  const [suppliers, setSuppliers] = useState<OrgSupplierListItem[]>([]);
+  const [supplierLeadDrafts, setSupplierLeadDrafts] = useState<
+    Record<string, string>
+  >({});
+  const [savingSupplierId, setSavingSupplierId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const result = await getOrgSettings();
-    if (!result.success) {
-      setError(result.error);
+    const [settingsResult, suppliersResult] = await Promise.all([
+      getOrgSettings(),
+      getOrgSuppliers(),
+    ]);
+    if (!settingsResult.success) {
+      setError(settingsResult.error);
       setIsLoading(false);
       return;
     }
-    setProfile(result.data.profile);
-    setMembers(result.data.members);
+    setProfile(settingsResult.data.profile);
+    setMembers(settingsResult.data.members);
+    if (suppliersResult.success) {
+      setSuppliers(suppliersResult.data);
+      setSupplierLeadDrafts(
+        Object.fromEntries(
+          suppliersResult.data.map((s) => [s.id, String(s.leadTimeDays)])
+        )
+      );
+    }
     setIsLoading(false);
   }, []);
 
@@ -97,6 +116,36 @@ export function OrganizationSettingsPanel() {
     setNewLastName("");
     setSuccess(`Compte membre créé pour ${result.data.email}.`);
     await load();
+  };
+
+  const handleSaveSupplierLeadTime = async (supplierId: string) => {
+    const raw = supplierLeadDrafts[supplierId] ?? "0";
+    const leadTimeDays = Number.parseInt(raw, 10);
+    if (!Number.isFinite(leadTimeDays) || leadTimeDays < 0) {
+      setError("Délai de livraison invalide (entier ≥ 0).");
+      return;
+    }
+
+    setSavingSupplierId(supplierId);
+    setError(null);
+    setSuccess(null);
+
+    const result = await updateSupplierLeadTime({ supplierId, leadTimeDays });
+
+    setSavingSupplierId(null);
+    if (!result.success) {
+      setError(result.error);
+      return;
+    }
+
+    setSuppliers((prev) =>
+      prev.map((s) => (s.id === supplierId ? result.data : s))
+    );
+    setSupplierLeadDrafts((prev) => ({
+      ...prev,
+      [supplierId]: String(result.data.leadTimeDays),
+    }));
+    setSuccess(`Délai enregistré pour ${result.data.name}.`);
   };
 
   if (isLoading) {
@@ -190,6 +239,62 @@ export function OrganizationSettingsPanel() {
             </button>
           </div>
         </form>
+      </section>
+
+      <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-white">
+          <Truck size={20} className="text-amber-400" />
+          Fournisseurs
+        </h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Délai de livraison utilisé pour le calcul de réappro (Verdict v2).
+        </p>
+        {suppliers.length === 0 ? (
+          <p className="mt-4 text-sm text-slate-500">
+            Aucun fournisseur enregistré — créez-en via une réception.
+          </p>
+        ) : (
+          <ul className="mt-6 divide-y divide-slate-800">
+            {suppliers.map((supplier) => (
+              <li
+                key={supplier.id}
+                className="flex flex-wrap items-end gap-3 py-4 first:pt-0 last:pb-0"
+              >
+                <div className="min-w-[180px] flex-1">
+                  <p className="font-medium text-white">{supplier.name}</p>
+                  {supplier.email && (
+                    <p className="text-xs text-slate-500">{supplier.email}</p>
+                  )}
+                </div>
+                <Field label="Délai de livraison (jours)">
+                  <input
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={supplierLeadDrafts[supplier.id] ?? "0"}
+                    onChange={(e) =>
+                      setSupplierLeadDrafts((prev) => ({
+                        ...prev,
+                        [supplier.id]: e.target.value,
+                      }))
+                    }
+                    className={`${inputClass} w-28`}
+                  />
+                </Field>
+                <button
+                  type="button"
+                  disabled={savingSupplierId === supplier.id}
+                  onClick={() => void handleSaveSupplierLeadTime(supplier.id)}
+                  className="rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50"
+                >
+                  {savingSupplierId === supplier.id
+                    ? "Enregistrement…"
+                    : "Enregistrer"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8">

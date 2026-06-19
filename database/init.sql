@@ -1384,6 +1384,7 @@ CREATE TABLE IF NOT EXISTS suppliers (
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   email TEXT,
+  lead_time_days INT NOT NULL DEFAULT 0 CHECK (lead_time_days >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -1396,9 +1397,12 @@ CREATE TABLE IF NOT EXISTS products (
   name TEXT NOT NULL,
   has_dlc BOOLEAN NOT NULL DEFAULT false,
   category TEXT,
+  supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (organization_id, ean)
 );
+
+CREATE INDEX IF NOT EXISTS idx_products_supplier_id ON products(supplier_id);
 
 CREATE INDEX IF NOT EXISTS idx_products_organization_id ON products(organization_id);
 CREATE INDEX IF NOT EXISTS idx_products_ean ON products(ean);

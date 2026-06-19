@@ -66,7 +66,8 @@ export async function upsertProductForLine(
   ctx: RegiaireContext,
   ean: string,
   name: string,
-  hasDlc: boolean
+  hasDlc: boolean,
+  supplierId: string
 ): Promise<string> {
   const { data, error } = await ctx.db
     .from("products")
@@ -76,6 +77,7 @@ export async function upsertProductForLine(
         ean,
         name,
         has_dlc: hasDlc,
+        supplier_id: supplierId,
       },
       { onConflict: "organization_id,ean" }
     )

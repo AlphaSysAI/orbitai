@@ -31,7 +31,7 @@ function owmErrorMessage(raw: OwmForecastResponse, status: number): string {
 }
 
 /**
- * Prévision météo J0 → J+3 via OpenWeatherMap (forecast 2.5, agrégation journalière).
+ * Prévision météo J0 → J+6 via OpenWeatherMap (forecast 2.5, agrégation journalière).
  * Timeout ~3 s + fallback { available: false } — ne bloque jamais le Verdict.
  */
 export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
@@ -93,7 +93,7 @@ export async function getWeather(ctx: RegiaireContext): Promise<WeatherSignal> {
     if (days.length === 0) {
       return WeatherSignalSchema.parse({
         available: false,
-        reason: "Aucune prévision sur la période J0→J+3",
+        reason: "Aucune prévision sur la période J0→J+6",
       });
     }
 

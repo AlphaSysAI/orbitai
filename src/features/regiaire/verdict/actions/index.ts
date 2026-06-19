@@ -15,3 +15,7 @@ export {
   getExpiringStock,
   type GetExpiringStockActionResult,
 } from "./get-expiring-stock";
+export {
+  generateReplenishmentPlan,
+  type GenerateReplenishmentPlanResult,
+} from "./generate-replenishment-plan";
