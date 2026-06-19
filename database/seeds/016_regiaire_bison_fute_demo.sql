@@ -14,6 +14,8 @@ WHERE bison_fute_zone IS NULL
     city ILIKE '%Carcassonne%'
     OR city ILIKE '%Pamiers%'
     OR city ILIKE '%Castelnaudary%'
+    OR city ILIKE '%Arzens%'
+    OR id = '7ec3c50b-4893-4904-90d2-56e0ab04532a'::uuid
   );
 
 -- Prévisions démo zone 5 (été 2026 — chassé-croisé)
