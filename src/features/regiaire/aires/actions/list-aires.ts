@@ -32,7 +32,7 @@ export async function listAiresForOrg(): Promise<ListAiresActionResult> {
 
     const { data, error } = await db
       .from("aires")
-      .select("id, name, city, school_zone")
+      .select("id, name, city, school_zone, bison_fute_zone")
       .eq("organization_id", access.organizationId)
       .order("created_at", { ascending: true });
 
@@ -46,6 +46,7 @@ export async function listAiresForOrg(): Promise<ListAiresActionResult> {
         name: row.name,
         city: row.city,
         schoolZone: row.school_zone,
+        bisonFuteZone: row.bison_fute_zone ?? null,
       })
     );
 
@@ -60,7 +61,7 @@ export async function getAire(aireId: string) {
     const ctx = await requireRegiaireContext(aireId);
     const { data, error } = await ctx.db
       .from("aires")
-      .select("id, organization_id, name, lat, lon, city, school_zone, order_days, created_at")
+      .select("id, organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone, created_at")
       .eq("id", ctx.aireId)
       .single();
 
@@ -79,6 +80,7 @@ export async function getAire(aireId: string) {
         city: data.city,
         schoolZone: data.school_zone,
         orderDays: data.order_days ?? [],
+        bisonFuteZone: data.bison_fute_zone ?? null,
         createdAt: data.created_at,
       },
     };

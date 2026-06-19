@@ -2,9 +2,19 @@ import {
   CalendarCheck,
   CloudOff,
   Palmtree,
+  Route,
   TrafficCone,
 } from "lucide-react";
 
+import {
+  BISON_FUTE_LEVEL_LABELS,
+  BISON_FUTE_ZONE_LABELS,
+  type BisonFuteZone,
+} from "@/features/regiaire/verdict/bison-fute/schemas";
+import {
+  bisonFuteBadgeClass,
+  bisonFuteLevelDescription,
+} from "@/features/regiaire/verdict/lib/bison-fute-display";
 import { weatherDayLabel } from "@/features/regiaire/verdict/lib/weather-labels";
 import {
   weatherIconForCode,
@@ -16,10 +26,10 @@ type VerdictSignalsBannerProps = {
 };
 
 export function VerdictSignalsBanner({ signals }: VerdictSignalsBannerProps) {
-  const { weather, schoolHoliday, traffic } = signals;
+  const { weather, schoolHoliday, traffic, bisonFute } = signals;
 
   return (
-    <section className="grid gap-3 sm:grid-cols-3">
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <SignalCard title="Météo" icon={<CloudOff size={14} className="text-sky-400" />}>
         {weather.available && weather.forecast ? (
           <div className="flex gap-2 overflow-x-auto pb-1">
@@ -88,21 +98,53 @@ export function VerdictSignalsBanner({ signals }: VerdictSignalsBannerProps) {
         )}
       </SignalCard>
 
-      <SignalCard title="Trafic" icon={<TrafficCone size={14} className="text-orange-400" />}>
+      <SignalCard
+        title="Jour Bison Futé"
+        icon={<Route size={14} className="text-amber-400" />}
+      >
+        {bisonFute.available && bisonFute.level != null && bisonFute.zone != null ? (
+          <div className="space-y-2">
+            <span
+              className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider ${bisonFuteBadgeClass(bisonFute.level)}`}
+            >
+              {BISON_FUTE_LEVEL_LABELS[bisonFute.level]}
+            </span>
+            <p className="text-sm font-bold text-white">
+              Zone {bisonFute.zone}
+            </p>
+            <p className="text-[11px] text-slate-400">
+              {BISON_FUTE_ZONE_LABELS[bisonFute.zone as BisonFuteZone]}
+            </p>
+            <p className="text-xs text-slate-500">
+              {bisonFuteLevelDescription(bisonFute.level)} · {bisonFute.signalDate}
+            </p>
+            {(bisonFute.levelAller || bisonFute.levelRetour) && (
+              <p className="text-[10px] text-slate-600">
+                Aller {bisonFute.levelAller ?? "—"} / Retour{" "}
+                {bisonFute.levelRetour ?? "—"}
+              </p>
+            )}
+          </div>
+        ) : (
+          <UnavailableHint />
+        )}
+      </SignalCard>
+
+      <SignalCard title="Fréquentation" icon={<TrafficCone size={14} className="text-orange-400" />}>
         {traffic.available && traffic.footfallIndex != null ? (
           <div>
             <p className="text-2xl font-black tabular-nums text-white">
               {traffic.footfallIndex.toFixed(0)}
             </p>
             <p className="mt-1 text-[10px] text-slate-500">
-              Indice fréquentation · {traffic.signalDate}
+              Indice historique · {traffic.signalDate}
             </p>
             <p className="mt-2 text-xs text-slate-400">
               {traffic.footfallIndex >= 110
-                ? "Trafic au-dessus de la normale"
+                ? "Au-dessus de la normale"
                 : traffic.footfallIndex <= 90
-                  ? "Trafic en dessous de la normale"
-                  : "Trafic dans la normale"}
+                  ? "En dessous de la normale"
+                  : "Dans la normale"}
             </p>
           </div>
         ) : (

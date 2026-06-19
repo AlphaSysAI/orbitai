@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { BisonFuteSignalSchema } from "@/features/regiaire/verdict/bison-fute/schemas";
+
 export const SchoolZoneSchema = z.enum(["A", "B", "C"]);
 export type SchoolZone = z.infer<typeof SchoolZoneSchema>;
 
@@ -77,16 +79,16 @@ export type StationSettings = z.infer<typeof StationSettingsSchema>;
 
 export const WeatherSignalSchema = z.object({
   available: z.boolean(),
-  forecast: WeatherForecastSchema.optional(),
-  reason: z.string().optional(),
+  forecast: WeatherForecastSchema.nullable(),
+  reason: z.string().nullable(),
 });
 
 export type WeatherSignal = z.infer<typeof WeatherSignalSchema>;
 
 export const SchoolHolidaySignalSchema = z.object({
   available: z.boolean(),
-  status: SchoolHolidayStatusSchema.optional(),
-  reason: z.string().optional(),
+  status: SchoolHolidayStatusSchema.nullable(),
+  reason: z.string().nullable(),
 });
 
 export type SchoolHolidaySignal = z.infer<typeof SchoolHolidaySignalSchema>;
@@ -94,11 +96,18 @@ export type SchoolHolidaySignal = z.infer<typeof SchoolHolidaySignalSchema>;
 export const TrafficSignalSchema = z.object({
   available: z.boolean(),
   signalDate: IsoDateSchema,
-  footfallIndex: z.number().optional(),
-  reason: z.string().optional(),
+  footfallIndex: z.number().nullable(),
+  reason: z.string().nullable(),
 });
 
 export type TrafficSignal = z.infer<typeof TrafficSignalSchema>;
+
+export {
+  BisonFuteLevelSchema,
+  BisonFuteSignalSchema,
+  type BisonFuteLevel,
+  type BisonFuteSignal,
+} from "@/features/regiaire/verdict/bison-fute/schemas";
 
 export const TrendCategorySummarySchema = z.object({
   category: z.string(),
@@ -134,7 +143,7 @@ export const VerdictRecommendationSchema = z.object({
   affluence_attendue: AffluenceAttendueSchema,
   rayons: z.array(RayonRecommendationSchema).min(1),
   top_mouvements: z.array(TopMouvementSchema).min(1).max(5),
-  synthese: z.string().max(500).optional(),
+  synthese: z.string().max(500).nullable(),
 });
 
 export type VerdictRecommendation = z.infer<typeof VerdictRecommendationSchema>;
@@ -149,6 +158,7 @@ export const VerdictSignalsSnapshotSchema = z.object({
   weather: WeatherSignalSchema,
   schoolHoliday: SchoolHolidaySignalSchema,
   traffic: TrafficSignalSchema,
+  bisonFute: BisonFuteSignalSchema,
   trendsSummary: z.array(TrendCategorySummarySchema),
 });
 

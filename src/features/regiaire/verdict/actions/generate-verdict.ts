@@ -17,6 +17,7 @@ import {
   summarizeTrendsByCategory,
 } from "@/features/regiaire/verdict/signals/summarize-for-ai";
 import { getTrafficForDate } from "@/features/regiaire/verdict/signals/traffic";
+import { getBisonFuteForecast } from "@/features/regiaire/verdict/signals/bison-fute";
 import { getWeather } from "@/features/regiaire/verdict/signals/weather";
 import { getStationSettings } from "@/features/regiaire/verdict/station-settings-access";
 import { buildTrendWindows } from "@/features/regiaire/verdict/trends/build-trend-windows";
@@ -33,11 +34,85 @@ const VERDICT_PROMPT = `Tu es l'assistant Verdict d'une station-service en Franc
 À partir des signaux résumés ci-dessous, produis une recommandation merchandising et d'affluence.
 
 RÈGLES :
-- affluence_attendue : faible | normale | forte (croise météo, vacances, trafic, jour de semaine implicite).
+- affluence_attendue : faible | normale | forte (Bison Futé rouge/noir → forte en priorité ; croise météo, vacances, indice historique, jour de semaine).
 - rayons : une entrée par catégorie pertinente avec direction augmenter|maintenir|reduire, emphase forte|moderee|legere, justification courte citant les signaux (ex. « week-end + vacances zone C + grand soleil → boissons fraîches +30% »).
 - top_mouvements : jusqu'à 5 écarts marquants vs N-1 (deltaPct si calculable).
+- synthese : phrase de synthèse (max 500 car.) ou null si non pertinent.
 - Si un signal est indisponible, ne l'invente pas — adapte la confiance et mentionne-le si utile.
 - Réponds en français.`;
+
+function parseStoredRecommendation(raw: unknown) {
+  const rec =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return VerdictRecommendationSchema.parse({
+    ...rec,
+    synthese: rec.synthese ?? null,
+  });
+}
+
+function parseStoredSignals(raw: unknown) {
+  if (!raw || typeof raw !== "object") return raw;
+  const s = raw as Record<string, unknown>;
+  const weather =
+    s.weather && typeof s.weather === "object"
+      ? (s.weather as Record<string, unknown>)
+      : null;
+  const schoolHoliday =
+    s.schoolHoliday && typeof s.schoolHoliday === "object"
+      ? (s.schoolHoliday as Record<string, unknown>)
+      : null;
+  const traffic =
+    s.traffic && typeof s.traffic === "object"
+      ? (s.traffic as Record<string, unknown>)
+      : null;
+  const bisonFute =
+    s.bisonFute && typeof s.bisonFute === "object"
+      ? (s.bisonFute as Record<string, unknown>)
+      : null;
+
+  return {
+    ...s,
+    weather: weather
+      ? {
+          ...weather,
+          forecast: weather.forecast ?? null,
+          reason: weather.reason ?? null,
+        }
+      : weather,
+    schoolHoliday: schoolHoliday
+      ? {
+          ...schoolHoliday,
+          status: schoolHoliday.status ?? null,
+          reason: schoolHoliday.reason ?? null,
+        }
+      : schoolHoliday,
+    traffic: traffic
+      ? {
+          ...traffic,
+          footfallIndex: traffic.footfallIndex ?? null,
+          reason: traffic.reason ?? null,
+        }
+      : traffic,
+    bisonFute: bisonFute
+      ? {
+          ...bisonFute,
+          zone: bisonFute.zone ?? null,
+          level: bisonFute.level ?? null,
+          levelAller: bisonFute.levelAller ?? null,
+          levelRetour: bisonFute.levelRetour ?? null,
+          reason: bisonFute.reason ?? null,
+        }
+      : {
+          available: false,
+          signalDate: s.runDate ?? todayParisIso(),
+          zone: null,
+          level: null,
+          levelAller: null,
+          levelRetour: null,
+          reason: "Signal absent (cache antérieur)",
+        },
+  };
+}
 
 function mapVerdictRunRow(row: {
   id: string;
@@ -52,8 +127,8 @@ function mapVerdictRunRow(row: {
     id: row.id,
     organizationId: row.organization_id,
     runDate: String(row.run_date),
-    signals: row.signals,
-    recommendation: row.recommendation,
+    signals: parseStoredSignals(row.signals),
+    recommendation: parseStoredRecommendation(row.recommendation),
     createdBy: row.created_by,
     createdAt: row.created_at,
   });
@@ -97,10 +172,11 @@ export async function generateVerdict(
 
     const settings = await getStationSettings(ctx);
 
-    const [weather, schoolHoliday, traffic, trends] = await Promise.all([
+    const [weather, schoolHoliday, traffic, bisonFute, trends] = await Promise.all([
       getWeather(ctx),
       getSchoolHolidayStatus(ctx, runDate),
       getTrafficForDate(ctx, runDate),
+      getBisonFuteForecast(ctx, runDate),
       buildTrendWindows(ctx.organizationId, runDate, ctx),
     ]);
 
@@ -111,6 +187,7 @@ export async function generateVerdict(
       weather,
       schoolHoliday,
       traffic,
+      bisonFute,
       trendsSummary,
     });
 
@@ -123,7 +200,10 @@ export async function generateVerdict(
       temperature: 0.4,
     });
 
-    const parsedRecommendation = VerdictRecommendationSchema.parse(recommendation);
+    const parsedRecommendation = VerdictRecommendationSchema.parse({
+      ...recommendation,
+      synthese: recommendation.synthese ?? null,
+    });
 
     const { data: inserted, error: insertError } = await ctx.db
       .from("verdict_runs")

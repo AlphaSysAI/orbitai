@@ -6,6 +6,7 @@ export {
   getSchoolHolidayStatus,
 } from "@/features/regiaire/verdict/signals/school-holidays";
 export { getTrafficForDate } from "@/features/regiaire/verdict/signals/traffic";
+export { getBisonFuteForecast } from "@/features/regiaire/verdict/signals/bison-fute";
 export {
   buildTrendWindows,
   alignedLastYear,
@@ -31,6 +32,8 @@ export type {
   SchoolHolidayStatus,
   SchoolHolidaySignal,
   TrafficSignal,
+  BisonFuteSignal,
+  BisonFuteLevel,
   SchoolZone,
   TrendWindows,
   TrendCategorySummary,
