@@ -1,5 +1,5 @@
-import { AiresAdminPanel } from "@/features/regiaire/aires/components/AiresAdminPanel";
+import { redirect } from "next/navigation";
 
 export default function AiresAdminPage() {
-  return <AiresAdminPanel />;
+  redirect("/station");
 }

@@ -1,9 +1,27 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Building2, CheckCircle2, Loader2, Plus, Users } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  MapPin,
+  Plus,
+  Users,
+} from "lucide-react";
 
+import {
+  AdminAireFields,
+  aireDraftToPayload,
+  type AireDraft,
+} from "@/features/admin/components/AdminAireFields";
+import { AdminClientAiresEditor } from "@/features/admin/components/AdminClientAiresEditor";
+import { emptyAireDraft } from "@/lib/admin/client-aire-schema";
+import type { AdminClientAireRecord } from "@/lib/admin/client-aire-schema";
 import { ORG_MODULE_CATALOG } from "@/lib/organizations/module-catalog";
+import { ORG_MODULE_NAMES } from "@/lib/organizations/types";
 
 type ClientRow = {
   id: string;
@@ -14,12 +32,12 @@ type ClientRow = {
   businessSector: string | null;
   createdAt: string;
   enabledModules: string[];
+  aires: AdminClientAireRecord[];
 };
 
 type CreateResult = {
   organizationId: string;
   managerEmail: string;
-  temporaryPassword: string;
   enabledModules: string[];
 };
 
@@ -44,6 +62,7 @@ export function AdminClientPanel() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<CreateResult | null>(null);
+  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
 
   const [companyName, setCompanyName] = useState("");
   const [managerFirstName, setManagerFirstName] = useState("");
@@ -51,6 +70,10 @@ export function AdminClientPanel() {
   const [managerEmail, setManagerEmail] = useState("");
   const [businessSector, setBusinessSector] = useState("");
   const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
+  const [aireCount, setAireCount] = useState(1);
+  const [aireDrafts, setAireDrafts] = useState<AireDraft[]>([emptyAireDraft(1)]);
+
+  const hasRegiaire = selectedModules.has(ORG_MODULE_NAMES.REGIAIRE_CORE);
 
   const loadClients = useCallback(async () => {
     setIsLoading(true);
@@ -71,6 +94,13 @@ export function AdminClientPanel() {
     void loadClients();
   }, [loadClients]);
 
+  useEffect(() => {
+    if (hasRegiaire && aireDrafts.length === 0) {
+      setAireCount(1);
+      setAireDrafts([emptyAireDraft(1)]);
+    }
+  }, [hasRegiaire, aireDrafts.length]);
+
   const toggleModule = (moduleId: string) => {
     setSelectedModules((prev) => {
       const next = new Set(prev);
@@ -80,11 +110,44 @@ export function AdminClientPanel() {
     });
   };
 
+  const handleAireCountChange = (raw: number) => {
+    const count = Math.max(1, Math.min(20, Number.isFinite(raw) ? raw : 1));
+    setAireCount(count);
+    setAireDrafts((prev) => {
+      if (prev.length === count) return prev;
+      if (prev.length < count) {
+        return [
+          ...prev,
+          ...Array.from({ length: count - prev.length }, (_, i) =>
+            emptyAireDraft(prev.length + i + 1)
+          ),
+        ];
+      }
+      return prev.slice(0, count);
+    });
+  };
+
+  const updateAireDraft = (index: number, draft: AireDraft) => {
+    setAireDrafts((prev) => prev.map((d, i) => (i === index ? draft : d)));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
     setSuccess(null);
+
+    let airesPayload: ReturnType<typeof aireDraftToPayload>[] = [];
+    if (hasRegiaire) {
+      airesPayload = aireDrafts.map(aireDraftToPayload);
+      if (airesPayload.some((p) => p === null)) {
+        setError(
+          "Chaque aire doit avoir un nom et une adresse validée (sélection dans la liste)."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     try {
       const res = await fetch("/api/admin/clients", {
@@ -97,6 +160,7 @@ export function AdminClientPanel() {
           managerEmail,
           businessSector,
           moduleNames: Array.from(selectedModules),
+          aires: hasRegiaire ? airesPayload : undefined,
         }),
       });
       const data = await res.json();
@@ -109,6 +173,8 @@ export function AdminClientPanel() {
       setManagerEmail("");
       setBusinessSector("");
       setSelectedModules(new Set());
+      setAireCount(1);
+      setAireDrafts([emptyAireDraft(1)]);
       await loadClients();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur création");
@@ -124,7 +190,8 @@ export function AdminClientPanel() {
           Gestion des clients
         </h2>
         <p className="mt-2 text-sm text-slate-400">
-          Créez une organisation, le compte du responsable et activez les modules auxquels il aura accès.
+          Créez une organisation, le compte du responsable, activez les modules et
+          configurez les aires RégiAire.
         </p>
       </div>
 
@@ -134,7 +201,9 @@ export function AdminClientPanel() {
       >
         <div className="flex items-center gap-2 text-violet-400">
           <Plus size={18} />
-          <h3 className="text-sm font-black uppercase tracking-wider">Nouveau client</h3>
+          <h3 className="text-sm font-black uppercase tracking-wider">
+            Nouveau client
+          </h3>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -219,14 +288,52 @@ export function AdminClientPanel() {
                     className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-600 focus:ring-violet-500"
                   />
                   <span>
-                    <span className="block text-sm font-semibold text-white">{mod.label}</span>
-                    <span className="mt-0.5 block text-xs text-slate-500">{mod.description}</span>
+                    <span className="block text-sm font-semibold text-white">
+                      {mod.label}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      {mod.description}
+                    </span>
                   </span>
                 </label>
               );
             })}
           </div>
         </div>
+
+        {hasRegiaire && (
+          <div className="space-y-4 rounded-xl border border-violet-500/20 bg-violet-600/5 p-6">
+            <div className="flex flex-wrap items-end gap-4">
+              <Field label="Nombre d'aires de service *" className="w-40">
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  required
+                  value={aireCount}
+                  onChange={(e) =>
+                    handleAireCountChange(parseInt(e.target.value, 10))
+                  }
+                  className={inputClass}
+                />
+              </Field>
+              <p className="pb-3 text-xs text-slate-400">
+                Renseignez l&apos;adresse de chaque aire (météo, Bison Futé).
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {aireDrafts.map((draft, index) => (
+                <AdminAireFields
+                  key={`create-aire-${index}`}
+                  index={index}
+                  aire={draft}
+                  onChange={(next) => updateAireDraft(index, next)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -243,12 +350,9 @@ export function AdminClientPanel() {
             <p>
               Email : <strong>{success.managerEmail}</strong>
             </p>
-            <p>
-              Mot de passe temporaire :{" "}
-              <code className="rounded bg-slate-900 px-2 py-1 text-emerald-100">{success.temporaryPassword}</code>
-            </p>
             <p className="text-xs text-emerald-400/80">
-              Communiquez ce mot de passe au responsable — il pourra le modifier après connexion.
+              Un email d&apos;invitation a été envoyé à cette adresse avec un
+              lien de connexion sécurisé.
             </p>
           </div>
         )}
@@ -258,7 +362,11 @@ export function AdminClientPanel() {
           disabled={isSubmitting}
           className="flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-[10px] font-black uppercase tracking-wider text-white hover:bg-violet-500 disabled:opacity-50"
         >
-          {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Building2 size={16} />}
+          {isSubmitting ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Building2 size={16} />
+          )}
           Créer le client
         </button>
       </form>
@@ -266,7 +374,9 @@ export function AdminClientPanel() {
       <section className="rounded-2xl border border-slate-800 bg-slate-900/40 p-8">
         <div className="mb-6 flex items-center gap-2 text-slate-300">
           <Users size={18} />
-          <h3 className="text-sm font-black uppercase tracking-wider">Clients existants</h3>
+          <h3 className="text-sm font-black uppercase tracking-wider">
+            Clients existants
+          </h3>
         </div>
 
         {isLoading ? (
@@ -277,30 +387,33 @@ export function AdminClientPanel() {
         ) : clients.length === 0 ? (
           <p className="text-sm text-slate-500">Aucun client pour le moment.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  <th className="pb-3 pr-4">Entreprise</th>
-                  <th className="pb-3 pr-4">Responsable</th>
-                  <th className="pb-3 pr-4">Métier</th>
-                  <th className="pb-3 pr-4">Email</th>
-                  <th className="pb-3">Modules</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((client) => (
-                  <tr key={client.id} className="border-b border-slate-800/60 text-slate-300">
-                    <td className="py-4 pr-4 font-medium text-white">{client.name}</td>
-                    <td className="py-4 pr-4">
-                      {[client.managerFirstName, client.managerLastName].filter(Boolean).join(" ") || "—"}
-                    </td>
-                    <td className="py-4 pr-4">{client.businessSector ?? "—"}</td>
-                    <td className="py-4 pr-4 text-slate-400">{client.managerEmail ?? "—"}</td>
-                    <td className="py-4">
-                      <div className="flex flex-wrap gap-1">
+          <div className="space-y-4">
+            {clients.map((client) => {
+              const clientHasRegiaire = client.enabledModules.includes(
+                ORG_MODULE_NAMES.REGIAIRE_CORE
+              );
+              const isExpanded = expandedClientId === client.id;
+
+              return (
+                <article
+                  key={client.id}
+                  className="rounded-xl border border-slate-800 bg-slate-950/40 overflow-hidden"
+                >
+                  <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-start">
+                    <div>
+                      <p className="font-semibold text-white">{client.name}</p>
+                      <p className="mt-1 text-sm text-slate-400">
+                        {[client.managerFirstName, client.managerLastName]
+                          .filter(Boolean)
+                          .join(" ") || "—"}{" "}
+                        · {client.managerEmail ?? "—"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {client.businessSector ?? "—"}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1">
                         {client.enabledModules.length === 0 ? (
-                          <span className="text-slate-600 text-xs">Aucun</span>
+                          <span className="text-slate-600 text-xs">Aucun module</span>
                         ) : (
                           client.enabledModules.map((m) => (
                             <span
@@ -311,12 +424,46 @@ export function AdminClientPanel() {
                             </span>
                           ))
                         )}
+                        {clientHasRegiaire && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-600/15 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-300">
+                            <MapPin size={10} />
+                            {client.aires.length} aire
+                            {client.aires.length !== 1 ? "s" : ""}
+                          </span>
+                        )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+
+                    {clientHasRegiaire && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedClientId(isExpanded ? null : client.id)
+                        }
+                        className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-slate-300 hover:border-violet-500/40 hover:text-violet-300"
+                      >
+                        {isExpanded ? (
+                          <ChevronUp size={14} />
+                        ) : (
+                          <ChevronDown size={14} />
+                        )}
+                        Gérer les aires
+                      </button>
+                    )}
+                  </div>
+
+                  {isExpanded && clientHasRegiaire && (
+                    <div className="border-t border-slate-800 px-5 pb-5">
+                      <AdminClientAiresEditor
+                        organizationId={client.id}
+                        initialAires={client.aires}
+                        onSaved={() => void loadClients()}
+                      />
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
@@ -335,7 +482,9 @@ function Field({
 }) {
   return (
     <label className={`block space-y-2 ${className}`}>
-      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{label}</span>
+      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+        {label}
+      </span>
       {children}
     </label>
   );

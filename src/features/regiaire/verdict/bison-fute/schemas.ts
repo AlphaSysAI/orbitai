@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { IsoDateSchema } from "@/features/regiaire/verdict/schemas";
+import { IsoDateSchema } from "@/features/regiaire/verdict/shared-schemas";
 
 export const BISON_FUTE_ZONES = [1, 2, 3, 4, 5, 6] as const;
 export type BisonFuteZone = (typeof BISON_FUTE_ZONES)[number];
@@ -61,6 +61,3 @@ export const BISON_FUTE_LEVEL_PRIORITY: Record<BisonFuteLevel, number> = {
   rouge: 2,
   noir: 3,
 };
-
-export const DEFAULT_BISON_FUTE_CSV_URL =
-  "https://raw.githubusercontent.com/openeventdatabase/datasources/master/fr.bisonfute/bisonfute2016.csv";

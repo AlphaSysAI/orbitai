@@ -25,6 +25,7 @@ export async function getTrafficForDate(
     return TrafficSignalSchema.parse({
       available: false,
       signalDate,
+      footfallIndex: null,
       reason: error.message,
     });
   }
@@ -33,6 +34,7 @@ export async function getTrafficForDate(
     return TrafficSignalSchema.parse({
       available: false,
       signalDate,
+      footfallIndex: null,
       reason: "Aucun signal trafic pour cette date",
     });
   }
@@ -41,5 +43,6 @@ export async function getTrafficForDate(
     available: true,
     signalDate,
     footfallIndex: Number(data.footfall_index),
+    reason: null,
   });
 }

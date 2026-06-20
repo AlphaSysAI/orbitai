@@ -15,7 +15,7 @@ export function VerdictRecommendations({
 }: VerdictRecommendationsProps) {
   return (
     <section className="space-y-5">
-      {recommendation.synthese && (
+      {recommendation.synthese != null && recommendation.synthese.length > 0 && (
         <div className="rounded-2xl border border-amber-500/25 bg-gradient-to-br from-amber-600/10 to-slate-900/60 p-5">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-500/80">
             Synthèse

@@ -49,6 +49,7 @@ export async function getSchoolHolidayStatus(
   if (!settings) {
     return SchoolHolidaySignalSchema.parse({
       available: false,
+      status: null,
       reason: "Paramètres station manquants (zone scolaire)",
     });
   }
@@ -74,6 +75,7 @@ export async function getSchoolHolidayStatus(
     if (!response.ok) {
       return SchoolHolidaySignalSchema.parse({
         available: false,
+        status: null,
         reason: `API calendrier scolaire (${response.status})`,
       });
     }
@@ -94,6 +96,7 @@ export async function getSchoolHolidayStatus(
             isOnHoliday: true,
             label: row.description?.trim() || "Vacances scolaires",
           }),
+          reason: null,
         });
       }
     }
@@ -106,6 +109,7 @@ export async function getSchoolHolidayStatus(
         isOnHoliday: false,
         label: null,
       }),
+      reason: null,
     });
   } catch (error) {
     const reason =
@@ -114,6 +118,10 @@ export async function getSchoolHolidayStatus(
         : error instanceof Error
           ? error.message
           : "Erreur vacances scolaires";
-    return SchoolHolidaySignalSchema.parse({ available: false, reason });
+    return SchoolHolidaySignalSchema.parse({
+      available: false,
+      status: null,
+      reason,
+    });
   }
 }

@@ -16,6 +16,7 @@ import {
 import { isModuleEnabled, type EnabledOrgModule } from "@/lib/organizations/types";
 import { resolveSaasBrandFromModules } from "@/lib/organizations/saas-branding";
 import { SaasBrandTitle } from "@/components/branding/SaasBrandTitle";
+import { MesAiresFlyoutNav } from "@/features/regiaire/components/MesAiresFlyoutNav";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useOrgRole } from "@/features/organization/hooks/useOrgRole";
 import * as Icons from "lucide-react";
@@ -247,19 +248,7 @@ export function ContextualNavigation({
             <SaasBrandTitle brand={saasBrand} size="sm" />
           </p>
           <div className="flex flex-col gap-2">
-            <Link
-              href="/station"
-              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
-                pathname === "/station" || pathname === "/station/aires"
-                  ? "bg-amber-600/20 border border-amber-500/40 text-amber-400"
-                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              }`}
-            >
-              <Fuel size={18} />
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                Mes aires
-              </span>
-            </Link>
+            <MesAiresFlyoutNav />
             {stationLinks.map((link) => {
               const Icon = link.icon;
               const isActive =

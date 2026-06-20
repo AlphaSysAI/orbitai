@@ -1,8 +1,14 @@
-import { randomBytes } from "crypto";
-
 import { createClient } from "@supabase/supabase-js";
 
 import { sanitizeModuleSelection } from "@/lib/organizations/module-catalog";
+import type {
+  AdminClientAireInput,
+  AdminClientAireRecord,
+} from "@/lib/admin/client-aire-schema";
+import {
+  insertAiresForOrganization,
+  listAiresForOrganization,
+} from "@/lib/admin/client-aires";
 import { forWrite } from "@/lib/supabase-write";
 import type { Database } from "@/types/database.types";
 
@@ -13,13 +19,13 @@ export type ProvisionClientInput = {
   managerEmail: string;
   businessSector: string;
   moduleNames: string[];
+  aires?: AdminClientAireInput[];
 };
 
 export type ProvisionClientResult = {
   organizationId: string;
   userId: string;
   managerEmail: string;
-  temporaryPassword: string;
   enabledModules: string[];
 };
 
@@ -30,10 +36,6 @@ function getServiceClient() {
     throw new Error("Configuration Supabase service_role manquante.");
   }
   return createClient<Database>(url, serviceKey);
-}
-
-function generateTemporaryPassword(): string {
-  return randomBytes(12).toString("base64url");
 }
 
 export async function provisionClient(
@@ -53,18 +55,18 @@ export async function provisionClient(
     throw new Error("Tous les champs obligatoires doivent être renseignés.");
   }
 
-  const temporaryPassword = generateTemporaryPassword();
-
-  const { data: authUser, error: authError } = await admin.auth.admin.createUser({
-    email: managerEmail,
-    password: temporaryPassword,
-    email_confirm: true,
-    user_metadata: {
-      first_name: managerFirstName,
-      last_name: managerLastName,
-      company_name: companyName,
-    },
-  });
+  // Invite via email — Supabase envoie un lien de setup sécurisé, aucun mot de passe
+  // ne transite dans l'application ni dans ses logs.
+  const { data: authUser, error: authError } = await admin.auth.admin.inviteUserByEmail(
+    managerEmail,
+    {
+      data: {
+        first_name: managerFirstName,
+        last_name: managerLastName,
+        company_name: companyName,
+      },
+    }
+  );
 
   if (authError) {
     if (authError.message.toLowerCase().includes("already")) {
@@ -122,11 +124,14 @@ export async function provisionClient(
       }
     }
 
+    if (input.aires && input.aires.length > 0) {
+      await insertAiresForOrganization(org.id, input.aires);
+    }
+
     return {
       organizationId: org.id,
       userId,
       managerEmail,
-      temporaryPassword,
       enabledModules,
     };
   } catch (error) {
@@ -144,6 +149,7 @@ export type AdminClientListItem = {
   businessSector: string | null;
   createdAt: string;
   enabledModules: string[];
+  aires: AdminClientAireRecord[];
 };
 
 export async function listClientsForAdmin(): Promise<AdminClientListItem[]> {
@@ -175,6 +181,12 @@ export async function listClientsForAdmin(): Promise<AdminClientListItem[]> {
     modulesByOrg.set(row.organization_id, list);
   }
 
+  const airesByOrg = new Map<string, AdminClientAireRecord[]>();
+  for (const org of orgs) {
+    const aires = await listAiresForOrganization(org.id);
+    airesByOrg.set(org.id, aires);
+  }
+
   return orgs.map((org) => ({
     id: org.id,
     name: org.name,
@@ -184,5 +196,6 @@ export async function listClientsForAdmin(): Promise<AdminClientListItem[]> {
     businessSector: org.business_sector,
     createdAt: org.created_at,
     enabledModules: modulesByOrg.get(org.id) ?? [],
+    aires: airesByOrg.get(org.id) ?? [],
   }));
 }

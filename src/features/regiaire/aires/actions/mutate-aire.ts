@@ -13,10 +13,32 @@ import {
   RegiaireContextError,
   requireRegiaireContext,
 } from "@/lib/regiaire/require-context";
+import {
+  generateAireEmailSlug,
+  makeSlugUnique,
+} from "@/features/regiaire/inbound/lib/generate-slug";
 
 export type MutateAireActionResult =
   | { success: true; data: Aire }
   | { success: false; error: string; code?: string };
+
+async function resolveUniqueSlug(
+  db: Awaited<ReturnType<typeof requireOrgAdminContext>>["db"],
+  name: string
+): Promise<string> {
+  const base = generateAireEmailSlug(name);
+
+  const { data } = await db
+    .from("aires")
+    .select("email_slug")
+    .not("email_slug", "is", null);
+
+  const existing = new Set(
+    (data ?? []).map((r) => r.email_slug as string).filter(Boolean)
+  );
+
+  return makeSlugUnique(base, existing);
+}
 
 export async function createAire(
   input: unknown
@@ -25,6 +47,7 @@ export async function createAire(
     const admin = await requireOrgAdminContext();
     const parsed = AireInputSchema.parse(input);
     const city = parsed.city?.trim() || null;
+    const emailSlug = await resolveUniqueSlug(admin.db, parsed.name.trim());
 
     const { data, error } = await admin.db
       .from("aires")
@@ -37,9 +60,10 @@ export async function createAire(
         school_zone: parsed.schoolZone,
         order_days: parsed.orderDays,
         bison_fute_zone: parsed.bisonFuteZone ?? null,
+        email_slug: emailSlug,
       })
       .select(
-        "id, organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone, created_at"
+        "id, organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone, email_slug, created_at"
       )
       .single();
 
@@ -59,6 +83,7 @@ export async function createAire(
         schoolZone: data.school_zone,
         orderDays: data.order_days,
         bisonFuteZone: data.bison_fute_zone ?? null,
+        emailSlug: data.email_slug ?? null,
         createdAt: data.created_at,
       }),
     };
@@ -95,7 +120,7 @@ export async function updateAire(
       })
       .eq("id", ctx.aireId)
       .select(
-        "id, organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone, created_at"
+        "id, organization_id, name, lat, lon, city, school_zone, order_days, bison_fute_zone, email_slug, created_at"
       )
       .single();
 
@@ -115,6 +140,7 @@ export async function updateAire(
         schoolZone: data.school_zone,
         orderDays: data.order_days,
         bisonFuteZone: data.bison_fute_zone ?? null,
+        emailSlug: data.email_slug ?? null,
         createdAt: data.created_at,
       }),
     };

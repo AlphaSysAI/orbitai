@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MapPin, Plus } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 import { listAiresForOrg } from "@/features/regiaire/aires/actions";
 
@@ -24,15 +24,12 @@ export default async function StationPage() {
           RégiAire
         </h1>
         <p className="text-sm text-slate-400">
-          Aucune aire configurée pour votre organisation.
+          Aucune aire n&apos;est encore configurée pour votre organisation.
         </p>
-        <Link
-          href="/station/aires"
-          className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-6 py-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-amber-500"
-        >
-          <Plus size={16} />
-          Configurer une aire
-        </Link>
+        <p className="text-xs text-slate-500">
+          Contactez votre administrateur OrbitAI pour activer vos aires de
+          service.
+        </p>
       </div>
     );
   }
@@ -63,21 +60,14 @@ export default async function StationPage() {
               <div className="min-w-0">
                 <p className="truncate font-bold text-white">{aire.name}</p>
                 <p className="mt-1 text-xs text-slate-500">
-                  {aire.city ?? "Ville non renseignée"} · zone {aire.schoolZone}
+                  {aire.address ?? aire.city ?? "Ville non renseignée"} · zone{" "}
+                  {aire.schoolZone}
                 </p>
               </div>
             </Link>
           </li>
         ))}
       </ul>
-
-      <Link
-        href="/station/aires"
-        className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 hover:text-amber-300"
-      >
-        <Plus size={14} />
-        Gérer les aires
-      </Link>
     </div>
   );
 }

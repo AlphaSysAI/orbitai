@@ -13,6 +13,7 @@ export const AireSchema = z.object({
   schoolZone: SchoolZoneSchema,
   orderDays: z.array(z.number().int().min(1).max(7)).min(1),
   bisonFuteZone: BisonFuteZoneSchema.nullable(),
+  emailSlug: z.string().nullable(),
   createdAt: z.string(),
 });
 

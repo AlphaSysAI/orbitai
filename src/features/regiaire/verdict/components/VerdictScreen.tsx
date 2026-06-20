@@ -16,6 +16,7 @@ import {
 import { VerdictRecommendations } from "@/features/regiaire/verdict/components/VerdictRecommendations";
 import { VerdictTrendsSection } from "@/features/regiaire/verdict/components/VerdictTrendsSection";
 import { VerdictExpiringSection } from "@/features/regiaire/verdict/components/VerdictExpiringSection";
+import { VerdictReplenishmentSection } from "@/features/regiaire/verdict/components/VerdictReplenishmentSection";
 import {
   AFFLUENCE_CONFIG,
   formatVerdictDate,
@@ -197,6 +198,11 @@ export function VerdictScreen({ aireId }: VerdictScreenProps) {
               proches={expiring.proches}
             />
           )}
+
+          <VerdictReplenishmentSection
+            aireId={aireId}
+            planDate={runDate}
+          />
         </>
       )}
     </div>
