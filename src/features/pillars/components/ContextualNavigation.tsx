@@ -24,6 +24,7 @@ import { MesAiresFlyoutNav } from "@/features/regiaire/components/MesAiresFlyout
 import { useRegiaireCapabilities } from "@/features/regiaire/hooks/useRegiaireCapabilities";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useOrgRole } from "@/features/organization/hooks/useOrgRole";
+import { useUserProfile } from "@/features/organization/hooks/useUserProfile";
 import * as Icons from "lucide-react";
 
 interface Thread {
@@ -78,6 +79,7 @@ export function ContextualNavigation({
   }, [pathname, isOnAdminRoute]);
   const { isAdmin } = useIsAdmin();
   const { isOrgAdmin } = useOrgRole();
+  const { profile: userProfile } = useUserProfile();
   const activePillarConfig = PILLARS.find((p) => p.id === activePillar);
   const { capabilities, isLoading: isCapsLoading } = useRegiaireCapabilities(aireId);
   const stationLinksRaw = aireId
@@ -501,10 +503,22 @@ export function ContextualNavigation({
 
         {/* Footer utilisateur */}
         <div className="pt-4 border-t border-slate-800 mt-4">
-          {userEmail && (
-            <div className="px-4 py-2 text-[10px] text-slate-400 mb-3">
-              <p className="font-bold text-white">{userEmail.split("@")[0]}</p>
-              <p className="text-[8px] text-purple-500 uppercase mt-1 tracking-widest">Operator</p>
+          {userProfile?.showProfile && (
+            <div className="mb-3 rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-500/15 to-slate-900/80 px-4 py-3 shadow-lg shadow-amber-500/5">
+              <p className="text-[8px] font-black uppercase tracking-[0.22em] text-amber-500/80">
+                Connecté
+              </p>
+              <p className="mt-1 text-sm font-black leading-tight text-white">
+                {userProfile.displayName}
+              </p>
+              <p className="mt-1.5 inline-flex rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-amber-300">
+                {userProfile.roleLabel}
+              </p>
+              {userProfile.email && (
+                <p className="mt-2 truncate text-[9px] text-slate-500">
+                  {userProfile.email}
+                </p>
+              )}
             </div>
           )}
           <button

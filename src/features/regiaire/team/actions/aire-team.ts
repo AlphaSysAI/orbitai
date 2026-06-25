@@ -18,7 +18,7 @@ import {
 
 const CreateEmployeeSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(8).optional(),
   firstName: z.string().max(100).optional(),
   lastName: z.string().max(100).optional(),
 });

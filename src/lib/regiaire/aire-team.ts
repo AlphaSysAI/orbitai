@@ -2,9 +2,9 @@
 
 import "server-only";
 
-import { randomBytes } from "crypto";
-
 import { createClient } from "@supabase/supabase-js";
+
+import { resolveAccountPassword } from "@/lib/auth/default-account-password";
 
 import { canManageAireTeam } from "@/lib/regiaire/aire-scope";
 import type { RegiaireContext } from "@/lib/regiaire/require-context";
@@ -30,7 +30,7 @@ export type AireTeamMember = {
 
 export type CreateAireEmployeeInput = {
   email: string;
-  password: string;
+  password?: string;
   firstName?: string;
   lastName?: string;
 };
@@ -88,10 +88,10 @@ export async function createAireEmployee(
   }
 
   const email = input.email.trim().toLowerCase();
-  const password = input.password.trim();
+  const password = resolveAccountPassword(input.password);
 
-  if (!email || password.length < 8) {
-    throw new Error("Email valide et mot de passe (8 caractères min.) requis.");
+  if (!email) {
+    throw new Error("Email valide requis.");
   }
 
   const admin = getServiceClient();
@@ -234,5 +234,5 @@ export async function removeAireEmployee(
 }
 
 export function generateEmployeePassword(): string {
-  return randomBytes(10).toString("base64url");
+  return resolveAccountPassword(null);
 }

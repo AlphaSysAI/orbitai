@@ -16,17 +16,9 @@ import {
   type OrgProfile,
   type OrgSupplierListItem,
 } from "@/features/organization/actions";
+import { ORG_ROLE_LABELS } from "@/lib/organizations/role-labels";
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: "Propriétaire",
-  admin: "Administrateur",
-  member: "Membre",
-  direction_france: "Direction France",
-  directeur_region: "Directeur régional",
-  chef_secteur: "Chef de secteur",
-  gerant: "Gérant",
-  employe: "Employé",
-};
+const ROLE_LABELS = ORG_ROLE_LABELS;
 
 export function OrganizationSettingsPanel() {
   const [profile, setProfile] = useState<OrgProfile | null>(null);
@@ -37,7 +29,6 @@ export function OrganizationSettingsPanel() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [newEmail, setNewEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
   const [newFirstName, setNewFirstName] = useState("");
   const [newLastName, setNewLastName] = useState("");
   const [suppliers, setSuppliers] = useState<OrgSupplierListItem[]>([]);
@@ -107,7 +98,6 @@ export function OrganizationSettingsPanel() {
 
     const result = await createOrgMember({
       email: newEmail,
-      password: newPassword,
       firstName: newFirstName || undefined,
       lastName: newLastName || undefined,
     });
@@ -119,7 +109,6 @@ export function OrganizationSettingsPanel() {
     }
 
     setNewEmail("");
-    setNewPassword("");
     setNewFirstName("");
     setNewLastName("");
     setSuccess(`Compte membre créé pour ${result.data.email}.`);
@@ -342,6 +331,10 @@ export function OrganizationSettingsPanel() {
             <UserPlus size={16} className="text-amber-400" />
             Nouveau membre
           </h3>
+          <p className="text-xs text-slate-500">
+            Le mot de passe initial est défini par l&apos;organisation (compte
+            prêt à l&apos;emploi).
+          </p>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Email *">
               <input
@@ -349,16 +342,6 @@ export function OrganizationSettingsPanel() {
                 required
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Mot de passe * (min. 8 car.)">
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
                 className={inputClass}
               />
             </Field>
