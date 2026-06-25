@@ -1,6 +1,8 @@
 # OrbitAI — Documentation projet
 
-> **Objectif de ce document** : fournir une vue d'ensemble complète et précise d'OrbitAI, utilisable comme base de connaissance (ChatGPT, onboarding, architecture). Pour le détail technique historique, voir aussi `DOCUMENTATION_TECHNIQUE.md` et `docs/ARCHITECTURE_OPENCLAW_VALIDATION.md`.
+> **Documentation produit à jour (2026)** : voir le dossier **[`Claude/`](./Claude/README.md)** — RégiAire comme cœur métier, add-ons piliers, architecture et notes Cowork.
+>
+> **Ce fichier** conserve l’historique détaillé (piliers, OpenClaw, onboarding legacy). Pour le détail technique historique, voir aussi `DOCUMENTATION_TECHNIQUE.md` et `docs/ARCHITECTURE_OPENCLAW_VALIDATION.md`.
 
 ---
 

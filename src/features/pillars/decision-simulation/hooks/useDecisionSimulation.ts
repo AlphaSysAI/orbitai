@@ -1,6 +1,8 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { DecisionSimulation, ConversationMessage, DecisionContext, Scenario } from "../types";
+import type { DecisionSimulation, ConversationMessage, DecisionContext, Scenario } from "../types";
 
 export function useDecisionSimulation(userId: string | null) {
   const supabase = createClient();
@@ -339,7 +341,7 @@ export function useDecisionSimulation(userId: string | null) {
       setActiveSimulation(sim);
       setConversation(sim.conversation);
       setCurrentContext(sim.context);
-      setUploadedDocuments(sim.context.documents || []);
+      setUploadedDocuments((sim.context.documents ?? []).map((d) => ({ ...d, content: d.content ?? "" })));
       setIsSaved(true); // Les simulations chargées depuis la DB sont déjà sauvegardées
     }
   };

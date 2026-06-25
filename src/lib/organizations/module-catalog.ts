@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { ORG_MODULE_NAMES, type OrgModuleName } from "./types";
 
 export type OrgModuleCatalogEntry = {

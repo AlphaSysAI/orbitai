@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -97,16 +99,19 @@ async function analyzeFeedbackAndUpdatePreferences(
 
     if (!recentFeedback || recentFeedback.length === 0) return;
 
+    type FeedbackRow = { feedback_type: string; correction_text?: string | null; message_content?: string | null };
+    const feedback = recentFeedback as FeedbackRow[];
+
     // Analyser les patterns
-    const positiveCount = recentFeedback.filter(f => f.feedback_type === 'positive').length;
-    const negativeCount = recentFeedback.filter(f => f.feedback_type === 'negative').length;
-    const correctionCount = recentFeedback.filter(f => f.feedback_type === 'correction').length;
-    
+    const positiveCount = feedback.filter((f) => f.feedback_type === 'positive').length;
+    const negativeCount = feedback.filter((f) => f.feedback_type === 'negative').length;
+    const correctionCount = feedback.filter((f) => f.feedback_type === 'correction').length;
+
     // Analyser les commentaires et corrections pour détecter des préférences
     const learnedPrefs: any = currentPrefs?.learned_preferences || {};
-    
+
     // Détecter les préférences basées sur les corrections
-    const corrections = recentFeedback.filter(f => f.correction_text);
+    const corrections = feedback.filter((f) => f.correction_text);
     if (corrections.length > 0) {
       // Analyser la longueur moyenne des réponses préférées
       const avgOriginalLength = corrections.reduce((sum, f) => sum + (f.message_content?.length || 0), 0) / corrections.length;
@@ -143,20 +148,20 @@ async function analyzeFeedbackAndUpdatePreferences(
     let preferredDetailLevel = currentPrefs?.preferred_detail_level || 5;
     
     // Si beaucoup de feedback positif sur des réponses courtes
-    const shortPositive = recentFeedback.filter(f => 
-      f.feedback_type === 'positive' && 
-      f.message_content && 
+    const shortPositive = feedback.filter((f) =>
+      f.feedback_type === 'positive' &&
+      f.message_content &&
       f.message_content.length < 500
     );
     if (shortPositive.length > positiveCount * 0.6 && positiveCount > 2) {
       preferredStyle = 'concise';
       preferredDetailLevel = Math.max(1, preferredDetailLevel - 1);
     }
-    
+
     // Si beaucoup de feedback positif sur des réponses longues/détaillées
-    const longPositive = recentFeedback.filter(f => 
-      f.feedback_type === 'positive' && 
-      f.message_content && 
+    const longPositive = feedback.filter((f) =>
+      f.feedback_type === 'positive' &&
+      f.message_content &&
       f.message_content.length > 1000
     );
     if (longPositive.length > positiveCount * 0.6 && positiveCount > 2) {

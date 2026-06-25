@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { handleTaskValidate } from "@/lib/review/review-service";
 
 export const runtime = "nodejs";

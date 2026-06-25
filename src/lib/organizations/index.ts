@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 /**
  * Exports client-safe uniquement.
  * Côté serveur : importer depuis `@/lib/organizations/access`.

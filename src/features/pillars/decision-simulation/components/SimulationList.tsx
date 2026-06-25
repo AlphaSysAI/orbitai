@@ -1,9 +1,11 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useState } from "react";
 import { Brain, Trash2, Download } from "lucide-react";
 import { jsPDF } from "jspdf";
-import { DecisionSimulation } from "../types";
+import type { DecisionSimulation } from "../types";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 
 interface SimulationListProps {
@@ -21,12 +23,9 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
     setDeleteCandidate({ id: sim.id, title: sim.title });
   };
 
-  const handleConfirmDelete = (e: React.MouseEvent) => {
+  const handleConfirmDelete = () => {
     if (deleteCandidate) {
-      const syntheticEvent = {
-        ...e,
-        stopPropagation: () => {},
-      } as React.MouseEvent;
+      const syntheticEvent = { stopPropagation: () => {} } as unknown as React.MouseEvent;
       onDelete(deleteCandidate.id, syntheticEvent);
       setDeleteCandidate(null);
     }
@@ -68,11 +67,11 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
     // Résumé exécutif
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text("RÉSUMÉ EXÉCUTIF", 10, yPosition);
     yPosition += 8;
 
-    doc.setFont(undefined, 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(30, 41, 59);
 
@@ -81,7 +80,7 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
     const aiMessages = sim.conversation.filter(m => m.role === 'assistant');
 
     if (userMessages.length > 0) {
-      const firstUserMessage = userMessages[0].content.substring(0, 200);
+      const firstUserMessage = (userMessages[0]?.content ?? "").substring(0, 200);
       doc.text("Question/Décision: " + firstUserMessage, 10, yPosition);
       yPosition += 8;
     }
@@ -93,7 +92,7 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
     }
 
     if (aiMessages.length > 0) {
-      const lastAiMessage = aiMessages[aiMessages.length - 1].content;
+      const lastAiMessage = (aiMessages[aiMessages.length - 1]?.content ?? "");
       const plainText = lastAiMessage.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').substring(0, 400);
       const splitText = doc.splitTextToSize(plainText, 180);
       doc.text("Synthèse: " + splitText[0], 10, yPosition);
@@ -111,7 +110,7 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
 
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text("SCÉNARIOS ANALYSÉS", 10, yPosition);
       yPosition += 10;
 
@@ -121,13 +120,13 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
           yPosition = 20;
         }
 
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
         doc.setTextColor(30, 41, 59);
         doc.text(`${index + 1}. ${scenario.title}`, 10, yPosition);
         yPosition += 7;
 
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         
         // Métriques clés
@@ -182,11 +181,11 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
 
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text("RECOMMANDATIONS STRATÉGIQUES", 10, yPosition);
       yPosition += 10;
 
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       
       const allRecommendations = sim.scenarios

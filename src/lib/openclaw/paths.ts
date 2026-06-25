@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import path from "node:path";
 
 const DEFAULT_LOGS_DIR = "logs";

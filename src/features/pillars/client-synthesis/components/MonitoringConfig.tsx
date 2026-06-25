@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useState } from "react";
@@ -208,23 +210,28 @@ export function MonitoringConfig({
               type="url"
               value={newSource.monitoring_url}
               onChange={(e) => setNewSource({ ...newSource, monitoring_url: e.target.value })}
-              placeholder="https://www.google.com/maps/place/Nom-Entreprise/@..."
+              placeholder="https://www.google.com/search?q=... ou https://www.google.com/maps/place/..."
               className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white"
             />
             <p className="text-xs text-slate-500 mt-1">
-              L'URL de la page contenant les avis/commentaires à surveiller
+              URL de la page Google contenant les avis de votre établissement
             </p>
-            <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-              <p className="text-xs text-blue-400 font-medium mb-1">💡 Comment obtenir l'URL Google Maps :</p>
-              <ol className="text-xs text-slate-400 space-y-1 ml-4 list-decimal">
-                <li>Allez sur <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Maps</a></li>
-                <li>Recherchez votre entreprise</li>
-                <li>Cliquez sur l'entreprise dans les résultats</li>
-                <li>Copiez l'URL complète de la page (elle contient "/place/")</li>
-              </ol>
-              <p className="text-xs text-orange-400 mt-2 font-medium">
-                ⚠️ Ne pas utiliser une URL de recherche Google (google.com/search)
-              </p>
+            <div className="mt-2 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg space-y-2">
+              <p className="text-xs text-blue-400 font-medium">💡 Deux façons d'obtenir l'URL Google :</p>
+              <div>
+                <p className="text-xs text-slate-300 font-medium mb-1">Option 1 — Google Search (la plus simple)</p>
+                <ol className="text-xs text-slate-400 space-y-0.5 ml-4 list-decimal">
+                  <li>Faites une recherche Google avec le nom de votre établissement</li>
+                  <li>Copiez l'URL de la barre d'adresse (commence par <span className="text-slate-300">google.com/search?</span>)</li>
+                </ol>
+              </div>
+              <div>
+                <p className="text-xs text-slate-300 font-medium mb-1">Option 2 — Google Maps</p>
+                <ol className="text-xs text-slate-400 space-y-0.5 ml-4 list-decimal">
+                  <li>Allez sur <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Google Maps</a>, recherchez votre établissement</li>
+                  <li>Cliquez dessus et copiez l'URL (elle contient <span className="text-slate-300">/place/</span>)</li>
+                </ol>
+              </div>
             </div>
           </div>
 

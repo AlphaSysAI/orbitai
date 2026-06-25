@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { MessageSquare, Trash2, Plus, LayoutDashboard, FileText, Settings, Orbit, LogOut } from "lucide-react";

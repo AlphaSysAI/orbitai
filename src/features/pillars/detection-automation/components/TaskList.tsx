@@ -1,8 +1,10 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useState } from "react";
 import { Plus, Trash2, FileText, Clock, History, Edit3, User, ListChecks } from "lucide-react";
-import { GrayTask } from "../types";
+import type { GrayTask } from "../types";
 
 interface TaskListProps {
   tasks: GrayTask[];

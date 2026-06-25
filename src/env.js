@@ -34,6 +34,14 @@ export const env = createEnv({
         : z.string().min(32).optional(),
     /** Emails autorisés à accéder à /admin (séparés par des virgules) */
     ORBIT_ADMIN_EMAILS: z.string().optional(),
+    /** OpenWeatherMap — météo RégiAire (serveur uniquement) */
+    OWM_API_KEY: z.string().optional(),
+    /** Resend — envoi d'ACK email après réception d'un BL par email */
+    RESEND_API_KEY: z.string().optional(),
+    /** Secret partagé pour authentifier le webhook Resend Inbound */
+    RESEND_INBOUND_SECRET: z.string().optional(),
+    /** Domaine email des aires (ex. regiaire.alphasys.tech) */
+    INBOUND_EMAIL_DOMAIN: z.string().optional(),
   },
 
   /**
@@ -68,6 +76,10 @@ export const env = createEnv({
     REVIEW_POLLING_TOKEN: process.env.REVIEW_POLLING_TOKEN,
     TRACKER_SIGNING_SECRET: process.env.TRACKER_SIGNING_SECRET,
     ORBIT_ADMIN_EMAILS: process.env.ORBIT_ADMIN_EMAILS,
+    OWM_API_KEY: process.env.OWM_API_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_INBOUND_SECRET: process.env.RESEND_INBOUND_SECRET,
+    INBOUND_EMAIL_DOMAIN: process.env.INBOUND_EMAIL_DOMAIN,
     NEXT_PUBLIC_OPENCLAW_ENABLED: process.env.NEXT_PUBLIC_OPENCLAW_ENABLED,
   },
   /**

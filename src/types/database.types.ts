@@ -367,6 +367,218 @@ export interface AutomationPolicyUpdate {
   updated_at?: string;
 }
 
+/** RégiAire — statut livraison (013) */
+export type DeliveryStatus = "draft" | "scanning" | "discrepancy" | "completed";
+
+export interface SupplierRow {
+  id: string;
+  organization_id: string;
+  name: string;
+  email: string | null;
+  lead_time_days: number;
+  created_at: string;
+}
+
+export interface ProductRow {
+  id: string;
+  organization_id: string;
+  ean: string;
+  name: string;
+  has_dlc: boolean;
+  category: string | null;
+  supplier_id: string | null;
+  created_at: string;
+}
+
+export interface DeliveryRow {
+  id: string;
+  organization_id: string;
+  aire_id: string;
+  supplier_id: string;
+  status: DeliveryStatus;
+  bl_file_path: string | null;
+  created_by: string;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface DeliveryLineRow {
+  id: string;
+  delivery_id: string;
+  product_id: string | null;
+  raw_name: string;
+  ean: string | null;
+  expected_qty: number;
+  scanned_qty: number;
+  dlc: string | null;
+  needs_review: boolean;
+}
+
+export interface StockBatchRow {
+  id: string;
+  organization_id: string;
+  aire_id: string;
+  product_id: string;
+  quantity: number;
+  dlc: string | null;
+  delivery_id: string;
+  entered_at: string;
+}
+
+export type ShiftPeriod = "matin" | "apres_midi" | "nuit";
+
+export interface ShiftTaskDefRow {
+  id: string;
+  organization_id: string;
+  label: string;
+  shifts: ShiftPeriod[];
+  position: number;
+  active: boolean;
+  created_at: string;
+}
+
+export interface ShiftTaskCheckRow {
+  id: string;
+  organization_id: string;
+  aire_id: string;
+  shift: ShiftPeriod;
+  service_date: string;
+  task_def_id: string;
+  checked: boolean;
+  checked_by: string | null;
+  checked_at: string | null;
+}
+
+export interface ShiftClosureRow {
+  id: string;
+  organization_id: string;
+  aire_id: string;
+  shift: ShiftPeriod;
+  service_date: string;
+  closed_by: string;
+  closed_at: string;
+  total_tasks: number;
+  checked_tasks: number;
+  completion_pct: number;
+  missing_labels: string[];
+  note: string | null;
+}
+
+export interface RegiaireStationSettingsRow {
+  id: string;
+  organization_id: string;
+  lat: number;
+  lon: number;
+  city: string | null;
+  school_zone: string;
+  order_days: number[];
+  updated_at: string;
+}
+
+export interface AireRow {
+  id: string;
+  organization_id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  city: string | null;
+  address: string | null;
+  school_zone: string;
+  order_days: number[];
+  bison_fute_zone: number | null;
+  secteur_id: string | null;
+  created_at: string;
+}
+
+/** Hiérarchie d'enseigne (029_org_hierarchy.sql) */
+export interface SecteurRow {
+  id: string;
+  organization_id: string;
+  name: string;
+  chef_user_id: string | null;
+  created_at: string;
+}
+
+export interface OrgHierarchyLinkRow {
+  organization_id: string;
+  manager_user_id: string;
+  subordinate_user_id: string;
+  created_at: string;
+}
+
+export interface OrgMemberProfileRow {
+  user_id: string;
+  organization_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SecteurVerdictRunRow {
+  id: string;
+  organization_id: string;
+  secteur_id: string;
+  run_date: string;
+  signals: Json;
+  recommendation: Json;
+  created_by: string;
+  created_at: string;
+}
+
+export interface GerantAireRow {
+  gerant_user_id: string;
+  aire_id: string;
+  organization_id: string;
+  created_at: string;
+}
+
+export interface AireTeamMemberRow {
+  user_id: string;
+  aire_id: string;
+  organization_id: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface BisonFuteForecastRow {
+  id: string;
+  forecast_date: string;
+  zone: number;
+  direction: string;
+  level: string;
+}
+
+export interface SalesHistoryRow {
+  id: string;
+  organization_id: string;
+  aire_id: string;
+  product_id: string;
+  sale_date: string;
+  quantity: number;
+}
+
+export interface TrafficSignalRow {
+  id: string;
+  organization_id: string;
+  aire_id: string;
+  signal_date: string;
+  footfall_index: number;
+}
+
+export interface VerdictRunRow {
+  id: string;
+  organization_id: string;
+  aire_id: string;
+  run_date: string;
+  signals: Json;
+  recommendation: Json;
+  created_by: string;
+  created_at: string;
+}
+
 /** Schéma des tables public pour le client Supabase (typage générique) */
 type TableDef<Row, Insert, Update> = {
   Row: Row;
@@ -442,6 +654,268 @@ export interface Database {
         },
         Partial<Pick<OrganizationModuleRow, "is_enabled" | "updated_at">>
       >;
+      suppliers: TableDef<
+        SupplierRow,
+        Pick<SupplierRow, "organization_id" | "name"> & {
+          id?: string;
+          email?: string | null;
+          lead_time_days?: number;
+          created_at?: string;
+        },
+        Partial<Pick<SupplierRow, "name" | "email" | "lead_time_days">>
+      >;
+      products: TableDef<
+        ProductRow,
+        Pick<ProductRow, "organization_id" | "ean" | "name"> & {
+          id?: string;
+          has_dlc?: boolean;
+          supplier_id?: string | null;
+          created_at?: string;
+        },
+        Partial<
+          Pick<ProductRow, "name" | "has_dlc" | "category" | "supplier_id">
+        >
+      >;
+      deliveries: TableDef<
+        DeliveryRow,
+        Pick<DeliveryRow, "organization_id" | "supplier_id" | "created_by"> & {
+          id?: string;
+          aire_id?: string;
+          status?: DeliveryStatus;
+          bl_file_path?: string | null;
+          created_at?: string;
+          completed_at?: string | null;
+        },
+        Partial<
+          Pick<DeliveryRow, "status" | "bl_file_path" | "completed_at">
+        >
+      >;
+      delivery_lines: TableDef<
+        DeliveryLineRow,
+        Pick<
+          DeliveryLineRow,
+          "delivery_id" | "raw_name" | "expected_qty"
+        > & {
+          id?: string;
+          product_id?: string | null;
+          ean?: string | null;
+          scanned_qty?: number;
+          dlc?: string | null;
+          needs_review?: boolean;
+        },
+        Partial<
+          Pick<
+            DeliveryLineRow,
+            "product_id" | "scanned_qty" | "dlc" | "ean" | "needs_review"
+          >
+        >
+      >;
+      stock_batches: TableDef<
+        StockBatchRow,
+        Pick<
+          StockBatchRow,
+          "organization_id" | "aire_id" | "product_id" | "quantity" | "delivery_id"
+        > & {
+          id?: string;
+          dlc?: string | null;
+          entered_at?: string;
+        },
+        Partial<Pick<StockBatchRow, "quantity" | "dlc">>
+      >;
+      shift_task_defs: TableDef<
+        ShiftTaskDefRow,
+        Pick<ShiftTaskDefRow, "organization_id" | "label" | "shifts"> & {
+          id?: string;
+          position?: number;
+          active?: boolean;
+          created_at?: string;
+        },
+        Partial<Pick<ShiftTaskDefRow, "label" | "shifts" | "position" | "active">>
+      >;
+      shift_task_checks: TableDef<
+        ShiftTaskCheckRow,
+        Pick<
+          ShiftTaskCheckRow,
+          "organization_id" | "aire_id" | "shift" | "service_date" | "task_def_id"
+        > & {
+          id?: string;
+          checked?: boolean;
+          checked_by?: string | null;
+          checked_at?: string | null;
+        },
+        Partial<
+          Pick<ShiftTaskCheckRow, "checked" | "checked_by" | "checked_at">
+        >
+      >;
+      shift_closures: TableDef<
+        ShiftClosureRow,
+        Pick<
+          ShiftClosureRow,
+          | "organization_id"
+          | "aire_id"
+          | "shift"
+          | "service_date"
+          | "closed_by"
+          | "total_tasks"
+          | "checked_tasks"
+          | "completion_pct"
+        > & {
+          id?: string;
+          closed_at?: string;
+          missing_labels?: string[];
+          note?: string | null;
+        },
+        Partial<Pick<ShiftClosureRow, "note">>
+      >;
+      regiaire_station_settings: TableDef<
+        RegiaireStationSettingsRow,
+        Pick<
+          RegiaireStationSettingsRow,
+          "organization_id" | "lat" | "lon" | "school_zone"
+        > & {
+          id?: string;
+          city?: string | null;
+          order_days?: number[];
+          updated_at?: string;
+        },
+        Partial<
+          Pick<
+            RegiaireStationSettingsRow,
+            "lat" | "lon" | "city" | "school_zone" | "order_days" | "updated_at"
+          >
+        >
+      >;
+      aires: TableDef<
+        AireRow,
+        Pick<
+          AireRow,
+          "organization_id" | "name" | "lat" | "lon" | "school_zone"
+        > & {
+          id?: string;
+          city?: string | null;
+          address?: string | null;
+          order_days?: number[];
+          bison_fute_zone?: number | null;
+          secteur_id?: string | null;
+          created_at?: string;
+        },
+        Partial<
+          Pick<
+            AireRow,
+            | "name"
+            | "lat"
+            | "lon"
+            | "city"
+            | "address"
+            | "school_zone"
+            | "order_days"
+            | "bison_fute_zone"
+            | "secteur_id"
+          >
+        >
+      >;
+      bison_fute_forecast: TableDef<
+        BisonFuteForecastRow,
+        Pick<
+          BisonFuteForecastRow,
+          "forecast_date" | "zone" | "direction" | "level"
+        > & { id?: string },
+        Partial<Pick<BisonFuteForecastRow, "level">>
+      >;
+      sales_history: TableDef<
+        SalesHistoryRow,
+        Pick<
+          SalesHistoryRow,
+          "organization_id" | "aire_id" | "product_id" | "sale_date" | "quantity"
+        > & { id?: string },
+        Partial<Pick<SalesHistoryRow, "quantity">>
+      >;
+      traffic_signals: TableDef<
+        TrafficSignalRow,
+        Pick<
+          TrafficSignalRow,
+          "organization_id" | "aire_id" | "signal_date" | "footfall_index"
+        > & { id?: string },
+        Partial<Pick<TrafficSignalRow, "footfall_index">>
+      >;
+      verdict_runs: TableDef<
+        VerdictRunRow,
+        Pick<
+          VerdictRunRow,
+          "organization_id" | "aire_id" | "run_date" | "created_by"
+        > & {
+          id?: string;
+          signals?: Json;
+          recommendation?: Json;
+          created_at?: string;
+        },
+        Partial<Pick<VerdictRunRow, "signals" | "recommendation">>
+      >;
+      secteurs: TableDef<
+        SecteurRow,
+        Pick<SecteurRow, "organization_id" | "name"> & {
+          id?: string;
+          chef_user_id?: string | null;
+          created_at?: string;
+        },
+        Partial<Pick<SecteurRow, "name" | "chef_user_id">>
+      >;
+      org_hierarchy_links: TableDef<
+        OrgHierarchyLinkRow,
+        Pick<
+          OrgHierarchyLinkRow,
+          "organization_id" | "manager_user_id" | "subordinate_user_id"
+        > & { created_at?: string },
+        Partial<Pick<OrgHierarchyLinkRow, "manager_user_id" | "subordinate_user_id">>
+      >;
+      org_member_profiles: TableDef<
+        OrgMemberProfileRow,
+        Pick<
+          OrgMemberProfileRow,
+          "user_id" | "organization_id" | "first_name" | "last_name" | "email"
+        > & {
+          phone?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        },
+        Partial<
+          Pick<
+            OrgMemberProfileRow,
+            "first_name" | "last_name" | "email" | "phone" | "updated_at"
+          >
+        >
+      >;
+      secteur_verdict_runs: TableDef<
+        SecteurVerdictRunRow,
+        Pick<
+          SecteurVerdictRunRow,
+          "organization_id" | "secteur_id" | "run_date" | "created_by"
+        > & {
+          id?: string;
+          signals?: Json;
+          recommendation?: Json;
+          created_at?: string;
+        },
+        Partial<Pick<SecteurVerdictRunRow, "signals" | "recommendation">>
+      >;
+      gerant_aires: TableDef<
+        GerantAireRow,
+        Pick<GerantAireRow, "gerant_user_id" | "aire_id" | "organization_id"> & {
+          created_at?: string;
+        },
+        Partial<Pick<GerantAireRow, "aire_id">>
+      >;
+      aire_team_members: TableDef<
+        AireTeamMemberRow,
+        Pick<
+          AireTeamMemberRow,
+          "user_id" | "aire_id" | "organization_id"
+        > & {
+          created_by?: string | null;
+          created_at?: string;
+        },
+        Partial<Pick<AireTeamMemberRow, "created_by">>
+      >;
     };
     Views: Record<string, never>;
     Functions: {
@@ -457,8 +931,38 @@ export interface Database {
         Args: Record<string, never>;
         Returns: { organization_id: string; module_name: string }[];
       };
+      is_org_member: {
+        Args: { p_organization_id: string };
+        Returns: boolean;
+      };
+      is_aire_member: {
+        Args: { p_aire_id: string };
+        Returns: boolean;
+      };
+      regiaire_default_aire_id: {
+        Args: { p_organization_id: string };
+        Returns: string;
+      };
+      regiaire_increment_scan: {
+        Args: {
+          p_line_id: string;
+          p_allow_extra: boolean;
+          p_dlc: string | null;
+        };
+        Returns: DeliveryLineRow[];
+      };
+      regiaire_decrement_scan: {
+        Args: { p_line_id: string };
+        Returns: DeliveryLineRow[];
+      };
+      regiaire_finalize_delivery: {
+        Args: { p_delivery_id: string };
+        Returns: { outcome: string; batches_created: number }[];
+      };
     };
-    Enums: Record<string, never>;
+    Enums: {
+      shift_period: ShiftPeriod;
+    };
     CompositeTypes: Record<string, never>;
   };
 }

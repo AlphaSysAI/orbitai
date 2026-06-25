@@ -1,6 +1,8 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
-import { Scenario } from "../types";
+import type { Scenario } from "../types";
 // Note: Pour les graphiques avancés, installer recharts: npm install recharts
 // Pour l'instant, on utilise des visualisations simples en CSS
 

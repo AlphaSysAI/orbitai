@@ -1,7 +1,9 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { ArrowLeft, AlertTriangle, Lightbulb, TrendingUp, Target, AlertCircle } from "lucide-react";
-import { MarketingAnalysis } from "../hooks/useClientSynthesis";
+import type { MarketingAnalysis } from "../hooks/useClientSynthesis";
 
 interface AnalysisViewProps {
   analysis: MarketingAnalysis;

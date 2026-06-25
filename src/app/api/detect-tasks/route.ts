@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { createClient } from '@supabase/supabase-js';

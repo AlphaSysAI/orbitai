@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import type { AiReviewQueueRow } from "@/types/database.types";
 
 /** Types de révision supportés par l'AI Review Engine. */

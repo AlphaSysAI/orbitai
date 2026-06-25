@@ -1,77 +1,87 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
-import { Zap, Activity, Brain, Sparkles, Users, BarChart2, GraduationCap } from "lucide-react";
-import { PILLARS } from "../types";
-import * as Icons from "lucide-react";
+import { Activity, Zap } from "lucide-react";
 
-export function GlobalDashboard() {
-  const getIcon = (iconName: string) => {
-    const IconComponent = (Icons as any)[iconName] || Icons.LayoutDashboard;
-    return <IconComponent size={24} />;
-  };
+import { SaasBrandTitle } from "@/components/branding/SaasBrandTitle";
+import { RegiaireBusinessDashboard } from "@/features/regiaire/components/RegiaireBusinessDashboard";
+import {
+  getPrimaryBusinessModule,
+  resolveSaasBrandFromModules,
+} from "@/lib/organizations/saas-branding";
+import { ORG_MODULE_NAMES, type EnabledOrgModule } from "@/lib/organizations/types";
+
+type GlobalDashboardProps = {
+  enabledModules?: EnabledOrgModule[];
+};
+
+export function GlobalDashboard({
+  enabledModules = [],
+}: GlobalDashboardProps) {
+  const brand = resolveSaasBrandFromModules(enabledModules);
+  const primaryModule = getPrimaryBusinessModule(enabledModules);
 
   return (
-    <div className="max-w-6xl mx-auto py-10 animate-in fade-in duration-700 text-white">
-      <h1 className="text-4xl font-extrabold mb-12 text-white italic tracking-tighter uppercase">
-        Dashboard OrbitAI
-      </h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-        {PILLARS.map((pillar) => {
-          const Icon = (Icons as any)[pillar.icon] || Icons.LayoutDashboard;
-          return (
-            <div
-              key={pillar.id}
-              className={`bg-slate-900/40 p-8 rounded-[2rem] border transition-all group shadow-xl ${
-                pillar.enabled
-                  ? "border-slate-800/50 hover:border-slate-700"
-                  : "border-slate-800/30 opacity-60"
-              }`}
-            >
-              <div className={`flex items-center gap-4 mb-4 ${pillar.color}`}>
-                <Icon size={24} />
-                <p className="font-black text-[11px] uppercase tracking-widest text-white">
-                  {pillar.name}
-                </p>
-              </div>
-              <p className="text-slate-400 text-sm font-medium mb-3">{pillar.description}</p>
-              <div className="flex items-center gap-2 mt-4">
-                <span
-                  className={`text-xs px-3 py-1 rounded-full ${
-                    pillar.enabled
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-slate-700 text-slate-500"
-                  }`}
-                >
-                  {pillar.enabled ? "Actif" : "Bientôt disponible"}
-                </span>
-              </div>
-            </div>
-          );
-        })}
+    <div className="mx-auto max-w-6xl animate-in fade-in py-10 duration-700 text-white">
+      <div className="mb-12">
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
+          {brand.dashboardTitle}
+        </p>
+        <h1 className="mt-2">
+          <SaasBrandTitle brand={brand} size="lg" />
+        </h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50 hover:border-slate-700 transition-all group shadow-xl text-white">
-          <div className="flex items-center gap-4 mb-4 text-yellow-400">
+      <div className="mb-12">
+        {primaryModule === ORG_MODULE_NAMES.REGIAIRE_CORE && (
+          <RegiaireBusinessDashboard />
+        )}
+        {primaryModule === ORG_MODULE_NAMES.ARTISAN_CORE && (
+          <BusinessModulePlaceholder label="Artisan" />
+        )}
+        {primaryModule === ORG_MODULE_NAMES.HOTEL_CORE && (
+          <BusinessModulePlaceholder label="Hôtel" />
+        )}
+        {!primaryModule && (
+          <div className="rounded-[2rem] border border-dashed border-slate-700 bg-slate-900/30 p-10 text-center">
+            <p className="text-sm text-slate-400">
+              Aucun module métier vertical activé pour votre organisation.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8 shadow-xl transition-all hover:border-slate-700">
+          <div className="mb-4 flex items-center gap-4 text-yellow-400">
             <Zap size={24} />
-            <p className="font-black text-[11px] uppercase tracking-widest text-white">Moteur IA</p>
+            <p className="font-black text-[11px] uppercase tracking-widest text-white">
+              Moteur IA
+            </p>
           </div>
-          <p className="text-slate-400 text-sm font-medium">GPT-4o Vision</p>
+          <p className="text-sm font-medium text-slate-400">GPT-4o Vision</p>
         </div>
-        <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50 hover:border-slate-700 transition-all group shadow-xl text-white">
-          <div className="flex items-center gap-4 mb-4 text-green-400">
+        <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8 shadow-xl transition-all hover:border-slate-700">
+          <div className="mb-4 flex items-center gap-4 text-green-400">
             <Activity size={24} />
-            <p className="font-black text-[11px] uppercase tracking-widest text-white">Statut</p>
+            <p className="font-black text-[11px] uppercase tracking-widest text-white">
+              Statut
+            </p>
           </div>
-          <p className="text-slate-400 text-sm font-medium">Système opérationnel</p>
+          <p className="text-sm font-medium text-slate-400">Système opérationnel</p>
         </div>
       </div>
     </div>
   );
 }
 
-
-
-
-
+function BusinessModulePlaceholder({ label }: { label: string }) {
+  return (
+    <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8 text-center">
+      <p className="text-sm text-slate-400">
+        Dashboard {label} — contenu métier à venir.
+      </p>
+    </div>
+  );
+}

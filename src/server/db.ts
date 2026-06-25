@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { env } from "~/env";
 import { PrismaClient } from "../../generated/prisma";
 

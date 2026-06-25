@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { getAuthenticatedUser } from "@/server/auth/supabase-server";
 
 function parseAdminEmails(): Set<string> {

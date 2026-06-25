@@ -1,8 +1,10 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { Sparkles, ListChecks, Zap, TrendingUp, Clock, CheckCircle2, RefreshCw, Activity, Play, Square, StopCircle, Download } from "lucide-react";
-import { AutomationStats, GrayTask, Automation } from "../types";
+import type { AutomationStats, GrayTask, Automation } from "../types";
 
 interface AutomationDashboardProps {
   stats: AutomationStats | null;

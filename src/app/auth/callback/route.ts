@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { NextResponse } from "next/server";
 
 import { createRouteHandlerSupabaseClient } from "@/server/auth/supabase-server";
@@ -12,6 +14,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const origin = requestUrl.origin;
   const code = requestUrl.searchParams.get("code");
+  const next = requestUrl.searchParams.get("next") ?? "/";
   const oauthError = requestUrl.searchParams.get("error");
 
   if (oauthError) {
@@ -33,7 +36,9 @@ export async function GET(request: Request) {
       return NextResponse.redirect(buildRedirectUrl(origin, LOGIN_ERROR_REDIRECT));
     }
 
-    return NextResponse.redirect(buildRedirectUrl(origin, "/"));
+    // `next` est validé : seules les URL relatives sont acceptées
+    const safeNext = next.startsWith("/") ? next : "/";
+    return NextResponse.redirect(buildRedirectUrl(origin, safeNext));
   } catch (err) {
     console.error("[auth/callback] Erreur inattendue.", err);
     return NextResponse.redirect(buildRedirectUrl(origin, LOGIN_ERROR_REDIRECT));

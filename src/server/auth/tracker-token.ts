@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 export const TRACKER_TOKEN_VERSION = 1 as const;
 export const TRACKER_TOKEN_PREFIX = "orbit_tracker_v1" as const;
 

@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { NextResponse } from 'next/server';
 
 // Import dynamique des parsers selon le format
@@ -23,9 +25,10 @@ async function extractFromExcel(buffer: Buffer): Promise<string> {
     let text = '';
     workbook.SheetNames.forEach((sheetName, index) => {
       const sheet = workbook.Sheets[sheetName];
+      if (!sheet) return;
       if (index > 0) text += '\n\n---\n\n';
       text += `[Feuille: ${sheetName}]\n\n`;
-      
+
       // Convertir la feuille en texte formaté
       const sheetText = XLSX.utils.sheet_to_txt(sheet);
       text += sheetText;
