@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 /** Valeur unitaire de référence (€ TTC) par catégorie — estimation dashboard. */
 const CATEGORY_UNIT_VALUE_EUR: Record<string, number> = {
   Boulangerie: 1.8,

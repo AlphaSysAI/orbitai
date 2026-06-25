@@ -1,9 +1,11 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { GrayTask, Automation, TriggerConfig, ActionConfig } from "../types";
+import type { GrayTask, Automation, TriggerConfig, ActionConfig } from "../types";
 
 interface AutomationAnalyzerProps {
   tasks: GrayTask[];

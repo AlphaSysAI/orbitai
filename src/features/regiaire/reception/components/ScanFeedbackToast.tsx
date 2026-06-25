@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";

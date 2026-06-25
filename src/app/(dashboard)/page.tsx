@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { PILLARS } from "@/features/pillars/types";
@@ -16,7 +18,11 @@ import {
   resolveSaasBrandFromModules,
 } from "@/lib/organizations/saas-branding";
 import { ORG_MODULE_NAMES } from "@/lib/organizations/types";
-import { useDashboardShell } from "@/features/pillars/components/DashboardShellContext";
+import { useCallback } from "react";
+import {
+  useDashboardShell,
+  type DashboardTab,
+} from "@/features/pillars/components/DashboardShellContext";
 
 export default function OrbitDashboard() {
   const { isLoading: isModulesLoading, enabledModules } =
@@ -35,6 +41,19 @@ export default function OrbitDashboard() {
     setDeleteThreadFn,
   } = useDashboardShell();
 
+  const handleThreadsUpdate = useCallback(
+    (
+      threads: Array<{ id_thread: string; title: string; created_at?: string }>,
+      activeId: string | null,
+      deleteFn?: (threadId: string, e: React.MouseEvent) => Promise<void>,
+    ) => {
+      setCopilotThreads(threads);
+      setActiveThreadId(activeId);
+      if (deleteFn) setDeleteThreadFn(() => deleteFn);
+    },
+    [setCopilotThreads, setActiveThreadId, setDeleteThreadFn]
+  );
+
   const renderActivePillar = () => {
     switch (activePillar) {
       case "copilot-transmission":
@@ -51,36 +70,42 @@ export default function OrbitDashboard() {
             onPillarChange={handlePillarChange}
             onTabChange={handleTabChange}
             onLogout={handleLogout}
-            onThreadsUpdate={(threads, activeId, deleteFn) => {
-              setCopilotThreads(threads);
-              setActiveThreadId(activeId);
-              if (deleteFn) {
-                setDeleteThreadFn(() => deleteFn);
-              }
-            }}
+            onThreadsUpdate={handleThreadsUpdate}
             externalActiveThreadId={activeThreadId}
           />
         );
-      case "detection-automation":
+      case "detection-automation": {
+        const automationTab = (
+          ["overview","tasks","automations","analyze","library","settings","dashboard"] as const
+        ).includes(activeTab as never)
+          ? (activeTab as "overview" | "tasks" | "automations" | "analyze" | "library" | "settings" | "dashboard")
+          : "dashboard" as const;
         return (
           <AutomationPillar
             user={user}
-            activeTab={activeTab}
+            activeTab={automationTab}
             onPillarChange={handlePillarChange}
             onTabChange={handleTabChange}
             onLogout={handleLogout}
           />
         );
-      case "decision-simulation":
+      }
+      case "decision-simulation": {
+        const decisionTab = (
+          ["dashboard","library","settings","tasks","automations","analyze","overview"] as const
+        ).includes(activeTab as never)
+          ? (activeTab as "dashboard" | "library" | "settings" | "tasks" | "automations" | "analyze" | "overview")
+          : "dashboard" as const;
         return (
           <DecisionPillar
             user={user}
-            activeTab={activeTab}
+            activeTab={decisionTab}
             onPillarChange={handlePillarChange}
-            onTabChange={handleTabChange}
+            onTabChange={(tab) => handleTabChange(tab as DashboardTab)}
             onLogout={handleLogout}
           />
         );
+      }
       case "emotional-ai":
         return <EmotionalPillar />;
       case "client-synthesis":
@@ -89,7 +114,7 @@ export default function OrbitDashboard() {
             user={user}
             activeTab={activeTab}
             onPillarChange={handlePillarChange}
-            onTabChange={handleTabChange}
+            onTabChange={(tab) => handleTabChange(tab as DashboardTab)}
             onLogout={handleLogout}
           />
         );

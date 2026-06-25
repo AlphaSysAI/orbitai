@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import type { DeliveryStatus } from "@/features/regiaire/reception/schemas";
 
 export const DELIVERY_STATUS_META: Record<

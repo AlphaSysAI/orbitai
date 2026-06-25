@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 export { analyzeBL, type AnalyzeBLActionResult } from "./analyze-bl";
 export { recordScan, type RecordScanActionResult } from "./record-scan";
 export {

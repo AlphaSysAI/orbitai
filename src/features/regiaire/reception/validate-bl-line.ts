@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import type { BLExtractedUncertainLine, NormalizedBlLine } from "@/features/regiaire/reception/schemas";
 import { UNREADABLE_LINE_NAME as PLACEHOLDER } from "@/features/regiaire/reception/schemas";
 

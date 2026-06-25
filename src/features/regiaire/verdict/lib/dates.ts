@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { IsoDateSchema } from "@/features/regiaire/verdict/schemas";
 
 const PARIS_TZ = "Europe/Paris";

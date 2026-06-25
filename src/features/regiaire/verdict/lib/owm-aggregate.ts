@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { addDaysIso } from "@/features/regiaire/verdict/trends/iso-dates";
 import { todayParisIso } from "@/features/regiaire/verdict/lib/dates";
 import { mapOwmConditionToWeatherCode } from "@/features/regiaire/verdict/lib/owm-weather-codes";

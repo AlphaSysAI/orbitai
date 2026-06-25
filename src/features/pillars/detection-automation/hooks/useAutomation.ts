@@ -1,6 +1,8 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { GrayTask, Automation, AutomationExecution, AutomationStats, TriggerConfig, ActionConfig } from "../types";
+import type { GrayTask, Automation, AutomationExecution, AutomationStats, TriggerConfig, ActionConfig } from "../types";
 
 export function useAutomation(userId: string | null) {
   const supabase = createClient();
@@ -99,11 +101,9 @@ export function useAutomation(userId: string | null) {
       const successRate = totalExecutions > 0 ? (successCount / totalExecutions) * 100 : 0;
 
       // Estimer le temps économisé (basé sur time_estimate_minutes des tâches automatisées)
-      const automatedTasksData = tasksData.filter(t => t.status === 'automated');
-      const timeSavedMinutes = automatedTasksData.reduce((sum, t) => {
-        const task = tasks.find(t2 => t2.id === t.id);
-        return sum + (task?.time_estimate_minutes || 0);
-      }, 0);
+      const timeSavedMinutes = tasks
+        .filter((t) => t.status === 'automated')
+        .reduce((sum, t) => sum + (t.time_estimate_minutes || 0), 0);
       const timeSavedHours = timeSavedMinutes / 60;
 
       // Top automatisations par nombre d'exécutions

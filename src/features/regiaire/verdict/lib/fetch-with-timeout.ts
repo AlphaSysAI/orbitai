@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 const DEFAULT_TIMEOUT_MS = 3_000;
 
 export async function fetchWithTimeout(

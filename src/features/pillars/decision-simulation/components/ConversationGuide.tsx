@@ -1,10 +1,12 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
 import { Send, Brain, Paperclip, FileText, X, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { jsPDF } from "jspdf";
-import { ConversationMessage, Scenario } from "../types";
+import type { ConversationMessage, Scenario } from "../types";
 
 interface ConversationGuideProps {
   messages: ConversationMessage[];
@@ -69,7 +71,7 @@ export function ConversationGuide({
     // Résumé exécutif - extraire les points clés de la conversation
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
-    doc.setFont(undefined, 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text("RÉSUMÉ EXÉCUTIF", 10, yPosition);
     yPosition += 8;
 
@@ -77,18 +79,18 @@ export function ConversationGuide({
     const aiMessages = messages.filter(m => m.role === 'assistant');
     const userMessages = messages.filter(m => m.role === 'user');
     
-    doc.setFont(undefined, 'normal');
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(30, 41, 59);
     
     if (userMessages.length > 0) {
-      const firstUserMessage = userMessages[0].content.substring(0, 200);
+      const firstUserMessage = (userMessages[0]?.content ?? "").substring(0, 200);
       doc.text("Question/Décision: " + firstUserMessage, 10, yPosition);
       yPosition += 8;
     }
 
     if (aiMessages.length > 0) {
-      const lastAiMessage = aiMessages[aiMessages.length - 1].content;
+      const lastAiMessage = (aiMessages[aiMessages.length - 1]?.content ?? "");
       const plainText = lastAiMessage.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').substring(0, 400);
       const splitText = doc.splitTextToSize(plainText, 180);
       doc.text("Synthèse: " + splitText[0], 10, yPosition);
@@ -106,7 +108,7 @@ export function ConversationGuide({
 
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text("SCÉNARIOS ANALYSÉS", 10, yPosition);
       yPosition += 10;
 
@@ -116,13 +118,13 @@ export function ConversationGuide({
           yPosition = 20;
         }
 
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
         doc.setTextColor(30, 41, 59);
         doc.text(`${index + 1}. ${scenario.title}`, 10, yPosition);
         yPosition += 7;
 
-        doc.setFont(undefined, 'normal');
+        doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         
         // Métriques clés
@@ -178,11 +180,11 @@ export function ConversationGuide({
 
       doc.setFontSize(14);
       doc.setTextColor(30, 41, 59);
-      doc.setFont(undefined, 'bold');
+      doc.setFont('helvetica', 'bold');
       doc.text("RECOMMANDATIONS STRATÉGIQUES", 10, yPosition);
       yPosition += 10;
 
-      doc.setFont(undefined, 'normal');
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       
       // Regrouper les recommandations de tous les scénarios

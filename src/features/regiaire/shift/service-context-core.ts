@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { ServiceContextSchema, type ServiceContext, type ShiftPeriod } from "@/features/regiaire/shift/schemas";
 
 const PARIS_TZ = "Europe/Paris";

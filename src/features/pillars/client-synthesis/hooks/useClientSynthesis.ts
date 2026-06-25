@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 

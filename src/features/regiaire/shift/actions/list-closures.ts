@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import { z } from "zod";
@@ -7,10 +9,9 @@ import {
   type ShiftClosure,
 } from "@/features/regiaire/shift/schemas";
 import {
-  OrgContextError,
-  requireOrgAdminContext,
-  requireOrgContext,
-} from "@/lib/organizations/org-context";
+  canManageShiftOnAire,
+  resolveShiftMemberFlags,
+} from "@/lib/regiaire/aire-scope";
 import {
   RegiaireContextError,
   requireRegiaireContext,
@@ -29,16 +30,24 @@ export type GetMemberRoleActionResult =
   | { success: true; role: string; isAdmin: boolean }
   | { success: false; error: string; code?: string };
 
-export async function getShiftMemberRole(): Promise<GetMemberRoleActionResult> {
+export async function getShiftMemberRole(
+  aireId: string
+): Promise<GetMemberRoleActionResult> {
   try {
-    const ctx = await requireOrgContext();
+    const ctx = await requireRegiaireContext(aireId);
+    const flags = await resolveShiftMemberFlags(
+      ctx.organizationId,
+      ctx.userId,
+      ctx.aireId,
+      ctx.supabase
+    );
     return {
       success: true,
-      role: ctx.role,
-      isAdmin: ctx.isOrgAdmin,
+      role: flags.role,
+      isAdmin: flags.isAdmin,
     };
   } catch (error) {
-    if (error instanceof OrgContextError) {
+    if (error instanceof RegiaireContextError) {
       return { success: false, error: error.message, code: error.code };
     }
     return { success: false, error: "Erreur serveur" };
@@ -51,8 +60,15 @@ export async function listClosures(
   to: string
 ): Promise<ListClosuresActionResult> {
   try {
-    await requireOrgAdminContext();
     const ctx = await requireRegiaireContext(aireId);
+    const canManage = await canManageShiftOnAire(ctx);
+    if (!canManage) {
+      return {
+        success: false,
+        error: "Accès réservé au gérant ou à l'administration",
+        code: "forbidden",
+      };
+    }
     const range = DateRangeSchema.parse({ from, to });
 
     const { data, error } = await ctx.db
@@ -83,9 +99,6 @@ export async function listClosures(
     return { success: true, data: closures };
   } catch (error) {
     if (error instanceof RegiaireContextError) {
-      return { success: false, error: error.message, code: error.code };
-    }
-    if (error instanceof OrgContextError) {
       return { success: false, error: error.message, code: error.code };
     }
     return { success: false, error: "Erreur lors du chargement" };

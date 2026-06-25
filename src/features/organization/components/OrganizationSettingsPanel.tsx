@@ -1,8 +1,11 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Truck, UserPlus, Users } from "lucide-react";
 
+import { GoogleReviewSettings } from "@/features/organization/components/GoogleReviewSettings";
 import {
   createOrgMember,
   getOrgSettings,
@@ -18,6 +21,11 @@ const ROLE_LABELS: Record<string, string> = {
   owner: "Propriétaire",
   admin: "Administrateur",
   member: "Membre",
+  direction_france: "Direction France",
+  directeur_region: "Directeur régional",
+  chef_secteur: "Chef de secteur",
+  gerant: "Gérant",
+  employe: "Employé",
 };
 
 export function OrganizationSettingsPanel() {
@@ -314,8 +322,10 @@ export function OrganizationSettingsPanel() {
               key={m.id}
               className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3 text-sm"
             >
-              <span className="font-mono text-xs text-slate-500 truncate max-w-[200px]">
-                {m.userId.slice(0, 8)}…
+              <span className="text-sm text-white truncate max-w-[200px]">
+                {m.firstName
+                  ? `${m.firstName}${m.lastName ? ` ${m.lastName.charAt(0)}.` : ""}`
+                  : <span className="font-mono text-xs text-slate-500">{m.userId.slice(0, 8)}…</span>}
               </span>
               <span className="rounded-lg bg-slate-800 px-2 py-1 text-[10px] font-bold uppercase text-slate-300">
                 {ROLE_LABELS[m.role] ?? m.role}
@@ -376,6 +386,8 @@ export function OrganizationSettingsPanel() {
           </button>
         </form>
       </section>
+
+      <GoogleReviewSettings />
     </div>
   );
 }

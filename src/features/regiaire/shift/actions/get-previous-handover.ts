@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import { getPreviousServiceContext } from "@/features/regiaire/shift/service-context-core";

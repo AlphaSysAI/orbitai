@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import type { BisonFuteLevel } from "@/features/regiaire/verdict/bison-fute/schemas";
 import { bisonFuteBadgeClass } from "@/features/regiaire/verdict/lib/bison-fute-display";
 

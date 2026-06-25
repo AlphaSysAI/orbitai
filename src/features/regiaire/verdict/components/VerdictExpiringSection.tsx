@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { AlertTriangle, PackageX, Sparkles } from "lucide-react";
 
 import type { ExpiringStockItem } from "@/features/regiaire/verdict/schemas";

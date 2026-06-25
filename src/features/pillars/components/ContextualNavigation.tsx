@@ -1,22 +1,27 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, Settings, Orbit, LogOut, ChevronDown, ChevronUp,
-  FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap, CheckCircle2, Fuel, Shield
+import {
+  LayoutDashboard, Settings, Orbit, LogOut, ChevronDown, ChevronUp, ChevronRight,
+  FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap, CheckCircle2, Fuel, Shield,
+  Network, Wrench, Users,
 } from "lucide-react";
 import { PILLARS, type PillarId } from "../types";
 import {
   buildStationNavLinks,
   extractAireIdFromPath,
   filterNavLinksByModules,
+  filterStationNavByCapabilities,
 } from "@/lib/organizations/navigation";
 import { isModuleEnabled, type EnabledOrgModule } from "@/lib/organizations/types";
 import { resolveSaasBrandFromModules } from "@/lib/organizations/saas-branding";
 import { SaasBrandTitle } from "@/components/branding/SaasBrandTitle";
 import { MesAiresFlyoutNav } from "@/features/regiaire/components/MesAiresFlyoutNav";
+import { useRegiaireCapabilities } from "@/features/regiaire/hooks/useRegiaireCapabilities";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useOrgRole } from "@/features/organization/hooks/useOrgRole";
 import * as Icons from "lucide-react";
@@ -63,12 +68,27 @@ export function ContextualNavigation({
   const isStationRoute = pathname.startsWith("/station");
   const aireId = extractAireIdFromPath(pathname);
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
+  const [isAdminFlyoutOpen, setIsAdminFlyoutOpen] = useState(false);
+  const isOnAdminRoute = pathname.startsWith("/admin");
+
+  // Ferme l'accordion admin quand on quitte les routes /admin, le menu système à chaque navigation
+  useEffect(() => {
+    if (!isOnAdminRoute) setIsAdminFlyoutOpen(false);
+    setIsSystemMenuOpen(false);
+  }, [pathname, isOnAdminRoute]);
   const { isAdmin } = useIsAdmin();
   const { isOrgAdmin } = useOrgRole();
   const activePillarConfig = PILLARS.find((p) => p.id === activePillar);
-  const stationLinks = aireId
+  const { capabilities, isLoading: isCapsLoading } = useRegiaireCapabilities(aireId);
+  const stationLinksRaw = aireId
     ? filterNavLinksByModules(buildStationNavLinks(aireId), enabledModules)
     : [];
+  const stationLinks =
+    aireId && capabilities
+      ? filterStationNavByCapabilities(stationLinksRaw, capabilities)
+      : isCapsLoading
+        ? []
+        : stationLinksRaw;
   const hasRegiaire = isModuleEnabled(enabledModules, "regiaire_core");
   const saasBrand = resolveSaasBrandFromModules(enabledModules);
 
@@ -299,7 +319,7 @@ export function ContextualNavigation({
                     (nav.id === 'discussions' && activeTab === 'dashboard') || 
                     (nav.id === 'overview' && activeTab === 'overview') ||
                     (nav.id === 'validation' && activeTab === 'validation') ||
-                    (activeTab === nav.id && nav.id !== 'discussions')
+                    (activeTab === nav.id && (nav.id as string) !== 'discussions')
                       ? "bg-purple-600/20 border border-purple-500/40 text-purple-400"
                       : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
                   }`}
@@ -362,6 +382,89 @@ export function ContextualNavigation({
         <div className="flex-1 overflow-y-auto scrollbar-hide"></div>
       )}
 
+      {/* Administration (admins uniquement) — accordion SaaS par clic */}
+      {isAdmin && (
+        <div className="border-b border-slate-800 p-3 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsAdminFlyoutOpen((v) => !v)}
+            className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+              isOnAdminRoute
+                ? "bg-violet-600/15 border border-violet-500/30 text-violet-400"
+                : "text-slate-400 hover:bg-violet-600/10 hover:text-violet-300"
+            }`}
+          >
+            <Shield size={18} />
+            <span className="text-[9px] font-bold uppercase tracking-wider flex-1 text-left">Administration</span>
+            {isAdminFlyoutOpen || isOnAdminRoute
+              ? <ChevronUp size={13} className="opacity-50" />
+              : <ChevronDown size={13} className="opacity-50" />
+            }
+          </button>
+
+          {/* SaaS list — visible au survol ou quand on est sur /admin */}
+          {(isAdminFlyoutOpen || isOnAdminRoute) && (
+            <div className="mt-2 flex flex-col gap-1 pl-2">
+              <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] px-2 pt-1 pb-0.5">
+                SaaS
+              </p>
+              <Link
+                href="/admin"
+                className={`flex items-center gap-3 p-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${
+                  isOnAdminRoute
+                    ? "bg-violet-600/20 text-violet-300"
+                    : "text-slate-500 hover:bg-slate-800 hover:text-slate-200"
+                }`}
+              >
+                <Fuel size={14} className="text-amber-400" />
+                RégiAire
+              </Link>
+              <div className="flex items-center gap-3 p-2 rounded-xl opacity-35 cursor-not-allowed">
+                <Network size={14} className="text-blue-400" />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">NodAll</span>
+                <span className="ml-auto text-[8px] text-slate-600 font-bold uppercase">Bientôt</span>
+              </div>
+              <div className="flex items-center gap-3 p-2 rounded-xl opacity-35 cursor-not-allowed">
+                <Wrench size={14} className="text-orange-400" />
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">AlphArtisan</span>
+                <span className="ml-auto text-[8px] text-slate-600 font-bold uppercase">Bientôt</span>
+              </div>
+
+              {/* Sub-nav quand on est sur /admin/* */}
+              {isOnAdminRoute && (
+                <>
+                  <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] px-2 pt-2 pb-0.5">
+                    Pages
+                  </p>
+                  <Link
+                    href="/admin"
+                    className={`flex items-center gap-3 p-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${
+                      pathname === "/admin"
+                        ? "bg-violet-600/20 text-violet-300"
+                        : "text-slate-500 hover:bg-slate-800 hover:text-slate-200"
+                    }`}
+                  >
+                    <Users size={14} />
+                    Clients
+                  </Link>
+                  <Link
+                    href="/admin/bison-fute"
+                    className={`flex items-center gap-3 p-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${
+                      pathname.startsWith("/admin/bison-fute")
+                        ? "bg-violet-600/20 text-violet-300"
+                        : "text-slate-500 hover:bg-slate-800 hover:text-slate-200"
+                    }`}
+                  >
+                    <Zap size={14} />
+                    Bison Futé
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Menu système (Dashboard/Réglages) */}
       <div className="border-t border-slate-800 p-5 space-y-2">
         <button
@@ -377,15 +480,6 @@ export function ContextualNavigation({
 
         {isSystemMenuOpen && (
           <div className="space-y-1 pl-8 animate-in slide-in-from-top-2 duration-200">
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="w-full flex items-center gap-4 p-3 rounded-xl transition-all text-left text-slate-500 hover:bg-white/5 hover:text-violet-400"
-              >
-                <Shield size={16} />
-                <span className="font-black text-[10px] uppercase tracking-widest">Administration</span>
-              </Link>
-            )}
             {isOrgAdmin && (
               <button
                 onClick={() => {

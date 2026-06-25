@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { DeliveryScanLoader } from "@/features/regiaire/reception/components/DeliveryScanLoader";
 
 type PageProps = {

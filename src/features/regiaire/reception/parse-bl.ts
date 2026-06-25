@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import "server-only";
 
 import { generateObject } from "ai";

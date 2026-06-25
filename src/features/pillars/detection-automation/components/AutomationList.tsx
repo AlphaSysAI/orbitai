@@ -1,8 +1,10 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useState } from "react";
 import { Plus, Trash2, Zap, Play, Pause, Archive } from "lucide-react";
-import { Automation } from "../types";
+import type { Automation } from "../types";
 
 interface AutomationListProps {
   automations: Automation[];

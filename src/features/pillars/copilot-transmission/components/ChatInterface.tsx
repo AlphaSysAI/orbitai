@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";

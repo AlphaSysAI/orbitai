@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { NextRequest } from "next/server";
 
 import { searchBanAddresses } from "@/features/regiaire/aires/lib/ban-address";

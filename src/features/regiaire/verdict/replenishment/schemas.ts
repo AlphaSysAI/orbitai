@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { z } from "zod";
 
 import { IsoDateSchema } from "@/features/regiaire/verdict/schemas";

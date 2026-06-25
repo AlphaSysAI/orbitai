@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import "server-only";
 
 /** Clé serveur — éviter NEXT_PUBLIC_ en prod ; conservé pour compat .env existants. */

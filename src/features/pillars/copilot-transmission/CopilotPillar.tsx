@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -139,6 +141,7 @@ Base-toi sur TOUS les documents de la base de connaissances pour créer ce guide
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      if (!file) continue;
       const formData = new FormData();
       formData.append("file", file);
 

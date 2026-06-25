@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 /**
  * Génère un slug email à partir du nom d'une aire.
  * "Aire Arzens SUD" → "arzens-sud"

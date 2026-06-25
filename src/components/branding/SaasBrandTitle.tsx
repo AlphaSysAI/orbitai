@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import type { SaasBrand } from "@/lib/organizations/saas-branding";
 
 type SaasBrandTitleProps = {

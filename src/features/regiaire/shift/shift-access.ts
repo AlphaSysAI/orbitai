@@ -1,32 +1,39 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import "server-only";
 
 import type { RegiaireContext } from "@/lib/regiaire/require-context";
 import type { ShiftClosure, ShiftPeriod } from "@/features/regiaire/shift/schemas";
 
-const ADMIN_ROLES = new Set(["owner", "admin"]);
+import {
+  canManageShiftOnAire,
+  getMembershipRole,
+} from "@/lib/regiaire/aire-scope";
 
 export async function getMemberRole(
   ctx: RegiaireContext
 ): Promise<string | null> {
-  const { data, error } = await ctx.db
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", ctx.organizationId)
-    .eq("user_id", ctx.userId)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return data.role as string;
+  return getMembershipRole(ctx.db, ctx.organizationId, ctx.userId);
 }
 
+export async function requireShiftManager(
+  ctx: RegiaireContext
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const allowed = await canManageShiftOnAire(ctx);
+  if (!allowed) {
+    return {
+      ok: false,
+      error: "Accès réservé au gérant ou à l'administration",
+    };
+  }
+  return { ok: true };
+}
+
+/** @deprecated Utiliser requireShiftManager */
 export async function requireOrgAdmin(
   ctx: RegiaireContext
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const role = await getMemberRole(ctx);
-  if (!role || !ADMIN_ROLES.has(role)) {
-    return { ok: false, error: "Accès réservé aux administrateurs" };
-  }
-  return { ok: true };
+  return requireShiftManager(ctx);
 }
 
 export async function getShiftClosure(

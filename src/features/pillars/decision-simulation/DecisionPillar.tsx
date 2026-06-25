@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -37,7 +39,7 @@ export function DecisionPillar({ user, activeTab, onTabChange }: DecisionPillarP
   const [view, setView] = useState<'list' | 'conversation' | 'scenarios' | 'compare'>('list');
   const [selectedScenarios, setSelectedScenarios] = useState<string[]>([]);
   const [isCreatingAuto, setIsCreatingAuto] = useState(false);
-  const [lastActiveTab, setLastActiveTab] = useState<"dashboard" | "library" | "settings" | null>(null);
+  const [lastActiveTab, setLastActiveTab] = useState<string | null>(null);
 
   const handleCreateNew = useCallback(async () => {
     const id = await createNewSimulation();
@@ -182,7 +184,7 @@ export function DecisionPillar({ user, activeTab, onTabChange }: DecisionPillarP
             messages={conversation}
             isLoading={isAnalyzing}
             onSendMessage={sendMessage}
-            status={activeSimulation.status}
+            status={(activeSimulation.status === 'saved' ? 'ready' : activeSimulation.status) as 'conversation' | 'analyzing' | 'ready'}
             uploadedDocuments={uploadedDocuments}
             scenarios={activeSimulation.scenarios || []}
             simulationTitle={activeSimulation.title}
@@ -190,7 +192,8 @@ export function DecisionPillar({ user, activeTab, onTabChange }: DecisionPillarP
               const files = e.target.files;
               if (!files) return;
               for (let i = 0; i < files.length; i++) {
-                await uploadDocument(files[i]);
+                const f = files[i];
+                if (f) await uploadDocument(f);
               }
               e.target.value = '';
             }}

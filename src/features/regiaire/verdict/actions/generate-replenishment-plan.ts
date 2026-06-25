@@ -1,9 +1,12 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import { IsoDateSchema } from "@/features/regiaire/verdict/schemas";
 import { todayParisIso } from "@/features/regiaire/verdict/lib/dates";
 import { computeReplenishmentPlan } from "@/features/regiaire/verdict/replenishment/compute-plan";
 import type { ReplenishmentPlan } from "@/features/regiaire/verdict/replenishment/schemas";
+import { resolveRegiaireCapabilities } from "@/lib/regiaire/regiaire-capabilities";
 import {
   RegiaireContextError,
   requireRegiaireContext,
@@ -23,6 +26,14 @@ export async function generateReplenishmentPlan(
 ): Promise<GenerateReplenishmentPlanResult> {
   try {
     const ctx = await requireRegiaireContext(aireId);
+    const caps = await resolveRegiaireCapabilities(ctx);
+    if (!caps.canViewVerdict) {
+      return {
+        success: false,
+        error: "Accès réservé au gérant ou à l'administration",
+        code: "forbidden",
+      };
+    }
     const planDate = date ? IsoDateSchema.parse(date) : todayParisIso();
     const plan = await computeReplenishmentPlan(ctx, planDate);
     return { success: true, data: plan };

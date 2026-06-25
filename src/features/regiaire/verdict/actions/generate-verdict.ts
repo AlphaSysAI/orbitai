@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import { generateObject } from "ai";
@@ -30,23 +32,44 @@ export type GenerateVerdictActionResult =
   | { success: true; data: VerdictRun; cached: boolean }
   | { success: false; error: string; code?: string };
 
-const VERDICT_PROMPT = `Tu es l'assistant Verdict d'une station-service en France.
-À partir des signaux résumés ci-dessous, produis une recommandation merchandising et d'affluence.
+const VERDICT_PROMPT = `Tu es le directeur commercial d'une station-service autoroutière en France.
+Chaque matin tu produis un briefing Verdict pour le responsable de point de vente.
+Ton unique objectif : maximiser le chiffre d'affaires et la marge brute du jour.
 
-RÈGLES :
-- affluence_attendue : faible | normale | forte (Bison Futé rouge/noir → forte en priorité ; croise météo, vacances, indice historique, jour de semaine).
-- rayons : une entrée par catégorie pertinente avec direction augmenter|maintenir|reduire, emphase forte|moderee|legere, justification courte citant les signaux (ex. « week-end + vacances zone C + grand soleil → boissons fraîches +30% »).
-- top_mouvements : jusqu'à 5 écarts marquants vs N-1 (deltaPct si calculable).
-- synthese : phrase de synthèse (max 500 car.) ou null si non pertinent.
-- Si un signal est indisponible, ne l'invente pas — adapte la confiance et mentionne-le si utile.
-- Réponds en français.`;
+DIRECTIVES :
+- Parle en directeur : chiffres, impact CA estimé, marge, décisions concrètes. Jamais de vague.
+- affluence_attendue : faible | normale | forte. Bison Futé rouge/noir → forte ; croise météo, vacances scolaires, historique, jour de semaine.
+- rayons : une ligne par catégorie pertinente. justification détaillée (max 500 car.) citant les signaux chiffrés. impact_estime obligatoire : quantifie l'opportunité (ex. « +20% CA boissons soit ~180€ sur la journée »).
+- top_mouvements : 3 à 5 écarts vs N-1, deltaPct si disponible, justification orientée impact business.
+- synthese : synthèse exécutive (max 1200 car.) — situation du jour, fenêtre d'opportunité, impact global CA/marge attendu. Ton synthétique mais précis.
+- directeur_briefing : briefing matinal détaillé (max 2000 car.) — analyse du contexte, risques opérationnels, leviers de performance du jour, décisions à prendre avant ouverture. Style briefing DG : factuel, direct, orienté résultat.
+- opportunites_roi : 2 à 4 opportunités chiffrées et priorisées (critique/haute/normale). Action spécifique + impact estimé en CA.
+- actions_immediates : 3 à 5 actions concrètes à exécuter maintenant (réassort, mise en avant, prix, placement). Verbe d'action + objet + mesure.
+- Si un signal est indisponible, travaille avec les données restantes et l'indique brièvement. Ne fabrique pas de données.
+- Réponds entièrement en français.`;
 
 function parseStoredRecommendation(raw: unknown) {
   const rec =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+
+  // Rétro-compat : inject les champs nullable ajoutés après la v1
+  const rayons = Array.isArray(rec.rayons)
+    ? rec.rayons.map((r: unknown) => {
+        if (r && typeof r === "object") {
+          const rayon = r as Record<string, unknown>;
+          return { ...rayon, impact_estime: rayon.impact_estime ?? null };
+        }
+        return r;
+      })
+    : rec.rayons;
+
   return VerdictRecommendationSchema.parse({
     ...rec,
+    rayons,
     synthese: rec.synthese ?? null,
+    directeur_briefing: rec.directeur_briefing ?? null,
+    opportunites_roi: rec.opportunites_roi ?? null,
+    actions_immediates: rec.actions_immediates ?? null,
   });
 }
 
@@ -197,7 +220,7 @@ export async function generateVerdict(
       model: openai("gpt-4o"),
       schema: VerdictRecommendationSchema,
       prompt: `${VERDICT_PROMPT}\n\n--- SIGNAUX ---\n${promptContext}`,
-      temperature: 0.4,
+      temperature: 0.55,
     });
 
     const parsedRecommendation = VerdictRecommendationSchema.parse({

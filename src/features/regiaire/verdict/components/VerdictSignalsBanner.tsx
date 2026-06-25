@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import {
   CalendarCheck,
   CloudOff,
@@ -165,10 +167,10 @@ function SignalCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4">
-      <div className="mb-3 flex items-center gap-2">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
+      <div className="mb-3 flex items-center gap-2 border-b border-slate-800/60 pb-2.5">
         {icon}
-        <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+        <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-500">
           {title}
         </p>
       </div>
@@ -179,7 +181,7 @@ function SignalCard({
 
 function UnavailableHint() {
   return (
-    <p className="text-xs text-slate-600">Indisponible</p>
+    <p className="text-[11px] italic text-slate-700">Signal indisponible</p>
   );
 }
 

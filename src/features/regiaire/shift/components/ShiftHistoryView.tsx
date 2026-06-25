@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -43,7 +45,7 @@ export function ShiftHistoryView() {
     setIsLoading(true);
     setError(null);
 
-    const roleRes = await getShiftMemberRole();
+    const roleRes = await getShiftMemberRole(aireId);
     if (!roleRes.success) {
       setError(roleRes.error);
       setIsLoading(false);
@@ -79,14 +81,10 @@ export function ShiftHistoryView() {
     <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
       <header className="space-y-3">
         <div>
-          <h1 className="text-2xl font-extrabold uppercase italic tracking-tighter text-white">
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">Équipe</p>
+          <h1 className="mt-0.5 text-xl font-black uppercase tracking-tight text-white">
             {isAdmin ? "Historique" : "Passation précédente"}
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            {isAdmin
-              ? "Clôtures par date de service."
-              : "Note laissée par l'équipe du quart précédent."}
-          </p>
         </div>
         <EquipeSubNav aireId={aireId} isAdmin={isAdmin} />
       </header>
@@ -122,53 +120,54 @@ export function ShiftHistoryView() {
           <Loader2 className="animate-spin text-amber-400" />
         </div>
       ) : isAdmin ? (
-        <ul className="space-y-3">
+        <ul className="space-y-2">
           {ALL_SHIFT_PERIODS.map((shift) => {
             const closure = closureForShift(closures, shift);
+            const pct = closure?.completion_pct ?? 0;
             return (
               <li
                 key={shift}
-                className={`rounded-xl border p-4 ${
+                className={`rounded-2xl border p-4 ${
                   closure
-                    ? "border-slate-800 bg-slate-900/50"
-                    : "border-dashed border-slate-700 bg-slate-900/20"
+                    ? "border-slate-800 bg-slate-900/70"
+                    : "border-dashed border-slate-800 bg-slate-900/20"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <h2 className="font-bold text-white">
-                    {SHIFT_PERIOD_LABELS[shift]}
-                  </h2>
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-wider text-slate-600">Quart</p>
+                    <h2 className="font-bold text-white">{SHIFT_PERIOD_LABELS[shift]}</h2>
+                  </div>
                   {closure ? (
-                    <span
-                      className={`text-sm font-black tabular-nums ${
-                        closure.completion_pct >= 100
-                          ? "text-emerald-400"
-                          : "text-amber-400"
-                      }`}
-                    >
-                      {closure.completion_pct}%
+                    <span className={`text-xl font-black tabular-nums ${pct >= 100 ? "text-emerald-400" : "text-amber-400"}`}>
+                      {pct}%
                     </span>
                   ) : (
-                    <span className="text-xs text-slate-600">Non clôturé</span>
+                    <span className="rounded-full border border-slate-800 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-700">
+                      Non clôturé
+                    </span>
                   )}
                 </div>
                 {closure && (
-                  <div className="mt-2 space-y-1 text-xs text-slate-400">
-                    <p>
-                      {closure.checked_tasks}/{closure.total_tasks} tâches —{" "}
-                      {formatDateTimeFr(closure.closed_at)}
-                    </p>
-                    {closure.missing_labels.length > 0 && (
-                      <p className="text-amber-400/80">
-                        Manquantes : {closure.missing_labels.join(", ")}
-                      </p>
-                    )}
-                    {closure.note && (
-                      <p className="mt-2 rounded-lg bg-slate-950/50 p-2 text-slate-300">
-                        {closure.note}
-                      </p>
-                    )}
-                  </div>
+                  <>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : "bg-amber-500"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <div className="mt-2 space-y-1 text-[11px] text-slate-500">
+                      <p>{closure.checked_tasks}/{closure.total_tasks} tâches · {formatDateTimeFr(closure.closed_at)}</p>
+                      {closure.missing_labels.length > 0 && (
+                        <p className="text-amber-400/70">Manquantes : {closure.missing_labels.join(", ")}</p>
+                      )}
+                      {closure.note && (
+                        <p className="mt-2 rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2 text-slate-300">
+                          {closure.note}
+                        </p>
+                      )}
+                    </div>
+                  </>
                 )}
               </li>
             );

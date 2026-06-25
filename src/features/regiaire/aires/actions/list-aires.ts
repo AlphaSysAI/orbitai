@@ -1,12 +1,21 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import {
   AireListItemSchema,
   type AireListItem,
 } from "@/features/regiaire/aires/schemas";
+import {
+  getMembershipRole,
+  listAccessibleAireIds,
+} from "@/lib/regiaire/aire-scope";
 import { requireRegiaireAccess } from "@/lib/organizations/access";
 import { forWrite } from "@/lib/supabase-write";
-import { createServerSupabaseClient } from "@/server/auth/supabase-server";
+import {
+  createServerSupabaseClient,
+  getAuthenticatedUser,
+} from "@/server/auth/supabase-server";
 import {
   RegiaireContextError,
   requireRegiaireContext,
@@ -27,18 +36,37 @@ export async function listAiresForOrg(): Promise<ListAiresActionResult> {
       };
     }
 
+    const user = await getAuthenticatedUser();
+    if (!user) return { success: false, error: "Non authentifié" };
+
     const supabase = await createServerSupabaseClient();
     const db = forWrite(supabase);
 
-    const { data, error } = await db
+    const role =
+      (await getMembershipRole(db, access.organizationId, user.id)) ?? "member";
+    const accessible = await listAccessibleAireIds(
+      db,
+      access.organizationId,
+      user.id,
+      role
+    );
+
+    let query = db
       .from("aires")
       .select("id, name, city, school_zone, bison_fute_zone")
       .eq("organization_id", access.organizationId)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (accessible !== "all") {
+      if (accessible.length === 0) {
+        return { success: true, data: [] };
+      }
+      query = query.in("id", accessible);
     }
+
+    const { data, error } = await query;
+
+    if (error) return { success: false, error: error.message };
 
     const items = (data ?? []).map((row) =>
       AireListItemSchema.parse({

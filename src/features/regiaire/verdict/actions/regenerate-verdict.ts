@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import { generateVerdict } from "@/features/regiaire/verdict/actions/generate-verdict";

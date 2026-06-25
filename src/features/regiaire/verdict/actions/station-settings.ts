@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import { type StationSettings } from "@/features/regiaire/verdict/schemas";

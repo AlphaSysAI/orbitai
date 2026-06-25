@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateText } from 'ai';
@@ -141,11 +143,17 @@ Réponds UNIQUEMENT avec un JSON valide :
   "summary": "résumé en une phrase"
 }`;
 
-        let extracted = {
-          sentiment: 'neutral' as const,
-          category: 'other' as const,
-          urgency: 'low' as const,
-          tags: [] as string[],
+        let extracted: {
+          sentiment: string;
+          category: string;
+          urgency: string;
+          tags: string[];
+          summary: string;
+        } = {
+          sentiment: 'neutral',
+          category: 'other',
+          urgency: 'low',
+          tags: [],
           summary: item.content?.substring(0, 200) || '',
         };
 

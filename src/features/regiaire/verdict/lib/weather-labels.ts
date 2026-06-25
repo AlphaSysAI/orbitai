@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 export const WEATHER_CODE_LABELS: Record<number, string> = {
   0: "ciel dégagé",
   1: "principalement dégagé",

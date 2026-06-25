@@ -1,8 +1,10 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useState } from "react";
 import { ArrowLeft, Upload, FileText, Mail, MessageSquare, Star, Users, Phone, Trash2 } from "lucide-react";
-import { FeedbackSource } from "../hooks/useClientSynthesis";
+import type { FeedbackSource } from "../hooks/useClientSynthesis";
 
 interface ImportViewProps {
   sources: FeedbackSource[];

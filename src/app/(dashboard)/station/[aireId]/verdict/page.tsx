@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { VerdictScreen } from "@/features/regiaire/verdict/components/VerdictScreen";
 
 type PageProps = {

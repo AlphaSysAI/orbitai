@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -66,43 +68,43 @@ export function RegiaireHeader({ aireId, initial = null }: RegiaireHeaderProps) 
   const weather = snapshot?.weather;
 
   return (
-    <header className="z-20 flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-800 bg-[#0f172a]/50 px-8 backdrop-blur-md">
-      <div className="flex items-center gap-8 text-[10px] font-black uppercase italic tracking-[0.2em] text-slate-500">
-        <span className="border-b-2 border-amber-500 py-5 text-amber-400">
+    <header className="z-20 flex h-14 flex-shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950/80 px-6 backdrop-blur-xl">
+      {/* Brand */}
+      <div className="flex items-center gap-3">
+        <div className="h-1.5 w-6 rounded-full bg-amber-500" />
+        <span className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-400">
           <SaasBrandTitle brand={brand} size="sm" />
         </span>
       </div>
 
-      <div className="flex items-center gap-6">
+      {/* Station + weather */}
+      <div className="flex items-center gap-4">
         {stationName ? (
-          <span className="flex max-w-[280px] items-center gap-2 truncate text-[10px] font-bold uppercase tracking-wider text-slate-300">
-            <MapPin size={14} className="shrink-0 text-amber-500" />
-            <span className="truncate">{stationName}</span>
-          </span>
+          <div className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5">
+            <MapPin size={12} className="shrink-0 text-amber-500" />
+            <span className="max-w-[200px] truncate text-[11px] font-bold uppercase tracking-wider text-slate-200">
+              {stationName}
+            </span>
+          </div>
         ) : (
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
             Aire non configurée
           </span>
         )}
 
         {isRefreshing && !weather ? (
-          <Loader2 size={16} className="animate-spin text-slate-500" />
+          <Loader2 size={14} className="animate-spin text-slate-600" />
         ) : weather?.available ? (
-          <span className="flex items-center gap-2 text-[11px] font-medium text-slate-200">
+          <div className="hidden items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-1.5 sm:flex">
             <WeatherIcon code={weather.weatherCode} />
-            <span>
+            <span className="text-[11px] font-bold tabular-nums text-slate-200">
               {Math.round(weather.tempMinC)}–{Math.round(weather.tempMaxC)}°C
             </span>
-            <span className="hidden text-slate-500 sm:inline">·</span>
-            <span className="hidden capitalize text-slate-400 sm:inline">
-              {weather.label}
+            <span className="hidden capitalize text-[10px] text-slate-500 lg:inline">
+              · {weather.label}
             </span>
-          </span>
-        ) : (
-          <span className="text-[10px] text-slate-600">
-            {weather?.reason ?? "Météo…"}
-          </span>
-        )}
+          </div>
+        ) : null}
       </div>
     </header>
   );

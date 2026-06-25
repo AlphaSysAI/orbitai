@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import { z } from "zod";
@@ -11,7 +13,7 @@ import {
 } from "@/features/regiaire/shift/schemas";
 import {
   listAllTaskDefs,
-  requireOrgAdmin,
+  requireShiftManager,
 } from "@/features/regiaire/shift/shift-access";
 import {
   RegiaireContextError,
@@ -39,7 +41,7 @@ export async function listTaskDefsConfig(
 ): Promise<ListTaskDefsActionResult> {
   try {
     const ctx = await requireRegiaireContext(aireId);
-    const admin = await requireOrgAdmin(ctx);
+    const admin = await requireShiftManager(ctx);
     if (!admin.ok) {
       return { success: false, error: admin.error };
     }
@@ -63,7 +65,7 @@ export async function upsertTaskDef(
 ): Promise<UpsertTaskDefActionResult> {
   try {
     const ctx = await requireRegiaireContext(aireId);
-    const admin = await requireOrgAdmin(ctx);
+    const admin = await requireShiftManager(ctx);
     if (!admin.ok) {
       return { success: false, error: admin.error };
     }
@@ -128,7 +130,7 @@ export async function deleteTaskDef(
 ): Promise<DeleteTaskDefActionResult> {
   try {
     const ctx = await requireRegiaireContext(aireId);
-    const admin = await requireOrgAdmin(ctx);
+    const admin = await requireShiftManager(ctx);
     if (!admin.ok) {
       return { success: false, error: admin.error };
     }
@@ -162,7 +164,7 @@ export async function reorderTaskDefs(
 ): Promise<ReorderTaskDefsActionResult> {
   try {
     const ctx = await requireRegiaireContext(aireId);
-    const admin = await requireOrgAdmin(ctx);
+    const admin = await requireShiftManager(ctx);
     if (!admin.ok) {
       return { success: false, error: admin.error };
     }

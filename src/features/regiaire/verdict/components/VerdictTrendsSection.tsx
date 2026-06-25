@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { formatDeltaPct } from "@/features/regiaire/verdict/lib/verdict-display";
 import type { TrendCategorySummary } from "@/features/regiaire/verdict/schemas";
 

@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -36,7 +38,6 @@ export function BarcodeScanner({ onDetect, disabled }: BarcodeScannerProps) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    zxingReaderRef.current?.reset();
     zxingReaderRef.current = null;
     const video = videoRef.current;
     const stream = video?.srcObject as MediaStream | null;

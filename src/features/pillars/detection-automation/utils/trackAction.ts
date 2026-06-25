@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 /**
  * Utilitaire pour enregistrer les actions utilisateur dans l'historique
  * Cela permet de détecter les patterns répétitifs

@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 

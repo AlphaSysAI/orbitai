@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { NewReceptionWizard } from "@/features/regiaire/reception/components/NewReceptionWizard";
 
 type PageProps = {

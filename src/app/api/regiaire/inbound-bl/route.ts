@@ -1,10 +1,14 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
 
 import { processInboundBL } from "@/features/regiaire/inbound/lib/process-inbound-bl";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 const AttachmentSchema = z.object({
   filename: z.string(),
@@ -46,7 +50,7 @@ async function sendAck(params: {
     ? `noreply@${params.fromDomain}`
     : "noreply@regiaire.alphasys.tech";
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: fromEmail,
     to: params.to,
     subject: `BL reçu — ${params.aireName}`,

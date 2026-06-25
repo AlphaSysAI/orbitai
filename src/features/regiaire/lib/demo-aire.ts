@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 /**
  * Aire de référence pour les tests manuels et seeds démo (OrbitAI / RégiAire).
  * Seed : database/seeds/017_regiaire_arzens_demo.sql

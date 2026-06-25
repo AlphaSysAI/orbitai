@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { LayoutDashboard, FileText, Settings, Orbit, LogOut } from "lucide-react";

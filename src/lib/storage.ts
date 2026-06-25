@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getLegacyActionLabel,

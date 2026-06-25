@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 export {
   getWeather,
   getWeatherForecast,

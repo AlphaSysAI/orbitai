@@ -1,4 +1,8 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
+
+import { createClient } from "@supabase/supabase-js";
 
 import {
   OrgContextError,
@@ -9,6 +13,14 @@ import {
   createOrgMemberUser,
   type CreateOrgMemberResult,
 } from "@/lib/organizations/create-org-member";
+import type { Database } from "@/types/database.types";
+
+function getServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) return null;
+  return createClient<Database>(url, serviceKey);
+}
 
 export type OrgProfile = {
   id: string;
@@ -24,6 +36,8 @@ export type OrgMemberListItem = {
   userId: string;
   role: string;
   createdAt: string;
+  firstName: string | null;
+  lastName: string | null;
 };
 
 export type GetOrgSettingsResult =
@@ -101,11 +115,30 @@ export async function getOrgSettings(): Promise<GetOrgSettingsResult> {
       businessSector: org.business_sector,
     };
 
+    const userIds = (membersRaw ?? []).map((m) => m.user_id);
+    const userMetaMap: Record<string, { firstName: string | null; lastName: string | null }> = {};
+
+    const admin = getServiceClient();
+    if (admin && userIds.length > 0) {
+      const results = await Promise.all(userIds.map((uid) => admin.auth.admin.getUserById(uid)));
+      for (const r of results) {
+        if (r.data.user) {
+          const u = r.data.user;
+          userMetaMap[u.id] = {
+            firstName: (u.user_metadata?.first_name as string | null) ?? null,
+            lastName: (u.user_metadata?.last_name as string | null) ?? null,
+          };
+        }
+      }
+    }
+
     const members: OrgMemberListItem[] = (membersRaw ?? []).map((m) => ({
       id: m.id,
       userId: m.user_id,
       role: m.role as string,
       createdAt: m.created_at,
+      firstName: userMetaMap[m.user_id]?.firstName ?? null,
+      lastName: userMetaMap[m.user_id]?.lastName ?? null,
     }));
 
     return {

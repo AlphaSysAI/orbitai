@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 /** Retour sonore terrain (Web Audio API). */
 
 function playTone(frequency: number, durationMs: number, type: OscillatorType = "sine") {

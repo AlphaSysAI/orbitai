@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use server";
 
 import { daysBetweenIso, todayParisIso } from "@/features/regiaire/verdict/lib/dates";
@@ -7,9 +9,16 @@ import {
   STOCK_SHRINKAGE_RATE,
   unitValueForCategory,
 } from "@/features/regiaire/lib/business-stats";
+import {
+  getMembershipRole,
+  listAccessibleAireIds,
+} from "@/lib/regiaire/aire-scope";
 import { requireRegiaireAccess } from "@/lib/organizations/access";
 import { forWrite } from "@/lib/supabase-write";
-import { createServerSupabaseClient } from "@/server/auth/supabase-server";
+import {
+  createServerSupabaseClient,
+  getAuthenticatedUser,
+} from "@/server/auth/supabase-server";
 
 export type RegiaireBusinessDashboardStats = {
   aireCount: number;
@@ -27,6 +36,7 @@ export type GetRegiaireBusinessDashboardStatsResult =
 type StockBatchRow = {
   quantity: number;
   dlc: string | null;
+  aire_id: string;
   products: { category: string | null } | { category: string | null }[] | null;
 };
 
@@ -41,7 +51,7 @@ function productCategory(
 }
 
 /**
- * KPIs agrégés org (toutes les aires) pour le dashboard RégiAire.
+ * KPIs agrégés sur le périmètre d'aires accessible à l'utilisateur.
  */
 export async function getRegiaireBusinessDashboardStats(): Promise<GetRegiaireBusinessDashboardStatsResult> {
   try {
@@ -54,32 +64,70 @@ export async function getRegiaireBusinessDashboardStats(): Promise<GetRegiaireBu
       };
     }
 
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return { success: false, error: "Non authentifié", code: "unauthenticated" };
+    }
+
     const supabase = await createServerSupabaseClient();
     const db = forWrite(supabase);
     const orgId = access.organizationId;
     const today = todayParisIso();
 
+    const role =
+      (await getMembershipRole(db, orgId, user.id)) ?? "member";
+    const accessible = await listAccessibleAireIds(
+      db,
+      orgId,
+      user.id,
+      role
+    );
+
+    let aireFilter: string[] | null = null;
+    if (accessible !== "all") {
+      if (accessible.length === 0) {
+        return {
+          success: true,
+          data: {
+            aireCount: 0,
+            completedReceptions: 0,
+            receptionHoursSaved: 0,
+            expirySavingsEur: 0,
+            stockSavingsEur: 0,
+            totalSavingsEur: 0,
+          },
+        };
+      }
+      aireFilter = accessible;
+    }
+
+    const aireCountQuery = db
+      .from("aires")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId);
+    const receptionQuery = db
+      .from("deliveries")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", orgId)
+      .in("status", ["completed", "discrepancy"])
+      .not("completed_at", "is", null);
+    const batchQuery = db
+      .from("stock_batches")
+      .select("quantity, dlc, aire_id, products(category)")
+      .eq("organization_id", orgId)
+      .gt("quantity", 0);
+
+    if (aireFilter) {
+      aireCountQuery.in("id", aireFilter);
+      receptionQuery.in("aire_id", aireFilter);
+      batchQuery.in("aire_id", aireFilter);
+    }
+
     const [
       { count: aireCount, error: aireError },
       { count: receptionCount, error: receptionError },
       { data: batches, error: batchError },
-    ] = await Promise.all([
-      db
-        .from("aires")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", orgId),
-      db
-        .from("deliveries")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", orgId)
-        .in("status", ["completed", "discrepancy"])
-        .not("completed_at", "is", null),
-      db
-        .from("stock_batches")
-        .select("quantity, dlc, products(category)")
-        .eq("organization_id", orgId)
-        .gt("quantity", 0),
-    ]);
+    ] = await Promise.all([aireCountQuery, receptionQuery, batchQuery]);
 
     if (aireError) return { success: false, error: aireError.message };
     if (receptionError) return { success: false, error: receptionError.message };

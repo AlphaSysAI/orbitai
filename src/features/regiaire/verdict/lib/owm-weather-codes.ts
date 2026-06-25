@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 /**
  * Mappe les condition.id OpenWeatherMap vers nos codes internes (libellés + icônes).
  * @see https://openweathermap.org/weather-conditions

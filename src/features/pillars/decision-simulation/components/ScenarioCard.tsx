@@ -1,7 +1,9 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { TrendingUp, TrendingDown, Activity, AlertCircle, Target } from "lucide-react";
-import { Scenario } from "../types";
+import type { Scenario } from "../types";
 
 interface ScenarioCardProps {
   scenario: Scenario;

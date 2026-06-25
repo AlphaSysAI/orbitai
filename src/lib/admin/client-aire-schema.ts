@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { z } from "zod";
 
 import { BisonFuteZoneSchema } from "@/features/regiaire/verdict/bison-fute/schemas";

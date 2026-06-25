@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import "server-only";
 
 import type { RegiaireContext } from "@/lib/regiaire/require-context";
@@ -8,7 +10,7 @@ import {
 import { forWrite } from "@/lib/supabase-write";
 import { getPrimaryOrganizationForUser } from "@/lib/organizations/access";
 
-export const ORG_ADMIN_ROLES = new Set(["owner", "admin"]);
+export const ORG_ADMIN_ROLES = new Set(["owner", "admin", "direction_france"]);
 
 export type OrgContext = {
   userId: string;

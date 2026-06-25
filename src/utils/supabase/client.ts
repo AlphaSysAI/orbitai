@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {

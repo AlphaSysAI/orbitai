@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -40,7 +42,7 @@ export function ShiftConfigPanel() {
 
   const load = useCallback(async () => {
     setIsLoading(true);
-    const roleRes = await getShiftMemberRole();
+    const roleRes = await getShiftMemberRole(aireId);
     if (!roleRes.success || !roleRes.isAdmin) {
       setAccessDenied(true);
       setIsLoading(false);

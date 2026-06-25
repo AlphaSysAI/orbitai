@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 /** Bucket Supabase Storage privé pour les bons de livraison RégiAire. */
 export const REGIAIRE_BL_BUCKET = "regiaire-bl";
 

@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { z } from "zod";
 
 export const ShiftPeriodSchema = z.enum(["matin", "apres_midi", "nuit"]);
@@ -82,6 +84,23 @@ export const UpsertTaskDefInputSchema = z.object({
 });
 
 export type UpsertTaskDefInput = z.infer<typeof UpsertTaskDefInputSchema>;
+
+export const ShiftVerdictSchema = z.object({
+  tendance: z.enum(["amelioration", "stable", "degradation"]),
+  synthese: z.string().max(700),
+  points_critiques: z
+    .array(
+      z.object({
+        tache: z.string(),
+        detail: z.string().max(280),
+      })
+    )
+    .max(5),
+  recommandations: z.array(z.string().max(220)).max(4),
+  alerte: z.string().max(400).nullable(),
+});
+
+export type ShiftVerdict = z.infer<typeof ShiftVerdictSchema>;
 
 export function formatServiceDateFr(isoDate: string): string {
   const [y, m, d] = isoDate.split("-");

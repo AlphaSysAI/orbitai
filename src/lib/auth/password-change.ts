@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 export const MUST_CHANGE_PASSWORD_METADATA_KEY = "must_change_password";
 
 export function userMustChangePassword(

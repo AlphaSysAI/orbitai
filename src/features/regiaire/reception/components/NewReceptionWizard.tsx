@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -227,67 +229,108 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
     );
   }
 
+  const STEPS: { id: WizardStep; label: string }[] = [
+    { id: "supplier", label: "Fournisseur" },
+    { id: "capture", label: "Bon de livraison" },
+    { id: "review", label: "Vérification" },
+  ];
+  const currentStepIdx = STEPS.findIndex((s) => s.id === step);
+
   return (
     <div className="mx-auto max-w-lg space-y-6 px-4 py-6">
+      {/* Back link */}
       <Link
         href={`/station/${aireId}/deliveries`}
-        className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-300"
+        className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-600 transition-colors hover:text-slate-300"
       >
-        <ArrowLeft size={14} />
+        <ArrowLeft size={13} />
         Réceptions
       </Link>
 
+      {/* Page header */}
       <div>
-        <h1 className="text-2xl font-extrabold uppercase italic tracking-tighter text-white">
+        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-700">
           Nouvelle réception
+        </p>
+        <h1 className="mt-0.5 text-xl font-black uppercase tracking-tight text-white">
+          {supplierName && step !== "supplier" ? supplierName : "Créer une réception"}
         </h1>
-        {supplierName && step !== "supplier" && (
-          <p className="mt-1 text-sm text-slate-400">{supplierName}</p>
-        )}
+      </div>
+
+      {/* Step indicator */}
+      <div className="flex items-center gap-0">
+        {STEPS.map((s, i) => {
+          const isDone = i < currentStepIdx;
+          const isActive = i === currentStepIdx;
+          return (
+            <div key={s.id} className="flex flex-1 items-center">
+              <div className="flex flex-col items-center gap-1">
+                <div className={`flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-black transition-all ${
+                  isDone
+                    ? "bg-emerald-500 text-black"
+                    : isActive
+                      ? "bg-amber-500 text-black"
+                      : "border border-slate-700 bg-slate-900 text-slate-600"
+                }`}>
+                  {isDone ? "✓" : i + 1}
+                </div>
+                <span className={`text-[8px] font-black uppercase tracking-wider ${
+                  isActive ? "text-amber-400" : isDone ? "text-emerald-500" : "text-slate-700"
+                }`}>
+                  {s.label}
+                </span>
+              </div>
+              {i < STEPS.length - 1 && (
+                <div className={`mb-4 h-px flex-1 transition-all ${i < currentStepIdx ? "bg-emerald-500/40" : "bg-slate-800"}`} />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {error && (
-        <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+        <p className="rounded-xl border border-red-500/30 bg-red-500/8 px-4 py-3 text-sm text-red-300">
           {error}
         </p>
       )}
 
       {step === "supplier" && !resumeDeliveryId && (
         <div className="space-y-4">
-          <div className="flex gap-2">
+          {/* Segmented control */}
+          <div className="flex rounded-xl border border-slate-800 bg-slate-900/60 p-1">
             <button
               type="button"
               onClick={() => setCreateNewSupplier(false)}
-              className={`flex-1 rounded-xl py-2 text-xs font-bold uppercase ${
+              className={`flex-1 rounded-lg py-2 text-[10px] font-black uppercase tracking-wider transition-all ${
                 !createNewSupplier
-                  ? "bg-amber-600 text-white"
-                  : "bg-slate-800 text-slate-400"
+                  ? "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30"
+                  : "text-slate-600 hover:text-slate-300"
               }`}
             >
-              Existant
+              Fournisseur existant
             </button>
             <button
               type="button"
               onClick={() => setCreateNewSupplier(true)}
-              className={`flex-1 rounded-xl py-2 text-xs font-bold uppercase ${
+              className={`flex-1 rounded-lg py-2 text-[10px] font-black uppercase tracking-wider transition-all ${
                 createNewSupplier
-                  ? "bg-amber-600 text-white"
-                  : "bg-slate-800 text-slate-400"
+                  ? "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30"
+                  : "text-slate-600 hover:text-slate-300"
               }`}
             >
-              Nouveau
+              Nouveau fournisseur
             </button>
           </div>
 
           {!createNewSupplier ? (
-            <label className="block">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            <label className="block space-y-1.5">
+              <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-600">
                 Fournisseur
               </span>
               <select
                 value={selectedSupplierId}
                 onChange={(e) => setSelectedSupplierId(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white"
+                className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white focus:border-amber-500/50 focus:outline-none"
               >
                 <option value="">— Choisir —</option>
                 {suppliers.map((s) => (
@@ -299,26 +342,26 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
             </label>
           ) : (
             <div className="space-y-3">
-              <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Nom
+              <label className="block space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-600">
+                  Nom du fournisseur *
                 </span>
                 <input
                   value={newSupplierName}
                   onChange={(e) => setNewSupplierName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-700 focus:border-amber-500/50 focus:outline-none"
                   placeholder="Ex. Metro Cash & Carry"
                 />
               </label>
-              <label className="block">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Email (optionnel)
+              <label className="block space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-600">
+                  Email <span className="text-slate-700">(optionnel)</span>
                 </span>
                 <input
                   type="email"
                   value={newSupplierEmail}
                   onChange={(e) => setNewSupplierEmail(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-sm text-white placeholder:text-slate-700 focus:border-amber-500/50 focus:outline-none"
                   placeholder="contact@fournisseur.fr"
                 />
               </label>
@@ -329,10 +372,10 @@ export function NewReceptionWizard({ resumeDeliveryId }: { resumeDeliveryId?: st
             type="button"
             onClick={() => void handleSupplierNext()}
             disabled={isCreating}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 py-4 text-sm font-bold uppercase tracking-wider text-white disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 py-3.5 text-[11px] font-black uppercase tracking-wider text-black transition-all hover:bg-amber-400 hover:shadow-lg hover:shadow-amber-500/20 disabled:opacity-50"
           >
-            {isCreating && <Loader2 size={18} className="animate-spin" />}
-            Continuer — capture BL
+            {isCreating && <Loader2 size={16} className="animate-spin" />}
+            Continuer → Capture BL
           </button>
         </div>
       )}

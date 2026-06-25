@@ -486,6 +486,60 @@ export interface AireRow {
   school_zone: string;
   order_days: number[];
   bison_fute_zone: number | null;
+  secteur_id: string | null;
+  created_at: string;
+}
+
+/** Hiérarchie d'enseigne (029_org_hierarchy.sql) */
+export interface SecteurRow {
+  id: string;
+  organization_id: string;
+  name: string;
+  chef_user_id: string | null;
+  created_at: string;
+}
+
+export interface OrgHierarchyLinkRow {
+  organization_id: string;
+  manager_user_id: string;
+  subordinate_user_id: string;
+  created_at: string;
+}
+
+export interface OrgMemberProfileRow {
+  user_id: string;
+  organization_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SecteurVerdictRunRow {
+  id: string;
+  organization_id: string;
+  secteur_id: string;
+  run_date: string;
+  signals: Json;
+  recommendation: Json;
+  created_by: string;
+  created_at: string;
+}
+
+export interface GerantAireRow {
+  gerant_user_id: string;
+  aire_id: string;
+  organization_id: string;
+  created_at: string;
+}
+
+export interface AireTeamMemberRow {
+  user_id: string;
+  aire_id: string;
+  organization_id: string;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -742,6 +796,7 @@ export interface Database {
           address?: string | null;
           order_days?: number[];
           bison_fute_zone?: number | null;
+          secteur_id?: string | null;
           created_at?: string;
         },
         Partial<
@@ -755,6 +810,7 @@ export interface Database {
             | "school_zone"
             | "order_days"
             | "bison_fute_zone"
+            | "secteur_id"
           >
         >
       >;
@@ -794,6 +850,71 @@ export interface Database {
           created_at?: string;
         },
         Partial<Pick<VerdictRunRow, "signals" | "recommendation">>
+      >;
+      secteurs: TableDef<
+        SecteurRow,
+        Pick<SecteurRow, "organization_id" | "name"> & {
+          id?: string;
+          chef_user_id?: string | null;
+          created_at?: string;
+        },
+        Partial<Pick<SecteurRow, "name" | "chef_user_id">>
+      >;
+      org_hierarchy_links: TableDef<
+        OrgHierarchyLinkRow,
+        Pick<
+          OrgHierarchyLinkRow,
+          "organization_id" | "manager_user_id" | "subordinate_user_id"
+        > & { created_at?: string },
+        Partial<Pick<OrgHierarchyLinkRow, "manager_user_id" | "subordinate_user_id">>
+      >;
+      org_member_profiles: TableDef<
+        OrgMemberProfileRow,
+        Pick<
+          OrgMemberProfileRow,
+          "user_id" | "organization_id" | "first_name" | "last_name" | "email"
+        > & {
+          phone?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        },
+        Partial<
+          Pick<
+            OrgMemberProfileRow,
+            "first_name" | "last_name" | "email" | "phone" | "updated_at"
+          >
+        >
+      >;
+      secteur_verdict_runs: TableDef<
+        SecteurVerdictRunRow,
+        Pick<
+          SecteurVerdictRunRow,
+          "organization_id" | "secteur_id" | "run_date" | "created_by"
+        > & {
+          id?: string;
+          signals?: Json;
+          recommendation?: Json;
+          created_at?: string;
+        },
+        Partial<Pick<SecteurVerdictRunRow, "signals" | "recommendation">>
+      >;
+      gerant_aires: TableDef<
+        GerantAireRow,
+        Pick<GerantAireRow, "gerant_user_id" | "aire_id" | "organization_id"> & {
+          created_at?: string;
+        },
+        Partial<Pick<GerantAireRow, "aire_id">>
+      >;
+      aire_team_members: TableDef<
+        AireTeamMemberRow,
+        Pick<
+          AireTeamMemberRow,
+          "user_id" | "aire_id" | "organization_id"
+        > & {
+          created_by?: string | null;
+          created_at?: string;
+        },
+        Partial<Pick<AireTeamMemberRow, "created_by">>
       >;
     };
     Views: Record<string, never>;

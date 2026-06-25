@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { z } from "zod";
 
 /** Statuts possibles d'un événement logué par OpenClaw */

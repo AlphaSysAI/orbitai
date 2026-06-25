@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { z } from "zod";
 
 import { BisonFuteSignalSchema } from "@/features/regiaire/verdict/bison-fute/schemas";
@@ -125,7 +127,8 @@ export const RayonRecommendationSchema = z.object({
   category: z.string(),
   direction: z.enum(["augmenter", "maintenir", "reduire"]),
   emphase: z.enum(["forte", "moderee", "legere"]),
-  justification: z.string().max(220),
+  justification: z.string().max(500),
+  impact_estime: z.string().max(150).nullable(),
 });
 
 export type RayonRecommendation = z.infer<typeof RayonRecommendationSchema>;
@@ -134,16 +137,28 @@ export const TopMouvementSchema = z.object({
   category: z.string(),
   deltaPct: z.number().nullable(),
   direction: z.enum(["hausse", "baisse", "stable"]),
-  justification: z.string().max(180),
+  justification: z.string().max(350),
 });
 
 export type TopMouvement = z.infer<typeof TopMouvementSchema>;
+
+export const OpportuniteRoiSchema = z.object({
+  categorie: z.string(),
+  action: z.string().max(150),
+  impact_estime: z.string().max(150),
+  priorite: z.enum(["critique", "haute", "normale"]),
+});
+
+export type OpportuniteRoi = z.infer<typeof OpportuniteRoiSchema>;
 
 export const VerdictRecommendationSchema = z.object({
   affluence_attendue: AffluenceAttendueSchema,
   rayons: z.array(RayonRecommendationSchema).min(1),
   top_mouvements: z.array(TopMouvementSchema).min(1).max(5),
-  synthese: z.string().max(500).nullable(),
+  synthese: z.string().max(1200).nullable(),
+  directeur_briefing: z.string().max(2000).nullable(),
+  opportunites_roi: z.array(OpportuniteRoiSchema).max(4).nullable(),
+  actions_immediates: z.array(z.string().max(220)).max(5).nullable(),
 });
 
 export type VerdictRecommendation = z.infer<typeof VerdictRecommendationSchema>;

@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 export {
   listShiftTasks,
   getCurrentServiceContext,
@@ -31,3 +33,7 @@ export {
   type GetPreviousShiftHandoverResult,
   type PreviousShiftHandover,
 } from "./get-previous-handover";
+export {
+  generateShiftManagerVerdict,
+  type GenerateShiftVerdictResult,
+} from "./generate-shift-verdict";

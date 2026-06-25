@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -153,7 +155,7 @@ export function MesAiresFlyoutNav() {
                           {aire.name}
                         </p>
                         <p className="mt-0.5 truncate text-[10px] text-slate-500">
-                          {aire.address ?? aire.city ?? "Adresse non renseignée"}
+                          {aire.city ?? "Adresse non renseignée"}
                         </p>
                         <p className="mt-0.5 text-[9px] font-bold uppercase text-slate-600">
                           Zone {aire.schoolZone}

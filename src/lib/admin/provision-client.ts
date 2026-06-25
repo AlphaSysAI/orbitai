@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 import { createClient } from "@supabase/supabase-js";
 
 import { sanitizeModuleSelection } from "@/lib/organizations/module-catalog";
@@ -10,6 +12,7 @@ import {
   listAiresForOrganization,
 } from "@/lib/admin/client-aires";
 import { forWrite } from "@/lib/supabase-write";
+import { createOrInviteAuthUser } from "@/lib/admin/auth-provision";
 import type { Database } from "@/types/database.types";
 
 export type ProvisionClientInput = {
@@ -27,6 +30,7 @@ export type ProvisionClientResult = {
   userId: string;
   managerEmail: string;
   enabledModules: string[];
+  tempPassword?: string;
 };
 
 function getServiceClient() {
@@ -39,7 +43,8 @@ function getServiceClient() {
 }
 
 export async function provisionClient(
-  input: ProvisionClientInput
+  input: ProvisionClientInput,
+  topRole: string = "admin"
 ): Promise<ProvisionClientResult> {
   const admin = getServiceClient();
   const db = forWrite(admin);
@@ -55,31 +60,17 @@ export async function provisionClient(
     throw new Error("Tous les champs obligatoires doivent être renseignés.");
   }
 
-  // Invite via email — Supabase envoie un lien de setup sécurisé, aucun mot de passe
-  // ne transite dans l'application ni dans ses logs.
-  const { data: authUser, error: authError } = await admin.auth.admin.inviteUserByEmail(
-    managerEmail,
-    {
-      data: {
-        first_name: managerFirstName,
-        last_name: managerLastName,
-        company_name: companyName,
-      },
-    }
-  );
+  // Invitation email (prod) ou création directe avec mot de passe provisoire (dev).
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(".supabase.co", ".vercel.app") ?? "http://localhost:3000";
+  const redirectTo = `${siteUrl}/auth/callback?next=/auth/set-password`;
 
-  if (authError) {
-    if (authError.message.toLowerCase().includes("already")) {
-      throw new Error("Un compte existe déjà avec cet email.");
-    }
-    throw new Error(authError.message);
-  }
-
-  if (!authUser.user) {
-    throw new Error("Échec de création du compte utilisateur.");
-  }
-
-  const userId = authUser.user.id;
+  const { userId, tempPassword } = await createOrInviteAuthUser(admin, {
+    email: managerEmail,
+    firstName: managerFirstName,
+    lastName: managerLastName,
+    redirectTo,
+    extraData: { company_name: companyName },
+  });
 
   try {
     const { data: org, error: orgError } = await db
@@ -101,7 +92,7 @@ export async function provisionClient(
     const { error: memberError } = await db.from("organization_members").insert({
       organization_id: org.id,
       user_id: userId,
-      role: "admin",
+      role: topRole,
     });
 
     if (memberError) {
@@ -133,6 +124,7 @@ export async function provisionClient(
       userId,
       managerEmail,
       enabledModules,
+      tempPassword,
     };
   } catch (error) {
     await admin.auth.admin.deleteUser(userId);
@@ -151,6 +143,70 @@ export type AdminClientListItem = {
   enabledModules: string[];
   aires: AdminClientAireRecord[];
 };
+
+export async function updateClientModules(
+  organizationId: string,
+  moduleNames: string[]
+): Promise<void> {
+  const admin = getServiceClient();
+  const db = forWrite(admin);
+  const enabled = sanitizeModuleSelection(moduleNames);
+
+  const { error: disableError } = await db
+    .from("organization_modules")
+    .update({ is_enabled: false, updated_at: new Date().toISOString() })
+    .eq("organization_id", organizationId);
+
+  if (disableError) throw new Error(disableError.message);
+
+  if (enabled.length > 0) {
+    const { error: upsertError } = await db
+      .from("organization_modules")
+      .upsert(
+        enabled.map((module_name) => ({
+          organization_id: organizationId,
+          module_name,
+          is_enabled: true,
+          updated_at: new Date().toISOString(),
+        })),
+        { onConflict: "organization_id,module_name" }
+      );
+    if (upsertError) throw new Error(upsertError.message);
+  }
+}
+
+export async function deleteClient(organizationId: string): Promise<void> {
+  const admin = getServiceClient();
+  const db = forWrite(admin);
+
+  // Récupérer le manager pour supprimer son compte auth
+  const { data: org } = await db
+    .from("organizations")
+    .select("manager_email")
+    .eq("id", organizationId)
+    .single();
+
+  // Supprimer l'organisation (cascade sur organization_members, modules, aires, etc.)
+  const { error: orgError } = await db
+    .from("organizations")
+    .delete()
+    .eq("id", organizationId);
+
+  if (orgError) {
+    throw new Error(orgError.message);
+  }
+
+  // Supprimer le compte auth du manager si trouvé
+  if (org?.manager_email) {
+    const { data: users } = await admin.auth.admin.listUsers();
+    const authUser = users?.users?.find(
+      (u) => u.email?.toLowerCase() === (org.manager_email as string).toLowerCase()
+    );
+    if (authUser) {
+      await admin.auth.admin.deleteUser(authUser.id);
+    }
+  }
+}
 
 export async function listClientsForAdmin(): Promise<AdminClientListItem[]> {
   const admin = getServiceClient();

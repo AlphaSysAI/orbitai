@@ -1,3 +1,5 @@
+// Copyright © 2026 OrbitSys. Tous droits réservés.
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -103,19 +105,32 @@ export function DeliveriesList() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* CTA */}
       <Link
         href={`/station/${aireId}/deliveries/new`}
-        className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-600 py-4 text-sm font-bold uppercase tracking-wider text-white hover:bg-amber-500"
+        className="group flex w-full items-center justify-center gap-2.5 rounded-xl bg-amber-500 py-3.5 text-[11px] font-black uppercase tracking-wider text-black transition-all hover:bg-amber-400 hover:shadow-lg hover:shadow-amber-500/20"
       >
-        <Plus size={18} />
+        <Plus size={16} />
         Nouvelle réception
       </Link>
 
+      {/* Separator */}
+      {deliveries.length > 0 && (
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-slate-800" />
+          <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-600">
+            Historique · {deliveries.length}
+          </span>
+          <div className="h-px flex-1 bg-slate-800" />
+        </div>
+      )}
+
       {deliveries.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-700 py-12 text-center">
-          <Truck className="mx-auto text-slate-600" size={36} />
-          <p className="mt-3 text-sm text-slate-500">Aucune réception pour le moment.</p>
+        <div className="rounded-2xl border border-dashed border-slate-800 py-14 text-center">
+          <Truck className="mx-auto text-slate-700" size={32} />
+          <p className="mt-3 text-sm font-medium text-slate-600">Aucune réception enregistrée.</p>
+          <p className="mt-1 text-xs text-slate-700">Créez votre première réception ci-dessus.</p>
         </div>
       ) : (
         <ul className="space-y-2">
@@ -123,14 +138,20 @@ export function DeliveriesList() {
             <li key={item.id}>
               <Link
                 href={deliveryHref(aireId, item)}
-                className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4 transition-colors hover:border-amber-500/30 hover:bg-slate-900"
+                className="group flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900/80 px-4 py-3.5 transition-all duration-150 hover:border-slate-700 hover:bg-slate-900"
               >
+                {/* Status dot */}
+                <div className={`h-2 w-2 shrink-0 rounded-full ${
+                  item.status === "completed" ? "bg-emerald-400" :
+                  item.status === "draft" ? "bg-slate-600" :
+                  "bg-amber-400"
+                }`} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-white">{item.supplierName}</p>
-                  <p className="mt-1 text-xs text-slate-500">{formatDate(item.created_at)}</p>
+                  <p className="truncate text-sm font-bold text-white">{item.supplierName}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">{formatDate(item.created_at)}</p>
                 </div>
                 <DeliveryStatusBadge status={item.status} />
-                <ChevronRight size={18} className="shrink-0 text-slate-600" />
+                <ChevronRight size={15} className="shrink-0 text-slate-700 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-500" />
               </Link>
             </li>
           ))}
