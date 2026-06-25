@@ -218,7 +218,7 @@ export async function updateOrgProfile(input: {
 
 export async function createOrgMember(input: {
   email: string;
-  password: string;
+  password?: string;
   firstName?: string;
   lastName?: string;
 }): Promise<CreateOrgMemberActionResult> {

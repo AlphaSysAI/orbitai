@@ -2,9 +2,9 @@
 
 import "server-only";
 
-import { randomBytes } from "crypto";
-
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { getDefaultAccountPassword } from "@/lib/auth/default-account-password";
 
 /**
  * Mode dev : court-circuite l'email d'invitation Supabase (limites d'envoi).
@@ -17,7 +17,7 @@ export function skipInviteEmail(): boolean {
 }
 
 export function randomTempPassword(): string {
-  return randomBytes(9).toString("base64url");
+  return getDefaultAccountPassword();
 }
 
 export type CreatedAuthUser = { userId: string; tempPassword?: string };

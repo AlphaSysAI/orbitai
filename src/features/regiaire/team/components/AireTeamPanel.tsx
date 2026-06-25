@@ -35,7 +35,6 @@ export function AireTeamPanel() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
@@ -78,7 +77,6 @@ export function AireTeamPanel() {
 
     const res = await createAireTeamEmployee(aireId, {
       email,
-      password,
       firstName: firstName || undefined,
       lastName: lastName || undefined,
     });
@@ -92,7 +90,6 @@ export function AireTeamPanel() {
 
     setSuccess(`Compte créé : ${res.data.email}`);
     setEmail("");
-    setPassword("");
     setFirstName("");
     setLastName("");
     await load();
@@ -207,7 +204,8 @@ export function AireTeamPanel() {
             </h2>
             <p className="text-xs text-slate-500">
               L&apos;employé accède uniquement aux réceptions et à la passation
-              de quart sur cette aire.
+              de quart sur cette aire. Mot de passe initial standard de
+              l&apos;organisation.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block sm:col-span-2">
@@ -219,19 +217,6 @@ export function AireTeamPanel() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className={inputClass}
-                />
-              </label>
-              <label className="block sm:col-span-2">
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  Mot de passe * (min. 8 car.)
-                </span>
-                <input
-                  type="password"
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
                   className={inputClass}
                 />
               </label>

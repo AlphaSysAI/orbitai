@@ -13,6 +13,11 @@ export {
   type OrgMemberListItem,
 } from "./org-settings";
 export {
+  getCurrentUserProfile,
+  type CurrentUserProfile,
+  type GetCurrentUserProfileResult,
+} from "./user-profile";
+export {
   getOrgSuppliers,
   updateSupplierLeadTime,
   type OrgSupplierListItem,
