@@ -41,6 +41,10 @@ type AdminAireFieldsProps = {
   canRemove?: boolean;
   emailDomain?: string;
   savedRecord?: AdminClientAireRecord;
+  /** Jours de commande : masqués côté admin (remplis par le directeur/gérant de la station). */
+  showOrderDays?: boolean;
+  /** Masque l'entête « Aire N » + bouton retirer (quand le parent gère déjà l'entête). */
+  showHeader?: boolean;
 };
 
 export function AdminAireFields({
@@ -51,6 +55,8 @@ export function AdminAireFields({
   canRemove = false,
   emailDomain,
   savedRecord,
+  showOrderDays = true,
+  showHeader = true,
 }: AdminAireFieldsProps) {
   const emailSlug = savedRecord?.emailSlug;
   const emailAddress = emailSlug && emailDomain ? `${emailSlug}@${emailDomain}` : null;
@@ -64,23 +70,25 @@ export function AdminAireFields({
   };
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-5 space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-violet-400">
-          <MapPin size={14} />
-          Aire {index + 1}
-        </p>
-        {canRemove && onRemove && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2 py-1 text-[10px] font-bold uppercase text-red-400 hover:bg-red-500/10"
-          >
-            <Trash2 size={12} />
-            Retirer
-          </button>
-        )}
-      </div>
+    <div className="space-y-4">
+      {showHeader && (
+        <div className="flex items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-violet-400">
+            <MapPin size={14} />
+            Aire {index + 1}
+          </p>
+          {canRemove && onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2 py-1 text-[10px] font-bold uppercase text-red-400 hover:bg-red-500/10"
+            >
+              <Trash2 size={12} />
+              Retirer
+            </button>
+          )}
+        </div>
+      )}
 
       {emailAddress && (
         <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-600/5 px-3 py-2.5">
@@ -203,27 +211,29 @@ export function AdminAireFields({
         </div>
       </div>
 
-      <div>
-        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-          Jours de commande
-        </span>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {WEEKDAYS.map((day) => (
-            <button
-              key={day.value}
-              type="button"
-              onClick={() => toggleOrderDay(day.value)}
-              className={`rounded-lg px-2 py-1 text-[10px] font-bold uppercase ${
-                aire.orderDays.includes(day.value)
-                  ? "border border-violet-500/40 bg-violet-600/30 text-violet-300"
-                  : "bg-slate-800 text-slate-500"
-              }`}
-            >
-              {day.label}
-            </button>
-          ))}
+      {showOrderDays && (
+        <div>
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+            Jours de commande
+          </span>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {WEEKDAYS.map((day) => (
+              <button
+                key={day.value}
+                type="button"
+                onClick={() => toggleOrderDay(day.value)}
+                className={`rounded-lg px-2 py-1 text-[10px] font-bold uppercase ${
+                  aire.orderDays.includes(day.value)
+                    ? "border border-violet-500/40 bg-violet-600/30 text-violet-300"
+                    : "bg-slate-800 text-slate-500"
+                }`}
+              >
+                {day.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

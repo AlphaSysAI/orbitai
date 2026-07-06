@@ -28,7 +28,7 @@ export async function AdminShell({
             </div>
             <div>
               <h1 className="text-sm font-black uppercase italic tracking-tighter text-white">
-                Administration OrbitAI
+                Administration OrbitAll
               </h1>
               <p className="text-[10px] text-slate-500">{admin.user.email}</p>
             </div>
