@@ -56,7 +56,7 @@ export function CopilotNavigation({
           <Orbit size={20} className="text-white" />
         </div>
         <h2 className="text-xl font-bold tracking-tighter text-white uppercase italic">
-          OrbitAI
+          OrbitAll
         </h2>
       </div>
 

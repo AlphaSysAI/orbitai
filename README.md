@@ -1,24 +1,36 @@
-# OrbitAI — Documentation projet
+# OrbitAll — Documentation projet
 
-> **Documentation produit à jour (2026)** : voir le dossier **[`Claude/`](./Claude/README.md)** — RégiAire comme cœur métier, add-ons piliers, architecture et notes Cowork.
+> **Plateforme SaaS multi-tenant** développée par **AlphaSys**, hébergeant des applications métier verticales activables par organisation, sur une base commune (auth, organisations, modules) + des add-ons IA transverses.
 >
-> **Ce fichier** conserve l’historique détaillé (piliers, OpenClaw, onboarding legacy). Pour le détail technique historique, voir aussi `DOCUMENTATION_TECHNIQUE.md` et `docs/ARCHITECTURE_OPENCLAW_VALIDATION.md`.
+> Documentation produit détaillée : dossier **[`Claude/`](./Claude/README.md)** (`architecture.md`, `regiaire-reference.md`, `cowork-integration.md`). Le présent fichier est la vue d'ensemble technique du dépôt.
 
 ---
 
-## 1. Qu'est-ce qu'OrbitAI ?
+## 1. Qu'est-ce qu'OrbitAll ?
 
-**OrbitAI** est une plateforme SaaS d'intelligence artificielle stratégique pour entreprises. Elle s'organise en **5 piliers fonctionnels** indépendants, chacun couvrant un aspect de l'optimisation opérationnelle et décisionnelle :
+OrbitAll n'est plus positionné comme « 5 piliers IA ». C'est aujourd'hui une **plateforme multi-tenant** qui héberge des **verticals métier** activables par client (organisation), plus des **add-ons IA** optionnels.
 
-| Pilier | ID | Statut | Rôle |
-|--------|-----|--------|------|
-| Copilote IA & Transmission | `copilot-transmission` | ✅ Actif | RAG sur documents internes, chat onboarding, transmission de savoir |
-| Détection & Automatisation | `detection-automation` | ✅ Actif | Détection de tâches grises, tracking d'activité, automatisations |
+### Verticals métier
+
+| Priorité | Module (BDD) | Marque UI | Statut |
+|----------|--------------|-----------|--------|
+| **Cœur actuel** | `regiaire_core` | **Orbit Aire** *(anciennement RégiAire — identifiants techniques `regiaire_*` conservés)* | ✅ Implémenté et maintenu |
+| Roadmap | `artisan_core` | **Orbit Artisan** | Catalogue / branding prêts, pas de code métier |
+| Roadmap | `hotel_core` | **Orbit Hôtel** | Catalogue / branding prêts, pas de code métier |
+
+### Add-ons IA (ex-« piliers »)
+
+Activables par organisation, ils ne pilotent plus la roadmap :
+
+| Add-on | Module | Statut | Rôle |
+|--------|--------|--------|------|
+| Copilote IA & Transmission | `copilot-transmission` | ✅ Actif | RAG sur documents, chat, transmission de savoir |
+| Détection & Automatisation | `detection-automation` | ✅ Actif | Tâches grises, tracking d'activité, révisions IA |
 | Simulation décisionnelle | `decision-simulation` | ✅ Actif | Scénarios stratégiques, comparaison, export PDF |
 | Synthèse intelligente client | `client-synthesis` | ✅ Actif | Agrégation retours clients, analyse marketing, monitoring |
-| IA émotionnelle | `emotional-ai` | ⏳ Placeholder | Analyse des interactions (non implémenté) |
+| IA émotionnelle | `emotional-ai` | ⏳ Placeholder | Non implémenté |
 
-**Positionnement produit (2025)** : OrbitAI évolue vers une **Knowledge Platform** (transmission de savoir, centre de connaissances, onboarding). Le moteur de **validation humaine** devient l’**AI Review Engine** (composant transverse). **OpenClaw n’est plus le positionnement produit** — retrait progressif côté UI (Phase A) puis backend (phases B–D). Voir `project_state.md`.
+> **OpenClaw retiré.** L'ancien agent externe OpenClaw (Gateway, worker de sync, mode Agent du Copilote) a été **supprimé du code**. Ce qui subsiste est l'**AI Review Engine** (`/api/review/*`) pour la validation humaine côté Copilot, et quelques variables d'env legacy (`OPENCLAW_*`) conservées pour compat build.
 
 ---
 
@@ -27,16 +39,18 @@
 | Couche | Technologie |
 |--------|-------------|
 | Frontend | Next.js 15 (App Router), React 19, Tailwind CSS 4 |
-| Backend | API Routes Next.js (Edge ou Node selon la route) |
-| Base de données métier | **Supabase PostgreSQL** + client JS + RLS |
+| Backend | **Server Actions** (métier Orbit Aire) + API Routes Next.js |
+| Base de données | **Supabase PostgreSQL** + RLS |
+| Storage | Supabase Storage (bucket `regiaire-bl` — PDF bons de livraison) |
 | Auth principale | **Supabase Auth** (cookies HTTP-only via `@supabase/ssr`) |
-| Auth secondaire | NextAuth.js + Prisma (Discord provider, tables NextAuth uniquement) |
-| IA | OpenAI GPT-4o via `@ai-sdk/openai` et Vercel AI SDK (`streamText`, `generateText`) |
-| Typage | TypeScript, Zod (schémas OpenClaw) |
-| PDF / docs | `pdf-parse-fork`, `mammoth`, `xlsx`, `pptx2json` |
-| Agent externe | OpenClaw Gateway (Chat Completions API) |
+| Auth legacy | NextAuth.js + Prisma (provider Discord, tables NextAuth uniquement) |
+| IA | OpenAI GPT-4o via `@ai-sdk/openai` et Vercel AI SDK (`streamText`, `generateObject`) |
+| Emails | Resend (transactionnel + réception BL par email) |
+| Typage / validation | TypeScript, Zod |
+| PDF / docs | `pdf-parse`, `pdf-parse-fork`, `mammoth`, `xlsx`, `pptx2json`, `jspdf` |
+| Scan | `@zxing/browser` (scan EAN mobile Orbit Aire) |
 
-**Scripts npm** : `npm run dev` (Turbo), `npm run build`, `npm run check` (lint + tsc), `npm run db:push` (Prisma/NextAuth).
+**Scripts npm** : `npm run dev` (Turbo), `npm run build`, `npm run check` (lint + tsc), `npm run typecheck`, `npm run db:push` (Prisma/NextAuth).
 
 ---
 
@@ -44,47 +58,49 @@
 
 ```mermaid
 flowchart TB
-  subgraph UI["Frontend (Next.js)"]
-    Page["page.tsx — orchestrateur"]
-    Pillars["5 piliers React"]
-    Nav["ContextualNavigation"]
+  subgraph Clients["Navigateur / mobile"]
+    Dash["(dashboard)/ — shell + add-ons"]
+    Station["/station/[aireId] — Orbit Aire"]
+    Admin["/admin — plateforme"]
   end
 
-  subgraph API["API Routes"]
-    Chat["/api/chat — RAG Copilot"]
-    AgentChat["/api/agent-chat — proxy OpenClaw"]
-    Validation["/api/review/*"]
-    Cron["/api/cron/openclaw-sync"]
-    Other["autres routes pilier…"]
+  subgraph Next["Next.js 15 App Router"]
+    SA["Server Actions"]
+    API["API Routes /api/*"]
+    RSC["Server Components"]
   end
 
-  subgraph Data["Supabase PostgreSQL"]
-    Core["documents, threads, messages…"]
-    OpenClaw["ai_review_queue, agent_actions_index, inbox_*…"]
+  subgraph Supa["Supabase"]
+    Auth["Auth (JWT cookies)"]
+    PG["PostgreSQL + RLS"]
+    Store["Storage (BL PDF)"]
   end
 
-  subgraph External["Services externes"]
+  subgraph Ext["Services externes"]
     OpenAI["OpenAI GPT-4o"]
-    OpenClawGW["OpenClaw Gateway"]
-    Tracker["Scripts Python activity-tracker"]
+    OWM["OpenWeatherMap"]
+    Edu["data.education.gouv.fr"]
+    Resend["Resend"]
   end
 
-  Page --> Pillars
-  Pillars --> API
-  API --> Data
-  Chat --> OpenAI
-  AgentChat --> OpenClawGW
-  Cron --> OpenClaw
-  Tracker --> Other
+  Dash --> SA
+  Station --> SA
+  Admin --> API
+  SA --> PG
+  API --> PG
+  SA --> Auth
+  Station --> Store
+  SA --> OpenAI
+  SA --> OWM
+  SA --> Edu
+  API --> Resend
 ```
 
-### Point d'entrée UI
+### Points d'entrée
 
-- **`src/app/page.tsx`** : composant client principal. Vérifie la session Supabase, redirige vers `/login` si absent, orchestre le pilier actif, l'onglet actif et les threads Copilot.
-- **`src/features/pillars/types.ts`** : définition des piliers (`PILLARS`, `PillarId`, `enabled`).
-- **`src/features/pillars/components/ContextualNavigation.tsx`** : navigation adaptative par pilier.
-
-Chaque pilier vit dans `src/features/pillars/{pilier-id}/` avec ses composants, hooks et parfois un `setup.sql` local (legacy — le schéma canonique est `database/init.sql`).
+- **`src/app/(dashboard)/page.tsx`** : dashboard principal (route group `(dashboard)`, URL `/`). Vérifie la session Supabase, affiche les modules activés de l'organisation (Orbit Aire + add-ons piliers).
+- **`src/app/(dashboard)/station/[aireId]/`** : espace opérationnel Orbit Aire par aire.
+- **`src/app/(dashboard)/admin/`** : administration plateforme (clients, aires, Bison Futé).
 
 ---
 
@@ -92,555 +108,373 @@ Chaque pilier vit dans `src/features/pillars/{pilier-id}/` avec ses composants, 
 
 ```
 orbit-ai/
+├── Claude/                     # Documentation produit à jour (2026)
 ├── database/
-│   ├── init.sql              # Schéma complet (piliers + OpenClaw) — source de vérité
-│   ├── reset.sql             # Suppression de toutes les tables OrbitAI
-│   └── migrations/           # Historique incrémental (001–005, intégré dans init.sql)
-├── docs/
-│   └── ARCHITECTURE_OPENCLAW_VALIDATION.md
+│   ├── init.sql                # Schéma complet idempotent — source de vérité
+│   ├── reset.sql               # Suppression des tables OrbitAll
+│   ├── migrations/             # Historique incrémental 001–034
+│   ├── seeds/                  # Données démo Orbit Aire (013–017)
+│   └── RESET_INSTRUCTIONS.md
 ├── scripts/
-│   ├── activity-tracker.py           # macOS
+│   ├── activity-tracker.py           # macOS (add-on Automatisation)
 │   └── activity-tracker-windows.py   # Windows
-├── data/exchange/            # Dossiers legacy file-based (remplacés par inbox_* en base)
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx            # Dashboard principal
+│   │   ├── (dashboard)/        # Dashboard, station Orbit Aire, admin
 │   │   ├── login/              # Authentification Supabase
-│   │   ├── auth/callback/      # Callback OAuth Supabase
-│   │   └── api/                # Toutes les routes API
-│   ├── features/pillars/       # Modules métier par pilier
-│   ├── components/             # ValidationDashboard, AutomationSettings
+│   │   ├── auth/               # callback OAuth + set-password
+│   │   └── api/                # Routes API (voir §8)
+│   ├── features/
+│   │   ├── regiaire/           # CŒUR MÉTIER (réception, verdict, équipe…)
+│   │   ├── organization/       # Multi-tenant : profil org, membres, fournisseurs
+│   │   ├── admin/              # Provisioning clients, Bison Futé admin
+│   │   └── pillars/            # Add-ons IA (5 piliers)
 │   ├── lib/
-│   │   ├── openclaw/           # schema.ts, sync-worker.ts, paths.ts
-│   │   └── storage.ts          # Couche d'accès Supabase (OpenClaw + policies)
-│   ├── server/                 # auth NextAuth, tRPC (minimal)
+│   │   ├── regiaire/           # Contexte, scope aire, équipe, accès
+│   │   ├── organizations/      # Catalogue modules, navigation, branding SaaS
+│   │   ├── admin/              # Provisioning comptes/clients
+│   │   ├── auth/               # Mots de passe par défaut / changement forcé
+│   │   ├── review/             # AI Review Engine (queue, publish)
+│   │   ├── reviews/            # Sync avis Google
+│   │   ├── storage.ts          # Couche Supabase (review queue, policies…)
+│   │   └── supabase-write.ts   # Écritures typées
+│   ├── server/auth/            # Supabase server + NextAuth legacy
 │   ├── utils/supabase/         # Client browser Supabase
 │   └── types/database.types.ts # Types TS des tables Supabase
 ├── prisma/schema.prisma        # Uniquement tables NextAuth
-└── DOCUMENTATION_TECHNIQUE.md  # Doc technique détaillée (historique)
+└── DOCUMENTATION_TECHNIQUE.md  # Doc technique historique
 ```
 
 ---
 
-## 5. Les piliers en détail
+## 5. Multi-tenant et modules
 
-### 5.1 Copilote IA & Transmission (`copilot-transmission`)
-
-**Emplacement** : `src/features/pillars/copilot-transmission/`
-
-**Fonctionnalités** :
-- Upload de documents (PDF, etc.) → extraction de texte → stockage dans `documents.full_text`
-- Chat RAG : réponses basées **uniquement** sur la base de connaissances de l'utilisateur
-- Threads de conversation avec titres générés par IA
-- Mode **Agent OpenClaw** (optionnel) : raisonnement avancé via Gateway externe
-
-**Hook** : `hooks/useCopilot.ts` — CRUD threads/messages, upload, streaming chat.
-
-**API** :
-| Route | Rôle |
-|-------|------|
-| `POST /api/chat` | Chat streaming + RAG (Edge) |
-| `POST /api/agent-chat` | Proxy vers OpenClaw Gateway (Edge) |
-| `POST /api/extract` | Extraction texte PDF/docs (Node) |
-| `POST /api/detect-tasks` | Détection tâches grises depuis un document (Edge) |
-
-**Algorithme RAG** (`/api/chat`) :
-1. Récupère tous les `documents` de l'utilisateur (Supabase)
-2. Extrait les mots-clés de la question (> 2 caractères)
-3. Score les documents (occurrences, phrases complètes, proximité)
-4. Sélectionne les top 5 passages (max ~1500 caractères chacun)
-5. Injecte dans le prompt système GPT-4o avec consigne de citer les sources `[Source: Document X: fichier.pdf]`
-6. Stream la réponse, sauvegarde dans `messages`, met à jour le titre du thread
-
-**Tables** : `documents`, `threads`, `messages`
-
----
-
-### 5.2 Simulation décisionnelle (`decision-simulation`)
-
-**Emplacement** : `src/features/pillars/decision-simulation/`
-
-**Fonctionnalités** :
-- Conversation guidée pour poser une question stratégique
-- Génération de 3–5 scénarios avec métriques par GPT-4o
-- Comparaison visuelle, archivage, export PDF (jsPDF)
-
-**Hook** : `hooks/useDecisionSimulation.ts`
-
-**API** :
-| Route | Rôle |
-|-------|------|
-| `POST /api/decision-chat` | Chat conversationnel pour affiner le contexte |
-| `POST /api/decision-generate` | Génération structurée de scénarios |
-
-**Table** : `decision_simulations` (champs JSON : `context`, `conversation`, `scenarios`, `selected_scenarios`)
-
----
-
-### 5.3 Détection & Automatisation (`detection-automation`)
-
-**Emplacement** : `src/features/pillars/detection-automation/`
-
-**Fonctionnalités** :
-- Détection automatique de **tâches grises** (tâches répétitives automatisables)
-- Sources : documents uploadés, historique d'actions, script de tracking système
-- Gestion des automatisations et historique d'exécution
-- Analyse conversationnelle par IA (`AutomationAnalyzer`)
-- Onglet **Validation** : file Human-in-the-Loop OpenClaw + Auto-Pilot
-
-**Hook** : `hooks/useAutomation.ts`
-
-**API** :
-| Route | Rôle |
-|-------|------|
-| `POST /api/detect-tasks` | Analyse document → `gray_tasks` |
-| `POST /api/analyze-history` | Analyse 30 jours de `user_actions` + messages |
-| `POST /api/track-activity` | Réception snapshots activité (script Python) |
-| `GET /api/tracking-status` | Statut du tracking |
-| `GET /api/generate-tracker-script` | Génère script personnalisé (.command / .bat) |
-| `POST /api/tasks/validate` | Validation de tâches grises |
-
-**Scripts externes** (`scripts/`) :
-- Collectent fenêtre active, apps, emails, onglets toutes les ~60s
-- Envoient vers `/api/track-activity` → sauvegarde dans `user_actions` (`action_type: 'activity_snapshot'`)
-- Génération personnalisée avec `USER_ID` pré-rempli via `/api/generate-tracker-script`
-
-**Tables** : `gray_tasks`, `automations`, `automation_executions`, `user_actions`
-
----
-
-### 5.4 Synthèse intelligente client (`client-synthesis`)
-
-**Emplacement** : `src/features/pillars/client-synthesis/`
-
-**Fonctionnalités** :
-- Import de retours clients (CSV, JSON, manuel)
-- Sources configurables (email, ticket, review, survey, social…)
-- **Monitoring automatique** : surveillance d'URLs (Google Reviews, Trustpilot…) via `GOOGLE_PLACES_API_KEY`
-- Analyse IA marketing : forces, faiblesses, leviers, opportunités, menaces, recommandations
-- Comparaison temporelle entre analyses
-
-**Hook** : `hooks/useClientSynthesis.ts`
-
-**API** :
-| Route | Rôle |
-|-------|------|
-| `POST /api/client-feedback/import` | Import de retours |
-| `POST /api/client-feedback/analyze` | Analyse marketing complète |
-| `POST /api/client-feedback/fetch-monitoring` | Récupération avis via Google Places |
-
-**Tables** : `client_feedback_sources`, `client_feedback_items`, `marketing_analysis`
-
----
-
-### 5.5 IA émotionnelle (`emotional-ai`)
-
-**Statut** : placeholder UI uniquement (`EmotionalPillar.tsx`). Pilier désactivé dans `PILLARS` (`enabled: false`). Utilisé comme pilier par défaut dans `page.tsx` pour afficher le dashboard global système.
-
----
-
-## 6. OpenClaw — Agent, validation et Auto-Pilot
-
-OpenClaw est un **agent d'entreprise externe** qui exécute des actions et produit des logs structurés. OrbitAI gère la **mémoire RAG**, la **validation humaine** et l'**Auto-Pilot** (auto-approbation progressive).
-
-### 6.1 Principes fondamentaux
+### Modèle conceptuel
 
 ```
-Exécution (OpenClaw)  →  Inbox base de données  →  Worker cron  →  Mémoire RAG / File validation
-                                                                 ↓
-                                                          Humain approuve/rejette
-                                                                 ↓
-                                                          agent_actions_index (RAG)
+organizations
+  ├── organization_members (user_id, role: owner | admin | member)
+  ├── organization_modules (module_name, is_enabled)
+  └── aires (Orbit Aire — une org peut en avoir plusieurs)
 ```
 
-- **Le RAG ne lit jamais une action non validée** : seule `agent_actions_index` alimente la mémoire agent (+ `documents` pour le Copilot).
-- **Architecture database-first** : les tables `inbox_*` remplacent l'ancien système de fichiers (`data/exchange/inbox/*`). Le worker ne lit plus le disque local.
-- **Skills** : `skill_manifests` remplace `data/skills/` — procédures d'exécution par `action_type`.
+- **Catalogue des modules** : `src/lib/organizations/module-catalog.ts`
+- **Types / noms de modules** : `src/lib/organizations/types.ts` (`ORG_MODULE_NAMES`)
+- **Vérification runtime** : RPC Supabase `org_has_module`, `get_my_enabled_modules`
+- **Branding dashboard** : `src/lib/organizations/saas-branding.ts` (Orbit Aire / Orbit Artisan / Orbit Hôtel)
+- **Navigation** : `src/lib/organizations/navigation.ts` → `buildStationNavLinks(aireId)`
 
-### 6.2 Schéma JSON des événements OpenClaw
+### Rôles
 
-Défini dans `src/lib/openclaw/schema.ts` (Zod) :
-
-```json
-{
-  "event_id": "550e8400-e29b-41d4-a716-446655440000",
-  "timestamp": "2025-02-28T14:30:00.000Z",
-  "action": "send_email",
-  "status": "pending_validation | executed | failed",
-  "payload": { },
-  "rationale": "Justification de l'agent",
-  "human_input_required": true,
-  "user_id": "uuid-optionnel"
-}
-```
-
-### 6.3 Tables OpenClaw
-
-| Table | Rôle |
-|-------|------|
-| `inbox_agent_logs` | File d'entrée événements bruts (processed_at NULL = à traiter) |
-| `inbox_reports` | Rapports journaliers en attente |
-| `inbox_validation` | Demandes de validation en attente |
-| `validation_queue` | File Human-in-the-Loop (`pending` / `approved` / `rejected`, + `executed_at`) |
-| `agent_actions_index` | Mémoire RAG (actions exécutées ou approuvées) |
-| `daily_reports` | Rapports journaliers consolidés |
-| `agent_logs` | Logs append-only côté app |
-| `skill_manifests` | Manifests de skills par `action_type` |
-| `automation_policies` | Auto-Pilot : statut par `(user_id, action_type)` |
-
-**Vue** : `v_user_action_success_count` — compte les succès par action depuis `agent_actions_index`.
-
-**Fonction SQL** : `get_success_count_by_action(user_id)` — utilisée pour déclencher les paliers Auto-Pilot.
-
-### 6.4 Worker de synchronisation
-
-**Fichier** : `src/lib/openclaw/sync-worker.ts`  
-**Endpoint cron** : `GET|POST /api/cron/openclaw-sync` (runtime Node.js)  
-**Auth** : header `Authorization: Bearer <CRON_SECRET>` ou `OPENCLAW_SYNC_SECRET`
-
-**Étapes du worker** (`runOpenClawSync`) :
-
-1. `inbox_reports` → insert `daily_reports` → marquer `processed_at`
-2. `inbox_validation` → upsert `ai_review_queue` → marquer `processed_at`
-3. `inbox_agent_logs` :
-   - `status=executed` → insert `agent_actions_index`
-   - `status=pending_validation` + policy `ENABLED` → auto-approbation → `agent_actions_index` (status `auto_approved`)
-   - `status=pending_validation` sans Auto-Pilot → insert `ai_review_queue`
-   - `status=failed` → ignoré
-4. `ai_review_queue` (approved, `published_at IS NULL`, `legacy_action`) → exécution via `skill_manifests` → marquer `published_at`
-
-### 6.5 API Review (Human-in-the-Loop)
-
-| Route | Méthode | Rôle |
-|-------|---------|------|
-| `/api/review/queue` | GET | Liste révisions `pending` (session auth) |
-| `/api/review/approve` | POST | Approuve (`review_id` / `event_id`) → insert `agent_actions_index` si `legacy_action` |
-| `/api/review/reject` | POST | Rejette avec raison optionnelle |
-| `/api/review/status` | GET | Polling statut par `review_id` / `event_id` |
-
-**UI** : `src/components/ValidationDashboard.tsx` (onglet « Révisions IA » du pilier Copilote)
-
-> Les routes `/api/validation/*` ont été supprimées en Phase D.1. Utiliser `/api/review/*`.
-
-### 6.6 Auto-Pilot (deux paliers de confiance)
-
-**Statuts** `automation_policies.status` :
-- `PENDING` — palier 1 proposé (≥ 50 succès sur une action)
-- `ENABLED` — auto-approbation active
-- `DECLINED_50` — refus palier 1, palier 2 proposé (≥ 50 succès)
-- `DECLINED_100` — révoqué manuellement, retour file validation
-
-**API** :
-| Route | Rôle |
-|-------|------|
-| `GET /api/automation-policies?user_id=` | Liste policies + success_count, crée `PENDING` si ≥ 50 succès |
-| `PATCH /api/automation-policies` | Met à jour le statut (acceptation/refus/révocation) |
-| `GET /api/automation-policies/enabled?user_id=` | Liste des actions en Auto-Pilot actif |
-
-**UI** : modales Auto-Pilot dans `ValidationDashboard`, révocation dans `AutomationSettings` (Réglages).
-
-### 6.7 Mode Agent dans le Copilote
-
-Quand `NEXT_PUBLIC_OPENCLAW_ENABLED=true` :
-- Le Copilote affiche un sélecteur Copilot / Agent
-- Le mode Agent appelle `POST /api/agent-chat` → proxy vers OpenClaw Gateway `/v1/chat/completions`
-- Session stable par utilisateur : header `x-openclaw-session-key: orbit:<userId>`
-- Conversion SSE OpenClaw → flux texte pour le client React existant
-
-**Config Gateway OpenClaw** (côté OpenClaw) :
-```json5
-gateway: { http: { endpoints: { chatCompletions: { enabled: true } } } }
-```
+| Rôle | Périmètre |
+|------|-----------|
+| `owner` / `admin` (org) | Réglages org, membres, délais fournisseurs |
+| `member` (org) | Opérations Orbit Aire sur les aires de l'org |
+| Admin plateforme | `ORBIT_ADMIN_EMAILS` → `/admin`, opérations `service_role` (Bison Futé, provisioning) |
 
 ---
 
-## 7. Base de données
+## 6. Orbit Aire — cœur métier
 
-### 7.1 Deux systèmes coexistent
+Gestion opérationnelle de **stations-service / aires autoroutières**, multi-sites. Le métier passe majoritairement par des **Server Actions** (pas d'API REST publique).
 
-| Système | Usage |
-|---------|-------|
-| **Supabase PostgreSQL** | Toutes les données métier (piliers + OpenClaw) |
-| **Prisma + PostgreSQL** | Uniquement tables NextAuth (`User`, `Account`, `Session`, `VerificationToken`) |
+| Domaine | Fonctionnalités livrées | Emplacement |
+|---------|-------------------------|-------------|
+| **Aires** | CRUD, lat/lon, zone scolaire, jours de commande, zone Bison Futé, adresse (autocomplete BAN) | `features/regiaire/aires/` |
+| **Réception** | BL (upload + extraction IA + email inbound), scan EAN mobile, stock par lots (`stock_batches`), DLC, finalisation via RPC | `features/regiaire/reception/`, `inbound/` |
+| **Équipe** | Passation de quart, checklist tâches, historique, membres par aire | `features/regiaire/shift/`, `team/` |
+| **Verdict IA** | Synthèse des signaux (météo, vacances, trafic, Bison Futé, tendances N-1) → recommandation merchandising GPT-4o (cache `verdict_runs`) | `features/regiaire/verdict/` |
+| **Réappro v2 (étape A)** | Moteur déterministe en unités : projection demande, multiplicateurs heuristiques, `generateReplenishmentPlan` (pas d'UI dédiée) | `features/regiaire/verdict/replenishment/` |
+| **Périmés** | Alertes lots J+0 à J+3 depuis le stock réel | `features/regiaire/verdict/` |
+| **Vues** | Gérant multi-aires, chef de région, direction France, secteur | `features/regiaire/gerant/`, `region/`, `direction/`, `sector-manager/` |
 
-### 7.2 Initialisation
+### Pattern serveur
 
-**Nouvelle base ou reset complet** :
+Toute action métier est scoped **org + aire** :
+
+```typescript
+const ctx = await requireRegiaireContext(aireId);
+// ctx : { userId, organizationId, aireId, supabase, db }
+await ctx.db.from("deliveries").insert({ /* ... */ });
+```
+
+Chaîne d'accès : session Supabase valide → org primaire de l'utilisateur → module `regiaire_core` activé → l'`aireId` appartient à l'org.
+
+### Pipeline Verdict IA
+
+```mermaid
+sequenceDiagram
+  participant UI as VerdictScreen
+  participant GA as generateVerdict
+  participant Sig as Signaux
+  participant AI as OpenAI GPT-4o
+  participant DB as verdict_runs
+  UI->>GA: generateVerdict(aireId)
+  GA->>DB: cache hit ?
+  alt cache miss
+    GA->>Sig: météo, vacances, trafic, Bison Futé, tendances
+    GA->>AI: prompt + VerdictRecommendationSchema
+    GA->>DB: insert signals + recommendation
+  end
+  GA-->>UI: VerdictRun
+```
+
+| Signal | Source | Fallback |
+|--------|--------|----------|
+| Météo | OpenWeatherMap | `available: false` |
+| Vacances | API Éducation nationale | idem |
+| Trafic | `traffic_signals` (BDD) | seed simulé |
+| Bison Futé | `bison_fute_forecast` + zone aire | admin plateforme |
+| Tendances | `sales_history` (15 j vs N-1 aligné) | seed simulé |
+
+### Environnement de démo
+
+| Champ | Valeur |
+|-------|--------|
+| Aire ID | `7ec3c50b-4893-4904-90d2-56e0ab04532a` (Aire Arzens SUD) |
+| Org ID | `bba39426-6f78-4750-a77a-f5c0c991a878` |
+| Seed | `database/seeds/017_regiaire_arzens_demo.sql` |
+| Constantes | `src/features/regiaire/lib/demo-aire.ts` |
+
+---
+
+## 7. Add-ons IA (piliers)
+
+Les 5 piliers restent fonctionnels quand leur module est activé pour l'organisation. Ils vivent dans `src/features/pillars/{id}/`.
+
+### 7.1 Copilote IA & Transmission (`copilot-transmission`)
+
+- Upload de documents (PDF, docx, xlsx, pptx) → extraction texte → `documents.full_text`
+- Chat RAG : réponses basées **uniquement** sur la base de connaissances de l'utilisateur (scoring mots-clés, top passages, citations `[Source: …]`)
+- Threads avec titres générés par IA, feedback sur messages
+- Onglet **Révisions IA** (AI Review Engine)
+- API : `POST /api/chat` (streaming RAG), `POST /api/extract`, `POST /api/detect-tasks`, `POST /api/feedback`
+- Tables : `documents`, `threads`, `messages`
+
+### 7.2 Détection & Automatisation (`detection-automation`)
+
+- Détection de **tâches grises** (répétitives, automatisables)
+- Sources : documents, historique d'actions, script de tracking système (macOS/Windows)
+- API : `POST /api/detect-tasks`, `POST /api/analyze-history`, `POST /api/analyze-preferences`, `POST /api/track-activity`, `GET /api/tracking-status`, `GET /api/generate-tracker-script`, `POST /api/tasks/validate`, `/api/automation-policies*`
+- Tables : `gray_tasks`, `automations`, `automation_executions`, `user_actions`
+
+### 7.3 Simulation décisionnelle (`decision-simulation`)
+
+- Conversation guidée → génération de 3–5 scénarios GPT-4o avec métriques → comparaison + export PDF (jsPDF)
+- API : `POST /api/decision-chat`, `POST /api/decision-generate`
+- Table : `decision_simulations`
+
+### 7.4 Synthèse intelligente client (`client-synthesis`)
+
+- Import de retours clients (CSV, JSON, manuel), sources configurables
+- Monitoring avis (Google Places via `GOOGLE_PLACES_API_KEY`), sync via cron
+- Analyse IA marketing (forces, faiblesses, opportunités, menaces, recommandations)
+- API : `POST /api/client-feedback/import`, `/analyze`, `/fetch-monitoring`, `GET|POST /api/cron/sync-reviews`
+- Tables : `client_feedback_sources`, `client_feedback_items`, `marketing_analysis`
+
+### 7.5 IA émotionnelle (`emotional-ai`)
+
+Placeholder UI uniquement, désactivé.
+
+---
+
+## 8. Catalogue des API Routes
+
+Le métier Orbit Aire passe par des **Server Actions**. Les routes REST ci-dessous couvrent les add-ons, l'admin et les intégrations externes (33 routes actives).
+
+| Route | Domaine |
+|-------|---------|
+| `POST /api/chat` | Copilot RAG (streaming) |
+| `POST /api/extract` | Extraction texte documents |
+| `POST /api/detect-tasks` | Détection tâches grises |
+| `POST /api/feedback` | Feedback messages Copilot |
+| `POST /api/decision-chat` · `POST /api/decision-generate` | Simulation décisionnelle |
+| `POST /api/analyze-history` · `POST /api/analyze-preferences` | Automatisation (analyse) |
+| `POST /api/track-activity` · `GET /api/tracking-status` · `GET /api/generate-tracker-script` | Tracker d'activité |
+| `POST /api/tasks/validate` | Validation tâches grises |
+| `GET|PATCH /api/automation-policies` · `GET /api/automation-policies/enabled` | Auto-Pilot |
+| `POST /api/client-feedback/import` · `/analyze` · `/fetch-monitoring` | Synthèse client |
+| `GET|POST /api/cron/sync-reviews` | Cron sync avis |
+| `GET /api/review/queue` · `POST /api/review/approve` · `/reject` · `GET /api/review/status` | AI Review Engine |
+| `GET|PUT /api/user/review-settings` | Réglages révision utilisateur |
+| `GET /api/admin/me` · `/accounts` · `/clients` · `/clients/[organizationId]` · `/address-search` | Admin plateforme |
+| `GET /api/organizations/modules` | Modules activés de l'org |
+| `GET /api/regiaire/address-search` | Autocomplete adresses (BAN) |
+| `POST /api/regiaire/inbound-bl` | Webhook Resend — réception BL par email |
+| `/api/auth/[...nextauth]` | NextAuth (legacy) |
+| `/api/trpc/[trpc]` | tRPC (minimal, héritage T3) |
+
+> Les anciennes routes `/api/validation/*`, `/api/agent-chat` et `/api/cron/openclaw-sync` ont été **supprimées**. Utiliser `/api/review/*` et `/api/cron/sync-reviews`.
+
+---
+
+## 9. Base de données
+
+### Source de vérité
+
+| Fichier | Rôle |
+|---------|------|
+| `database/init.sql` | Schéma complet idempotent |
+| `database/migrations/001–034` | Historique incrémental (multi-tenant, Orbit Aire, RLS, etc.) |
+| `database/seeds/013–017` | Données démo Orbit Aire |
+| `src/types/database.types.ts` | Types TypeScript des tables |
+
+### Initialisation
+
 ```sql
--- 1. Supprimer (optionnel)
+-- Optionnel : réinitialiser
 \i database/reset.sql
-
--- 2. Créer tout le schéma
+-- Créer tout le schéma
 \i database/init.sql
 ```
 
-`database/init.sql` est la **source de vérité** — il inclut les piliers 1–5, le système de préférences/feedback, la synthèse client, et tout OpenClaw (ex-migrations 001–005).
+### Tables par domaine
 
-Les fichiers `database/migrations/*.sql` restent comme historique incrémental pour les bases déjà montées étape par étape.
+- **Multi-tenant** : `organizations`, `organization_members`, `organization_modules`
+- **Orbit Aire** : `aires`, `suppliers`, `products`, `deliveries`, `delivery_lines`, `stock_batches`, `sales_history`, `traffic_signals`, `verdict_runs`, `bison_fute_forecast`, `shift_closures`, `shift_task_defs`, `shift_task_checks`, `aire_team_members`
+- **Copilot** : `documents`, `threads`, `messages`
+- **Décision** : `decision_simulations`
+- **Automatisation** : `gray_tasks`, `automations`, `automation_executions`, `user_actions`, `automation_policies`
+- **Apprentissage** : `user_preferences`, `message_feedback`
+- **Synthèse client** : `client_feedback_sources`, `client_feedback_items`, `marketing_analysis`
+- **AI Review Engine** : `ai_review_queue`, `agent_actions_index`, `agent_logs`, `daily_reports`, `skill_manifests`
 
-### 7.3 Tables par domaine
+### Sécurité (RLS)
 
-**Copilot** : `documents`, `threads`, `messages`
-
-**Décision** : `decision_simulations`
-
-**Automatisation** : `gray_tasks`, `automations`, `automation_executions`, `user_actions`
-
-**Apprentissage** : `user_preferences`, `message_feedback` (+ trigger `update_user_preferences_from_feedback`)
-
-**Synthèse client** : `client_feedback_sources`, `client_feedback_items`, `marketing_analysis`
-
-**OpenClaw** : voir section 6.3
-
-### 7.4 Sécurité des données
-
-- **Row Level Security (RLS)** activé sur toutes les tables utilisateur
-- Filtrage systématique par `auth.uid() = user_id`
-- INSERT sur tables worker (`inbox_*`, `agent_actions_index`) : réservé à la clé **service_role** Supabase
-- Isolation stricte : aucun accès cross-user
+- Row Level Security activé sur toutes les tables utilisateur
+- Orbit Aire : accès via `is_org_member(organization_id)`
+- Add-ons : filtrage par `auth.uid() = user_id`
+- Opérations admin plateforme (Bison Futé, provisioning) : clé **service_role**, jamais depuis le client user
 
 ---
 
-## 8. Catalogue complet des API Routes
-
-| Route | Runtime | Description |
-|-------|---------|-------------|
-| `POST /api/chat` | Edge | Chat RAG Copilot (streaming) |
-| `POST /api/agent-chat` | Edge | Proxy OpenClaw Gateway |
-| `POST /api/extract` | Node | Extraction texte documents |
-| `POST /api/detect-tasks` | Edge | Détection tâches grises |
-| `POST /api/decision-chat` | Edge | Chat simulation décisionnelle |
-| `POST /api/decision-generate` | Edge | Génération scénarios |
-| `POST /api/analyze-history` | Edge | Analyse historique activité |
-| `POST /api/analyze-preferences` | Edge | Analyse préférences utilisateur |
-| `POST /api/track-activity` | Edge | Réception snapshots tracking |
-| `GET /api/tracking-status` | Edge | Statut tracking |
-| `GET /api/generate-tracker-script` | Node | Génération script tracker |
-| `POST /api/feedback` | Edge | Feedback sur messages Copilot |
-| `POST /api/client-feedback/import` | Node | Import retours clients |
-| `POST /api/client-feedback/analyze` | Node | Analyse marketing IA |
-| `POST /api/client-feedback/fetch-monitoring` | Node | Fetch avis Google Places |
-| `GET /api/review/queue` | Node | File révisions IA (AI Review Engine) |
-| `POST /api/review/approve` | Node | Approuver révision |
-| `POST /api/review/reject` | Node | Rejeter révision |
-| `GET /api/review/status` | Node | Statut révision (polling) |
-| `GET /api/automation-policies` | Node | Policies Auto-Pilot |
-| `PATCH /api/automation-policies` | Node | Mise à jour policy |
-| `GET /api/automation-policies/enabled` | Node | Policies ENABLED |
-| `GET\|POST /api/cron/openclaw-sync` | Node | Worker sync OpenClaw |
-| `POST /api/tasks/validate` | Node | Validation tâches grises |
-| `/api/auth/[...nextauth]` | — | NextAuth (fallback) |
-| `/api/trpc/[trpc]` | — | tRPC (minimal, héritage T3) |
-
-**Couche storage** : `src/lib/storage.ts` centralise les opérations Supabase pour OpenClaw (validation, inbox, policies, skills, agent_logs).
-
----
-
-## 9. Authentification
+## 10. Authentification
 
 ### Flux principal (Supabase)
 
 1. Utilisateur non authentifié → redirection `/login`
-2. Login Supabase (email/OAuth selon config projet)
-3. Callback → `src/app/auth/callback/route.ts`
-4. Session stockée en cookies HTTP-only
-5. Chaque requête client vérifie `supabase.auth.getSession()`
+2. Login Supabase (email / mot de passe) → cookies HTTP-only
+3. Callback : `src/app/auth/callback/route.ts`
+4. Changement de mot de passe forcé : `/auth/set-password`
+5. Helpers serveur : `src/server/auth/supabase-server.ts` (`getAuthenticatedUser()`), `src/lib/supabase-write.ts` (`forWrite`)
 
-### NextAuth (secondaire)
+### NextAuth (legacy)
 
-- Config : `src/server/auth/config.ts`
-- Provider Discord configuré
-- Utilisé pour Prisma/NextAuth, pas pour le flux principal métier
+- Config `src/server/auth/config.ts`, provider Discord, tables Prisma séparées. Non utilisé pour le flux métier.
 
 ---
 
-## 10. Variables d'environnement
+## 11. Variables d'environnement
 
 Copier `.env.example` → `.env`. Schéma validé dans `src/env.js`.
 
-### Obligatoires (build)
+### Plateforme (obligatoires build)
 
 | Variable | Description |
 |----------|-------------|
-| `AUTH_SECRET` | Secret NextAuth (prod) |
-| `AUTH_DISCORD_ID` / `AUTH_DISCORD_SECRET` | Provider Discord NextAuth |
+| `AUTH_SECRET` | Secret NextAuth (requis en prod) |
+| `AUTH_DISCORD_ID` / `AUTH_DISCORD_SECRET` | Provider Discord NextAuth (legacy) |
 | `DATABASE_URL` | PostgreSQL pour Prisma/NextAuth |
 
-### Supabase (runtime — pas dans env.js mais requis)
+### Supabase (runtime)
 
 | Variable | Description |
 |----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | URL projet Supabase |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé publique Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | Clé service (worker, APIs serveur) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clé service (APIs serveur, admin) |
 
-### IA
-
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | Clé OpenAI GPT-4o |
-
-### OpenClaw Gateway (optionnel)
+### IA & services
 
 | Variable | Description |
 |----------|-------------|
-| `OPENCLAW_GATEWAY_URL` | ex. `http://127.0.0.1:18789` |
-| `OPENCLAW_GATEWAY_TOKEN` | Token auth Gateway |
-| `OPENCLAW_AGENT_ID` | ID agent (défaut `main`) |
-| `NEXT_PUBLIC_OPENCLAW_ENABLED` | `true` pour afficher mode Agent |
+| `OPENAI_API_KEY` | OpenAI GPT-4o |
+| `OWM_API_KEY` | OpenWeatherMap (météo Orbit Aire) |
+| `GOOGLE_PLACES_API_KEY` | Monitoring avis (Synthèse client) |
+| `RESEND_API_KEY` | Emails transactionnels + ACK réception BL |
 
-### Worker sync (optionnel)
-
-| Variable | Description |
-|----------|-------------|
-| `CRON_SECRET` ou `OPENCLAW_SYNC_SECRET` | Protection endpoint cron |
-| `OPENCLAW_DEFAULT_USER_ID` | User ID par défaut si absent des logs |
-
-### Synthèse client (optionnel)
+### Orbit Aire / plateforme (optionnels)
 
 | Variable | Description |
 |----------|-------------|
-| `GOOGLE_PLACES_API_KEY` | Monitoring avis Google |
+| `ORBIT_ADMIN_EMAILS` | Emails admin plateforme (`/admin`), séparés par des virgules |
+| `NEXT_PUBLIC_SITE_URL` | URL publique (invitations email) |
+| `DEFAULT_ACCOUNT_PASSWORD` | Mot de passe initial des comptes créés |
+| `REGIAIRE_SKIP_INVITE_EMAIL` | Dev : crée les comptes avec mot de passe provisoire au lieu d'un email |
+| `RESEND_INBOUND_SECRET` | Secret webhook Resend Inbound (réception BL) |
+| `INBOUND_EMAIL_DOMAIN` | Domaine email des aires (ex. `regiaire.alphasys.tech`) |
+
+### Cron / add-ons (optionnels)
+
+| Variable | Description |
+|----------|-------------|
+| `CRON_SECRET` | Protection routes cron (`/api/cron/sync-reviews`) |
+| `REVIEW_POLLING_TOKEN` | Polling `GET /api/review/status` |
+| `TRACKER_SIGNING_SECRET` | HMAC tracker Python (≥ 32 car. en prod) |
+
+> Variables `OPENCLAW_*` et `NEXT_PUBLIC_OPENCLAW_ENABLED` : **legacy**, conservées uniquement pour compat build. OpenClaw est retiré du produit.
 
 ---
 
-## 11. Installation et démarrage
+## 12. Installation et démarrage
 
 ### Prérequis
 
 - Node.js 20+
-- Projet Supabase (Auth + PostgreSQL)
+- Projet Supabase (Auth + PostgreSQL + Storage)
 - Clé OpenAI
-- (Optionnel) Gateway OpenClaw, Google Places API
+- (Optionnel) OpenWeatherMap, Google Places, Resend
 
 ### Setup
 
 ```bash
 git clone <repo>
 cd orbit-ai
-cp .env.example .env
-# Remplir les variables
-
+cp .env.example .env      # renseigner les variables
 npm install
 npm run db:push          # Tables NextAuth via Prisma
 
 # Dans Supabase SQL Editor :
 # Exécuter database/init.sql (ou reset.sql puis init.sql)
+# Puis, pour la démo : database/seeds/017_regiaire_arzens_demo.sql
 ```
 
 ```bash
 npm run dev              # http://localhost:3000
 ```
 
-### Cron OpenClaw (production)
+### Déploiement
 
-Configurer un cron (Vercel Cron, GitHub Actions, etc.) :
-
-```
-GET https://<domaine>/api/cron/openclaw-sync
-Authorization: Bearer <CRON_SECRET>
-```
-
-Fréquence recommandée : toutes les 1–5 minutes selon le volume.
+- Cible : **Vercel** (Next.js)
+- BDD : **Supabase** cloud (migrations via SQL Editor ou CI)
+- Secrets : Vercel env vars — ne jamais committer `.env`
 
 ---
 
-## 12. Flux de données essentiels
+## 13. Conventions de développement
 
-### Conversation Copilot avec RAG
-
-```
-Upload PDF → /api/extract → documents (Supabase)
-         → /api/detect-tasks → gray_tasks (bonus)
-
-Question → /api/chat :
-  1. Fetch documents user
-  2. findRelevantPassages() — scoring mots-clés
-  3. Prompt GPT-4o + contexte RAG
-  4. Stream réponse + citations
-  5. Save messages + update thread.title
-```
-
-### Action OpenClaw avec validation
-
-```
-OpenClaw exécute action → insert inbox_agent_logs (status=pending_validation)
-                       ↓
-Cron /api/cron/openclaw-sync :
-  - policy ENABLED ? → agent_actions_index (auto_approved)
-  - sinon → validation_queue (pending)
-                       ↓
-Humain → /api/review/approve → agent_actions_index (legacy_action)
-      ou /api/review/reject  → pas d'index RAG
-                       ↓
-Worker → executeApprovedAction (skill_manifests) → executed_at
-```
-
-### Auto-Pilot
-
-```
-50+ succès sur action → GET /api/automation-policies crée PENDING
-                      ↓
-UI modal palier 1 → ENABLED ou DECLINED_50
-Palier 2 (si DECLINED_50 + 50 succès) → ENABLED ou reste DECLINED_50
-Révocation manuelle → DECLINED_100 → retour file validation
-```
-
----
-
-## 13. Interface utilisateur
-
-- **Design** : dark theme (slate-900/950), accents colorés par pilier
-- **Icônes** : Lucide React
-- **Navigation** : sidebar `ContextualNavigation` + onglets contextuels par pilier
-- **Dashboard global** : accessible via menu Système quand le pilier actif n'a pas son propre dashboard
-- **Réglages** : placeholder + `AutomationSettings` (révocation Auto-Pilot)
-
-Couleurs piliers (`src/features/pillars/utils/pillarColors.ts`) :
-- Copilot : cyan | Automatisation : violet | Décision : sky | Émotionnel : rose | Client : emerald
-
----
-
-## 14. État du projet et évolutions
-
-### Implémenté
-
-- 4 piliers fonctionnels (Copilot, Automatisation, Décision, Synthèse client)
-- RAG documentaire complet
-- Tracking d'activité macOS/Windows
-- OpenClaw : validation HITL, worker database-first, Auto-Pilot
-- Export PDF simulations
-
-### En cours / à venir
-
-- Pilier IA émotionnelle (placeholder)
-- Workflow builder automatisations
-- Réglages utilisateur (page placeholder)
-- Intégrations externes (email, fichiers)
-- Templates d'automatisation
-
-### Fichiers de référence
-
-| Fichier | Contenu |
-|---------|---------|
-| `DOCUMENTATION_TECHNIQUE.md` | Doc technique détaillée (peut contenir des infos légèrement obsolètes sur OpenClaw file-based) |
-| `docs/ARCHITECTURE_OPENCLAW_VALIDATION.md` | Architecture validation OpenClaw (schéma JSON, flux) |
-| `database/init.sql` | Schéma SQL canonique complet |
-| `database/RESET_INSTRUCTIONS.md` | Procédure reset base |
-| `SETUP_GOOGLE_PLACES_API.md` | Config Google Places pour monitoring avis |
-
----
-
-## 15. Conventions de développement
-
-- **Nouveau pilier** : créer `src/features/pillars/{id}/`, ajouter dans `types.ts` et `index.ts`, brancher dans `page.tsx`
-- **Nouvelle table** : ajouter dans `database/init.sql` + `database/reset.sql` + `src/types/database.types.ts`
-- **Nouvelle route API** : `src/app/api/{nom}/route.ts`, choisir `runtime = 'edge'` ou `'nodejs'` selon besoins Node.js
-- **OpenClaw** : toujours passer par `src/lib/storage.ts` pour les accès Supabase
-- **Schémas JSON** : Zod dans `src/lib/openclaw/schema.ts`
-- **Commits** : messages concis, focus sur le pourquoi
+- **Nouvelle action Orbit Aire** : Server Action `"use server"` scoped via `requireRegiaireContext(aireId)`, schéma Zod, `*-access.ts` pour lectures réutilisables
+- **Nouveau module vertical / add-on** : déclarer dans `src/lib/organizations/module-catalog.ts` + `types.ts`
+- **Nouvelle table** : ajouter une migration `database/migrations/`, mettre à jour `init.sql`, `reset.sql` et `src/types/database.types.ts`
+- **Nouvelle route API** : `src/app/api/{nom}/route.ts`, choisir `runtime = 'edge'` ou `'nodejs'`
+- **Écritures Supabase typées** : passer par `forWrite()` (`src/lib/supabase-write.ts`)
+- **Schémas IA** : Zod (`generateObject` / `streamText` via Vercel AI SDK)
 - **Langue UI** : français
 
 ---
 
-*Dernière mise à jour : juin 2025 — reflète l'état du dépôt incluant init.sql complet (OpenClaw database-first + Auto-Pilot).*
+## 14. Fichiers de référence
+
+| Fichier | Contenu |
+|---------|---------|
+| **`Claude/README.md`** | Vue produit à jour (2026) |
+| `Claude/architecture.md` | Architecture technique complète |
+| `Claude/regiaire-reference.md` | Orbit Aire : routes, actions, BDD, seeds |
+| `Claude/cowork-integration.md` | Notes pour assistants IA |
+| `DOCUMENTATION_TECHNIQUE.md` | Doc technique historique (peut contenir des infos legacy) |
+| `database/init.sql` | Schéma SQL canonique |
+| `database/RESET_INSTRUCTIONS.md` | Procédure de reset |
+
+---
+
+*Dernière mise à jour : juillet 2026 — Orbit Aire comme cœur métier, plateforme multi-tenant, add-ons piliers, OpenClaw retiré.*

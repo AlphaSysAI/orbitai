@@ -187,8 +187,15 @@ export async function getOrgHierarchyData(
         .eq("organization_id", organizationId),
     ]);
 
+  const profileByUser = new Map(
+    (profiles ?? []).map((p) => [p.user_id as string, p])
+  );
+  const secteurByChef = new Map(
+    (secteurs ?? []).map((s) => [s.chef_user_id as string, s])
+  );
+
   const nameOf = (userId: string) => {
-    const p = (profiles ?? []).find((x) => x.user_id === userId);
+    const p = profileByUser.get(userId);
     return p ? `${p.first_name} ${p.last_name}` : userId.slice(0, 8);
   };
 
@@ -199,7 +206,7 @@ export async function getOrgHierarchyData(
   const chefs = (members ?? [])
     .filter((m) => m.role === "chef_secteur")
     .map((m) => {
-      const secteur = (secteurs ?? []).find((s) => s.chef_user_id === m.user_id);
+      const secteur = secteurByChef.get(m.user_id as string);
       return {
         userId: m.user_id as string,
         name: nameOf(m.user_id as string),

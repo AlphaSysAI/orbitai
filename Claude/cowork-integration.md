@@ -8,7 +8,7 @@
 
 1. [README.md](./README.md) — vision produit 2026
 2. [architecture.md](./architecture.md) — stack et patterns
-3. [regiaire-reference.md](./regiaire-reference.md) — détail RégiAire
+3. [regiaire-reference.md](./regiaire-reference.md) — détail Orbit Aire
 4. `src/lib/regiaire/require-context.ts` — gate d’accès métier
 5. `src/lib/organizations/module-catalog.ts` — modules activables
 
@@ -20,10 +20,10 @@
 
 | ✅ Faire | ❌ Ne pas supposer |
 |----------|-------------------|
-| RégiAire = cœur métier | Les 5 piliers ne sont plus la roadmap principale |
-| Verticals : RégiAire → Artisan → NodAll | `artisan_core` / `hotel_core` n’ont pas de code métier encore |
+| Orbit Aire = cœur métier | Les 5 piliers ne sont plus la roadmap principale |
+| Verticals : Orbit Aire → Orbit Artisan → Orbit Hôtel | `artisan_core` / `hotel_core` n’ont pas de code métier encore |
 | Multi-aire : toujours passer `aireId` | Pas de données globales org sans `aire_id` pour stock/ventes |
-| Écritures RégiAire via `ctx.db` | Pas de service_role côté station utilisateur |
+| Écritures Orbit Aire via `ctx.db` | Pas de service_role côté station utilisateur |
 | Zod strict sur signaux | `forecast: null` si météo indispo (pas `undefined`) |
 
 ---
@@ -76,7 +76,7 @@ npx tsc --noEmit 2>&1 | rg "regiaire|verdict"
 
 ---
 
-## 6. Tests manuels RégiAire
+## 6. Tests manuels Orbit Aire
 
 ### Prérequis BDD
 
@@ -124,7 +124,7 @@ Route dev existante : `/api/dev/verdict` (vérifier avant usage).
 - **Imports server-only** : `import "server-only"` dans modules signaux / access
 - **Dates** : ISO `YYYY-MM-DD`, timezone Paris pour « aujourd’hui » (`todayParisIso`)
 - **Commits** : messages en français, impératif, focus « why »
-- **PR RégiAire récente** : branche `feature/verdict-v2-replenishment-step-a`, PR #15
+- **PR Orbit Aire récente** : branche `feature/verdict-v2-replenishment-step-a`, PR #15
 
 ---
 
@@ -133,7 +133,7 @@ Route dev existante : `/api/dev/verdict` (vérifier avant usage).
 - UI réappro Verdict v2 étape B
 - Suivi commandes fournisseur (réappro v1 ignore commandes passées)
 - POS / caisse → `sales_history` réel
-- Modules **Artisan** et **NodAll** (seulement entrées catalogue + branding)
+- Modules **Orbit Artisan** et **Orbit Hôtel** (seulement entrées catalogue + branding)
 - Prix, marge, CA
 
 ---
@@ -157,7 +157,7 @@ Route dev existante : `/api/dev/verdict` (vérifier avant usage).
 | **DLC** | Date limite de consommation |
 | **Bison Futé** | Signal trafic autoroute (vert/orange/rouge/noir) |
 | **Add-on** | Pilier IA transverse (Copilot, etc.) |
-| **NodAll** | Nom produit vertical hôtel (`hotel_core`) |
+| **Orbit Hôtel** | Nom produit vertical hôtel (`hotel_core`) |
 
 ---
 
@@ -165,7 +165,7 @@ Route dev existante : `/api/dev/verdict` (vérifier avant usage).
 
 | Tâche | Fichiers |
 |-------|----------|
-| Nouvelle action RégiAire | `actions/*.ts` + `requireRegiaireContext` |
+| Nouvelle action Orbit Aire | `actions/*.ts` + `requireRegiaireContext` |
 | Schéma BDD | `database/migrations/0xx_*.sql` + `init.sql` + `database.types.ts` |
 | Seed démo | `database/seeds/017_*.sql` |
 | Signaux Verdict | `verdict/signals/`, `verdict/schemas.ts` |
@@ -177,6 +177,6 @@ Route dev existante : `/api/dev/verdict` (vérifier avant usage).
 
 ## 13. Contact produit (contexte)
 
-- Éditeur : AlphaSys / OrbitAI
-- Vertical actif : **RégiAire** (stations-service, ex. client type Dyneff)
-- Prochains verticals : **Artisan**, **NodAll** (hôtel)
+- Éditeur : AlphaSys / OrbitAll
+- Vertical actif : **Orbit Aire** (stations-service, ex. client type Dyneff)
+- Prochains verticals : **Orbit Artisan**, **Orbit Hôtel** (hôtel)

@@ -10,10 +10,20 @@ import {
   getAuthenticatedUser,
 } from "@/server/auth/supabase-server";
 import { forWrite } from "@/lib/supabase-write";
+import { getMembershipRole } from "@/lib/regiaire/aire-scope";
+import { todayParisIso } from "@/features/regiaire/verdict/lib/dates";
+import type { SecteurOverviewCacheRow } from "@/types/database.types";
 import {
   buildSecteurOverview,
   type SecteurOverview,
 } from "@/features/regiaire/sector-manager/actions";
+
+/**
+ * Fenêtre de fraîcheur du cache de résumé secteur. En deçà, on réutilise la
+ * valeur en cache ; au-delà, on recalcule. Borne la charge DB à ~1 recalcul
+ * par secteur par fenêtre, quel que soit le nombre de consultations.
+ */
+const OVERVIEW_CACHE_TTL_MS = 10 * 60 * 1000;
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -69,6 +79,11 @@ async function subordinateIds(
 /**
  * Construit les fiches synthétiques des chefs de secteur fournis.
  * Réutilisé par le dashboard région ET direction France.
+ *
+ * Mis en cache par secteur + jour ([[secteur_overview_cache]]) avec une fenêtre
+ * de fraîcheur de 10 min : sur cache chaud, le dashboard direction d'une grosse
+ * enseigne passe de ~5 requêtes/aire (≈1500 pour 300 aires) à 1 lecture batch.
+ * Le recalcul complet n'a lieu que pour les secteurs au cache absent ou périmé.
  */
 export async function buildChefSummaries(
   db: SupabaseClient,
@@ -94,7 +109,26 @@ export async function buildChefSummaries(
     });
   }
 
-  return Promise.all(
+  const secteurIds = Array.from(secteurByChef.values()).map((s) => s.id);
+  const today = todayParisIso();
+  const freshThreshold = Date.now() - OVERVIEW_CACHE_TTL_MS;
+
+  // Lecture batch du cache : 1 requête pour tous les secteurs concernés.
+  const cacheBySecteur = new Map<string, SecteurOverviewCacheRow>();
+  if (secteurIds.length > 0) {
+    const { data: cacheRows } = await db
+      .from("secteur_overview_cache")
+      .select("*")
+      .eq("run_date", today)
+      .in("secteur_id", secteurIds);
+    for (const row of (cacheRows ?? []) as SecteurOverviewCacheRow[]) {
+      cacheBySecteur.set(row.secteur_id, row);
+    }
+  }
+
+  const toUpsert: Array<Record<string, unknown>> = [];
+
+  const summaries = await Promise.all(
     chefUserIds.map(async (chefId) => {
       const secteur = secteurByChef.get(chefId) ?? null;
       let aireCount = 0;
@@ -103,16 +137,38 @@ export async function buildChefSummaries(
       let inProgressCount = 0;
 
       if (secteur) {
-        const overview = await buildSecteurOverview(
-          db,
-          organizationId,
-          secteur.id,
-          secteur.name
-        );
-        aireCount = overview.aires.length;
-        totalSavingsEur = overview.totals.totalSavingsEur;
-        expiringCount = overview.totals.expiringCount;
-        inProgressCount = overview.totals.inProgressCount;
+        const cached = cacheBySecteur.get(secteur.id);
+        const isFresh =
+          cached && new Date(cached.computed_at).getTime() > freshThreshold;
+
+        if (isFresh && cached) {
+          aireCount = cached.aire_count;
+          totalSavingsEur = Number(cached.total_savings_eur);
+          expiringCount = cached.expiring_count;
+          inProgressCount = cached.in_progress_count;
+        } else {
+          const overview = await buildSecteurOverview(
+            db,
+            organizationId,
+            secteur.id,
+            secteur.name
+          );
+          aireCount = overview.aires.length;
+          totalSavingsEur = overview.totals.totalSavingsEur;
+          expiringCount = overview.totals.expiringCount;
+          inProgressCount = overview.totals.inProgressCount;
+          toUpsert.push({
+            secteur_id: secteur.id,
+            organization_id: organizationId,
+            run_date: today,
+            aire_count: aireCount,
+            total_savings_eur: totalSavingsEur,
+            expiring_count: expiringCount,
+            in_progress_count: inProgressCount,
+            reception_hours_saved: overview.totals.receptionHoursSaved,
+            computed_at: new Date().toISOString(),
+          });
+        }
       }
 
       return {
@@ -127,6 +183,15 @@ export async function buildChefSummaries(
       };
     })
   );
+
+  // Écriture batch du cache (best-effort : n'altère pas la réponse en cas d'échec).
+  if (toUpsert.length > 0) {
+    await db
+      .from("secteur_overview_cache")
+      .upsert(toUpsert, { onConflict: "secteur_id,run_date" });
+  }
+
+  return summaries;
 }
 
 // ─── Dashboard directeur régional ────────────────────────────────────────────
@@ -145,6 +210,16 @@ export async function getRegionOverview(): Promise<GetRegionOverviewResult> {
 
     const supabase = await createServerSupabaseClient();
     const db = forWrite(supabase);
+
+    const role = await getMembershipRole(db, access.organizationId, user.id);
+    if (
+      role !== "directeur_region" &&
+      role !== "direction_france" &&
+      role !== "owner" &&
+      role !== "admin"
+    ) {
+      return { success: false, error: "Accès réservé aux directeurs régionaux" };
+    }
 
     const chefIds = await subordinateIds(db, user.id);
     const chefs = await buildChefSummaries(db, access.organizationId, chefIds);
@@ -189,20 +264,14 @@ export async function getChefSecteurDetail(
     const db = forWrite(supabase);
 
     // Garde-fou : l'appelant doit superviser ce chef OU être direction France.
-    const { data: membership } = await db
-      .from("organization_members")
-      .select("role")
-      .eq("organization_id", access.organizationId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const role = (membership?.role as string | null) ?? null;
+    const role = await getMembershipRole(db, access.organizationId, user.id);
     let allowed = role === "direction_france";
 
     if (!allowed) {
       const { data: link } = await db
         .from("org_hierarchy_links")
         .select("subordinate_user_id")
+        .eq("organization_id", access.organizationId)
         .eq("manager_user_id", user.id)
         .eq("subordinate_user_id", chefUserId)
         .maybeSingle();

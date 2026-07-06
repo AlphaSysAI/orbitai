@@ -6,7 +6,9 @@ import "server-only";
 export function getDefaultAccountPassword(): string {
   const fromEnv = process.env.DEFAULT_ACCOUNT_PASSWORD?.trim();
   if (fromEnv) return fromEnv;
-  return "@mBr32005Sol!n3";
+  throw new Error(
+    "DEFAULT_ACCOUNT_PASSWORD non configuré. Définissez cette variable d'environnement."
+  );
 }
 
 export function resolveAccountPassword(password?: string | null): string {

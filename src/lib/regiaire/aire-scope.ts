@@ -10,6 +10,7 @@ export const FULL_AIRE_ACCESS_ROLES = new Set([
   "owner",
   "admin",
   "direction_france",
+  "member",
 ]);
 
 type Db = ReturnType<typeof forWrite>;

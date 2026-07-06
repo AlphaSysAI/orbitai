@@ -11,6 +11,7 @@ import {
   getAuthenticatedUser,
 } from "@/server/auth/supabase-server";
 import { forWrite } from "@/lib/supabase-write";
+import { getMembershipRole } from "@/lib/regiaire/aire-scope";
 import { todayParisIso } from "@/features/regiaire/verdict/lib/dates";
 import { formatEur } from "@/features/regiaire/lib/business-stats";
 import { buildSecteurOverview } from "@/features/regiaire/sector-manager/actions";
@@ -76,14 +77,28 @@ export async function generateSecteurVerdict(
     const supabase = await createServerSupabaseClient();
     const db = forWrite(supabase);
 
+    const role = await getMembershipRole(db, access.organizationId, user.id);
+    const isPrivileged =
+      role === "owner" ||
+      role === "admin" ||
+      role === "direction_france" ||
+      role === "directeur_region";
+
     const { data: secteur } = await db
       .from("secteurs")
-      .select("id, name, organization_id")
+      .select("id, name, organization_id, chef_user_id")
       .eq("id", secteurId)
       .eq("organization_id", access.organizationId)
       .maybeSingle();
 
     if (!secteur) return { success: false, error: "Secteur introuvable" };
+
+    if (!isPrivileged && role === "chef_secteur" && secteur.chef_user_id !== user.id) {
+      return { success: false, error: "Accès non autorisé à ce secteur" };
+    }
+    if (!isPrivileged && role !== "chef_secteur") {
+      return { success: false, error: "Accès non autorisé" };
+    }
 
     const runDate = todayParisIso();
 

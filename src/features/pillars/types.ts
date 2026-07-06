@@ -1,7 +1,7 @@
 // Copyright © 2026 OrbitSys. Tous droits réservés.
 
 /**
- * Types pour le système de piliers OrbitAI
+ * Types pour le système de piliers OrbitAll
  */
 
 export type PillarId = 

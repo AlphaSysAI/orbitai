@@ -1,7 +1,7 @@
 -- ============================================
 -- ORBITAI - SCRIPT DE RÉINITIALISATION COMPLÈTE
 -- ============================================
--- ⚠️ ATTENTION : Ce script supprime TOUTES les tables et données OrbitAI
+-- ⚠️ ATTENTION : Ce script supprime TOUTES les tables et données OrbitAll
 -- Il ne touche PAS aux tables système Supabase (auth.users, etc.)
 -- Exécutez ce script AVANT init.sql pour repartir de zéro
 -- ============================================
@@ -69,7 +69,7 @@ DO $$
 DECLARE
   remaining_tables INTEGER;
 BEGIN
-  -- Compter les tables OrbitAI restantes (ne devrait être que 0)
+  -- Compter les tables OrbitAll restantes (ne devrait être que 0)
   SELECT COUNT(*) INTO remaining_tables
   FROM information_schema.tables
   WHERE table_schema = 'public'
@@ -84,10 +84,10 @@ BEGIN
   );
   
   IF remaining_tables = 0 THEN
-    RAISE NOTICE '✅ Toutes les tables OrbitAI ont été supprimées avec succès.';
+    RAISE NOTICE '✅ Toutes les tables OrbitAll ont été supprimées avec succès.';
     RAISE NOTICE '📝 Vous pouvez maintenant exécuter init.sql pour tout recréer.';
   ELSE
-    RAISE WARNING '⚠️ Il reste % table(s) OrbitAI. Vérifiez manuellement.', remaining_tables;
+    RAISE WARNING '⚠️ Il reste % table(s) OrbitAll. Vérifiez manuellement.', remaining_tables;
   END IF;
 END $$;
 

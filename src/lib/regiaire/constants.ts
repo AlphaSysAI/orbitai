@@ -1,6 +1,6 @@
 // Copyright © 2026 OrbitSys. Tous droits réservés.
 
-/** Bucket Supabase Storage privé pour les bons de livraison RégiAire. */
+/** Bucket Supabase Storage privé pour les bons de livraison Orbit Aire. */
 export const REGIAIRE_BL_BUCKET = "regiaire-bl";
 
 /** Préfixe de chemin org-scoped : bl/{organizationId}/{deliveryId}/… */

@@ -9,7 +9,7 @@ import {
 
 export type SaasBrandPart = {
   text: string;
-  /** Segment « iA » en violet OrbitAI */
+  /** Segment « Orbit » en violet (accent de marque OrbitAll) */
   highlight?: boolean;
 };
 
@@ -23,27 +23,24 @@ const SAAS_BRANDS: Partial<Record<OrgModuleName, SaasBrand>> = {
   [ORG_MODULE_NAMES.REGIAIRE_CORE]: {
     moduleId: ORG_MODULE_NAMES.REGIAIRE_CORE,
     parts: [
-      { text: "Rég" },
-      { text: "iA", highlight: true },
-      { text: "ire" },
+      { text: "Orbit", highlight: true },
+      { text: " Aire" },
     ],
     dashboardTitle: "Dashboard station",
   },
   [ORG_MODULE_NAMES.ARTISAN_CORE]: {
     moduleId: ORG_MODULE_NAMES.ARTISAN_CORE,
     parts: [
-      { text: "Art" },
-      { text: "iA", highlight: true },
-      { text: "san" },
+      { text: "Orbit", highlight: true },
+      { text: " Artisan" },
     ],
     dashboardTitle: "Dashboard artisan",
   },
   [ORG_MODULE_NAMES.HOTEL_CORE]: {
     moduleId: ORG_MODULE_NAMES.HOTEL_CORE,
     parts: [
-      { text: "Hôt" },
-      { text: "iA", highlight: true },
-      { text: "l" },
+      { text: "Orbit", highlight: true },
+      { text: " Hôtel" },
     ],
     dashboardTitle: "Dashboard hôtel",
   },
@@ -58,7 +55,7 @@ const VERTICAL_MODULE_PRIORITY: OrgModuleName[] = [
 
 const FALLBACK_BRAND: SaasBrand = {
   moduleId: ORG_MODULE_NAMES.KNOWLEDGE_BASE,
-  parts: [{ text: "Orbit" }, { text: "iA", highlight: true }],
+  parts: [{ text: "Orbit", highlight: true }, { text: "All" }],
   dashboardTitle: "Dashboard",
 };
 

@@ -161,7 +161,7 @@ export function GoogleReviewSettings() {
   }
 
   return (
-    <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8 space-y-6">
+    <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-4 sm:p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold text-white flex items-center gap-2">

@@ -1,7 +1,7 @@
 -- ============================================
 -- ORBITAI - INITIALISATION COMPLÈTE DE LA BASE DE DONNÉES
 -- ============================================
--- Ce script initialise toutes les tables nécessaires pour OrbitAI,
+-- Ce script initialise toutes les tables nécessaires pour OrbitAll,
 -- y compris OpenClaw (validation, inbox database-first, auto-pilot).
 -- Inclut le contenu des migrations 001 à 005.
 -- Exécutez ce script dans votre console Supabase SQL Editor
@@ -1339,7 +1339,7 @@ AS $$
   ORDER BY om.module_name;
 $$;
 
-COMMENT ON TABLE organizations IS 'Tenant / organisation cliente OrbitAI.';
+COMMENT ON TABLE organizations IS 'Tenant / organisation cliente OrbitAll.';
 COMMENT ON TABLE organization_members IS 'Appartenance utilisateur à une organisation.';
 COMMENT ON TABLE organization_modules IS 'Modules activés par organisation (ex: knowledge_base, regiaire_core).';
 COMMENT ON FUNCTION org_has_module(UUID, TEXT) IS 'Vérifie si l''utilisateur courant a accès au module pour l''organisation.';
@@ -1455,9 +1455,9 @@ CREATE INDEX IF NOT EXISTS idx_stock_batches_organization_id ON stock_batches(or
 CREATE INDEX IF NOT EXISTS idx_stock_batches_product_id ON stock_batches(product_id);
 CREATE INDEX IF NOT EXISTS idx_stock_batches_delivery_id ON stock_batches(delivery_id);
 
-COMMENT ON TABLE suppliers IS 'Fournisseurs RégiAire par organisation.';
+COMMENT ON TABLE suppliers IS 'Fournisseurs Orbit Aire par organisation.';
 COMMENT ON TABLE products IS 'Catalogue produits (EAN) par organisation.';
-COMMENT ON TABLE deliveries IS 'Bon de livraison (réception) RégiAire.';
+COMMENT ON TABLE deliveries IS 'Bon de livraison (réception) Orbit Aire.';
 COMMENT ON TABLE delivery_lines IS 'Lignes extraites / scannées d''un BL.';
 COMMENT ON TABLE stock_batches IS 'Lots en stock issus d''une réception validée.';
 
@@ -1948,7 +1948,7 @@ CREATE POLICY "Org admins can update organization"
   WITH CHECK (is_org_admin(id));
 
 -- ============================================
--- 020 — RégiAire Verdict IA (étape 1) : socle données + signaux
+-- 020 — Orbit Aire Verdict IA (étape 1) : socle données + signaux
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS regiaire_station_settings (
@@ -2096,7 +2096,7 @@ CREATE POLICY "regiaire_verdict_runs_delete"
   USING (is_org_member(organization_id));
 
 -- ============================================
--- 022 — RégiAire multi-aires (étape 1/2) : modèle + re-scope aire_id
+-- 022 — Orbit Aire multi-aires (étape 1/2) : modèle + re-scope aire_id
 -- Absorbe regiaire_station_settings → aires. RLS is_aire_member sur tables aire-level.
 -- organization_id conservé (drop prévu étape 3).
 -- ============================================
@@ -2131,7 +2131,7 @@ CREATE INDEX IF NOT EXISTS idx_aires_organization_id ON aires(organization_id);
 CREATE INDEX IF NOT EXISTS idx_aires_org_created ON aires(organization_id, created_at);
 
 COMMENT ON TABLE aires IS
-  'Aires / stations RégiAire. Lecture org ; écriture admin OrbitAI uniquement.';
+  'Aires / stations Orbit Aire. Lecture org ; écriture admin OrbitAll uniquement.';
 
 CREATE OR REPLACE FUNCTION is_aire_member(p_aire_id UUID)
 RETURNS BOOLEAN
@@ -2171,7 +2171,7 @@ COMMENT ON FUNCTION regiaire_default_aire_id(UUID) IS
   'Aire par défaut d''une org (utilitaire listing / redirect UI). Plus de fallback insert.';
 
 -- ---------------------------------------------------------------------------
--- Backfill aires depuis station_settings (+ orgs RégiAire sans settings)
+-- Backfill aires depuis station_settings (+ orgs Orbit Aire sans settings)
 -- ---------------------------------------------------------------------------
 
 INSERT INTO aires (organization_id, name, lat, lon, city, school_zone, order_days, created_at)
@@ -2301,7 +2301,7 @@ ALTER TABLE shift_closures
   ADD CONSTRAINT shift_closures_aire_shift_date_key
   UNIQUE (aire_id, shift, service_date);
 
--- 023 — RégiAire multi-aires étape 2/2 : suppression fallback aire_id à l'insert
+-- 023 — Orbit Aire multi-aires étape 2/2 : suppression fallback aire_id à l'insert
 DROP TRIGGER IF EXISTS deliveries_set_default_aire_id ON deliveries;
 DROP FUNCTION IF EXISTS trg_regiaire_set_default_aire_id();
 
@@ -2405,7 +2405,7 @@ CREATE POLICY "regiaire_aires_select"
   ON aires FOR SELECT
   USING (is_org_member(organization_id));
 
--- Écriture aires : admin OrbitAI uniquement (service_role). Pas de policy INSERT/UPDATE/DELETE client.
+-- Écriture aires : admin OrbitAll uniquement (service_role). Pas de policy INSERT/UPDATE/DELETE client.
 
 -- ---------------------------------------------------------------------------
 -- RLS aire-level → is_aire_member(aire_id)
@@ -2618,7 +2618,7 @@ CREATE POLICY "regiaire_shift_closures_delete"
   USING (is_aire_member(aire_id));
 
 -- ============================================
--- 026 — RégiAire Verdict : prévisions Bison Futé (référence nationale)
+-- 026 — Orbit Aire Verdict : prévisions Bison Futé (référence nationale)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS bison_fute_forecast (

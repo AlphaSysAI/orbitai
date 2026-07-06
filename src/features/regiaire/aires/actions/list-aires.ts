@@ -31,7 +31,7 @@ export async function listAiresForOrg(): Promise<ListAiresActionResult> {
     if (!access.allowed) {
       return {
         success: false,
-        error: "Module RégiAire non activé",
+        error: "Module Orbit Aire non activé",
         code: access.reason,
       };
     }

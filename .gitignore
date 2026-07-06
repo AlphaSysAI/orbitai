@@ -44,3 +44,5 @@ yarn-error.log*
 
 # idea files
 .idea
+# Projets sources en cours de portage vers OrbitAll (matériau, jamais committé)
+_import/

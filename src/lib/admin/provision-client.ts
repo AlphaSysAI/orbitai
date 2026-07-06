@@ -119,6 +119,17 @@ export async function provisionClient(
       await insertAiresForOrganization(org.id, input.aires);
     }
 
+    // Orbit Artisan : profil métier de l'organisation (1:1), créé à l'activation.
+    if (enabledModules.includes("artisan_core")) {
+      const { error: artisanError } = await db
+        .from("artisan_profiles")
+        .upsert(
+          { organization_id: org.id, business_name: companyName },
+          { onConflict: "organization_id" }
+        );
+      if (artisanError) throw new Error(artisanError.message);
+    }
+
     return {
       organizationId: org.id,
       userId,
@@ -238,9 +249,14 @@ export async function listClientsForAdmin(): Promise<AdminClientListItem[]> {
   }
 
   const airesByOrg = new Map<string, AdminClientAireRecord[]>();
-  for (const org of orgs) {
-    const aires = await listAiresForOrganization(org.id);
-    airesByOrg.set(org.id, aires);
+  const airesResults = await Promise.all(
+    orgs.map(async (org) => ({
+      orgId: org.id,
+      aires: await listAiresForOrganization(org.id),
+    }))
+  );
+  for (const { orgId, aires } of airesResults) {
+    airesByOrg.set(orgId, aires);
   }
 
   return orgs.map((org) => ({

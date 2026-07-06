@@ -4,6 +4,8 @@ import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { createClient } from '@supabase/supabase-js';
 
+import { requireAuthOrResponse } from '@/server/auth/require-auth';
+
 export const runtime = 'edge';
 
 interface UserAction {
@@ -25,6 +27,9 @@ function formatRecentActionLabel(action: RecentActionItem): string {
 }
 
 export async function POST(req: Request) {
+  const denied = await requireAuthOrResponse(req);
+  if (denied) return denied;
+
   try {
     const { userId, days = 30 } = await req.json();
 

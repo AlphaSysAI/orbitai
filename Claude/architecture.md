@@ -1,4 +1,4 @@
-# OrbitAI — Architecture technique
+# OrbitAll — Architecture technique
 
 > Document de référence pour développeurs et assistants IA. Dernière révision : juin 2026.
 
@@ -10,7 +10,7 @@
 flowchart TB
   subgraph Clients["Navigateur / mobile"]
     Dashboard["(dashboard)/ — shell + add-ons"]
-    Station["/station/[aireId]/ — RégiAire"]
+    Station["/station/[aireId]/ — Orbit Aire"]
     Admin["/admin — plateforme"]
   end
 
@@ -54,7 +54,7 @@ flowchart TB
 organizations
   ├── organization_members (user_id, role: owner|admin|member)
   ├── organization_modules (module_name, is_enabled)
-  └── aires (RégiAire — une org peut en avoir plusieurs)
+  └── aires (Orbit Aire — une org peut en avoir plusieurs)
 
 organization_modules.module_name :
   ├── Verticals métier : regiaire_core | artisan_core | hotel_core
@@ -66,14 +66,14 @@ organization_modules.module_name :
 - Catalogue : `src/lib/organizations/module-catalog.ts`
 - Types : `src/lib/organizations/types.ts` (`ORG_MODULE_NAMES`)
 - Vérification runtime : RPC Supabase `org_has_module`, `get_my_enabled_modules`
-- Branding dashboard : `src/lib/organizations/saas-branding.ts` (RégiAire / Artisan / NodAll)
+- Branding dashboard : `src/lib/organizations/saas-branding.ts` (Orbit Aire / Orbit Artisan / Orbit Hôtel)
 
 ### Rôles
 
 | Rôle | Périmètre |
 |------|-----------|
 | `owner` / `admin` org | Réglages org, membres, délais fournisseurs |
-| `member` | Opérations RégiAire sur les aires de l’org |
+| `member` | Opérations Orbit Aire sur les aires de l’org |
 | Admin plateforme | `ORBIT_ADMIN_EMAILS` → `/admin`, service_role pour Bison Futé |
 
 ---
@@ -100,11 +100,11 @@ src/app/
 ├── login/
 ├── (dashboard)/
 │   ├── layout.tsx                # DashboardShell + navigation
-│   ├── page.tsx                  # Piliers add-on + GlobalDashboard RégiAire
+│   ├── page.tsx                  # Piliers add-on + GlobalDashboard Orbit Aire
 │   └── station/
 │       ├── page.tsx              # Liste aires / redirect
 │       └── [aireId]/
-│           ├── layout.tsx        # Header station, nav RégiAire
+│           ├── layout.tsx        # Header station, nav Orbit Aire
 │           ├── dashboard/
 │           ├── deliveries/       # + new, [id]/scan
 │           ├── equipe/           # + config, historique
@@ -114,13 +114,13 @@ src/app/
     └── bison-fute/             # Calendrier Bison Futé plateforme
 ```
 
-Navigation RégiAire : `src/lib/organizations/navigation.ts` → `buildStationNavLinks(aireId)`.
+Navigation Orbit Aire : `src/lib/organizations/navigation.ts` → `buildStationNavLinks(aireId)`.
 
 ---
 
-## 5. Pattern RégiAire (serveur)
+## 5. Pattern Orbit Aire (serveur)
 
-Toute action métier RégiAire scoped **org + aire** :
+Toute action métier Orbit Aire scoped **org + aire** :
 
 ```typescript
 // src/lib/regiaire/require-context.ts
@@ -151,7 +151,7 @@ Chaîne d’accès :
 | `database/seeds/013–017` | Données démo |
 | `src/types/database.types.ts` | Types TypeScript tables Supabase |
 
-### Migrations RégiAire (ordre logique)
+### Migrations Orbit Aire (ordre logique)
 
 | # | Sujet |
 |---|--------|
@@ -165,7 +165,7 @@ Chaîne d’accès :
 | 026 | Bison Futé : zone aire + table forecast |
 | 027 | Réappro : `lead_time_days`, `products.supplier_id` |
 
-### Tables RégiAire clés
+### Tables Orbit Aire clés
 
 ```
 suppliers ──< products ──< stock_batches
@@ -211,7 +211,7 @@ features/
     └── emotional-ai/
 ```
 
-Chaque domaine RégiAire suit le pattern :
+Chaque domaine Orbit Aire suit le pattern :
 
 - `schemas.ts` — Zod
 - `actions/*.ts` — Server Actions (`"use server"`)
@@ -283,7 +283,7 @@ Principales routes hors Server Actions :
 | `/api/admin/clients` | Provisioning |
 | `/api/regiaire/address-search` | BAN adresses aires |
 
-RégiAire métier : **Server Actions** prioritairement (pas REST public).
+Orbit Aire métier : **Server Actions** prioritairement (pas REST public).
 
 ---
 

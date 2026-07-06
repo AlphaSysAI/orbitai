@@ -72,7 +72,7 @@ export default function SetPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#020617] px-4">
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0f172a] p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0f172a] p-4 sm:p-8 shadow-2xl">
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-xl bg-purple-600/20 p-3">
             <Lock className="text-purple-400" size={24} />
@@ -82,7 +82,7 @@ export default function SetPasswordPage() {
               Créez votre mot de passe
             </h1>
             <p className="mt-0.5 text-sm text-slate-400">
-              Bienvenue sur OrbitAI — choisissez un mot de passe pour votre compte.
+              Bienvenue sur OrbitAll — choisissez un mot de passe pour votre compte.
             </p>
           </div>
         </div>

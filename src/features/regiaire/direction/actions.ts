@@ -8,6 +8,7 @@ import {
   getAuthenticatedUser,
 } from "@/server/auth/supabase-server";
 import { forWrite } from "@/lib/supabase-write";
+import { getMembershipRole } from "@/lib/regiaire/aire-scope";
 import {
   buildChefSummaries,
   type ChefSummary,
@@ -50,6 +51,11 @@ export async function getDirectionOverview(): Promise<GetDirectionOverviewResult
     const db = forWrite(supabase);
     const orgId = access.organizationId;
 
+    const role = await getMembershipRole(db, orgId, user.id);
+    if (role !== "direction_france" && role !== "owner" && role !== "admin") {
+      return { success: false, error: "Accès réservé à la Direction France" };
+    }
+
     const [{ data: members }, { data: profiles }, { data: links }] =
       await Promise.all([
         db
@@ -67,8 +73,11 @@ export async function getDirectionOverview(): Promise<GetDirectionOverviewResult
           .eq("organization_id", orgId),
       ]);
 
+    const profileByUser = new Map(
+      (profiles ?? []).map((p) => [p.user_id as string, p])
+    );
     const nameOf = (id: string) => {
-      const p = (profiles ?? []).find((x) => x.user_id === id);
+      const p = profileByUser.get(id);
       return p ? `${p.first_name} ${p.last_name}` : id.slice(0, 8);
     };
 
@@ -80,12 +89,14 @@ export async function getDirectionOverview(): Promise<GetDirectionOverviewResult
       .map((m) => m.user_id as string);
 
     // Chefs rattachés à un régional
+    const regionalIdSet = new Set(regionalIds);
+    const allChefIdSet = new Set(allChefIds);
     const chefsByRegional = new Map<string, string[]>();
     const assignedChefIds = new Set<string>();
     for (const link of links ?? []) {
       const mgr = link.manager_user_id as string;
       const sub = link.subordinate_user_id as string;
-      if (regionalIds.includes(mgr) && allChefIds.includes(sub)) {
+      if (regionalIdSet.has(mgr) && allChefIdSet.has(sub)) {
         if (!chefsByRegional.has(mgr)) chefsByRegional.set(mgr, []);
         chefsByRegional.get(mgr)!.push(sub);
         assignedChefIds.add(sub);

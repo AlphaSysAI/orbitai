@@ -37,7 +37,7 @@ export function DocumentModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-xl p-6 text-white animate-in fade-in duration-300">
       <div className="bg-[#0f172a] border border-slate-800 w-full max-w-5xl h-[85vh] rounded-[3rem] flex flex-col overflow-hidden shadow-2xl border-white/5 text-white">
-        <div className="p-8 border-b border-slate-800/50 flex justify-between bg-white/[0.02] text-white">
+        <div className="p-4 sm:p-8 border-b border-slate-800/50 flex justify-between bg-white/[0.02] text-white">
           <div>
             <p className="font-black text-2xl uppercase tracking-tighter italic text-white">
               Centre de Préparation de Données
@@ -100,15 +100,15 @@ export function DocumentModal({
             </label>
           </div>
 
-          <div className="flex-1 p-10 overflow-y-auto bg-black/10 font-mono text-[13px] text-slate-400 leading-relaxed italic scrollbar-hide text-white">
+          <div className="flex-1 p-5 sm:p-10 overflow-y-auto bg-black/10 font-mono text-[13px] text-slate-400 leading-relaxed italic scrollbar-hide text-white">
             {pendingFiles[selectedFileIndex]?.text || "Aucune donnée sélectionnée."}
           </div>
         </div>
 
-        <div className="p-8 border-t border-slate-800/50 flex gap-4 bg-white/[0.02] text-white">
+        <div className="p-4 sm:p-8 border-t border-slate-800/50 flex gap-4 bg-white/[0.02] text-white">
           <button
             onClick={onClose}
-            className="px-10 py-4 border border-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all text-white"
+            className="px-5 sm:px-10 py-4 border border-slate-800 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all text-white"
           >
             Annuler
           </button>

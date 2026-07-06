@@ -59,7 +59,7 @@ export function ForcePasswordChangeModal({
       aria-modal="true"
       aria-labelledby="force-password-title"
     >
-      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0f172a] p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0f172a] p-4 sm:p-8 shadow-2xl">
         <div className="mb-6 flex items-center gap-3">
           <div className="rounded-xl bg-purple-600/20 p-3">
             <Lock className="text-purple-400" size={24} />

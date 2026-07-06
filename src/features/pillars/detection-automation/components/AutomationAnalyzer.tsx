@@ -181,7 +181,7 @@ export function AutomationAnalyzer({
                 <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                 <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-              <span className="text-xs">OrbitAI réfléchit...</span>
+              <span className="text-xs">OrbitAll réfléchit...</span>
             </div>
           )}
           <div ref={messagesEndRef} />

@@ -44,7 +44,7 @@ export function GlobalDashboard({
           <BusinessModulePlaceholder label="Hôtel" />
         )}
         {!primaryModule && (
-          <div className="rounded-[2rem] border border-dashed border-slate-700 bg-slate-900/30 p-10 text-center">
+          <div className="rounded-[2rem] border border-dashed border-slate-700 bg-slate-900/30 p-5 sm:p-10 text-center">
             <p className="text-sm text-slate-400">
               Aucun module métier vertical activé pour votre organisation.
             </p>
@@ -53,7 +53,7 @@ export function GlobalDashboard({
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8 shadow-xl transition-all hover:border-slate-700">
+        <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-4 sm:p-8 shadow-xl transition-all hover:border-slate-700">
           <div className="mb-4 flex items-center gap-4 text-yellow-400">
             <Zap size={24} />
             <p className="font-black text-[11px] uppercase tracking-widest text-white">
@@ -62,7 +62,7 @@ export function GlobalDashboard({
           </div>
           <p className="text-sm font-medium text-slate-400">GPT-4o Vision</p>
         </div>
-        <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8 shadow-xl transition-all hover:border-slate-700">
+        <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-4 sm:p-8 shadow-xl transition-all hover:border-slate-700">
           <div className="mb-4 flex items-center gap-4 text-green-400">
             <Activity size={24} />
             <p className="font-black text-[11px] uppercase tracking-widest text-white">
@@ -78,7 +78,7 @@ export function GlobalDashboard({
 
 function BusinessModulePlaceholder({ label }: { label: string }) {
   return (
-    <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8 text-center">
+    <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-4 sm:p-8 text-center">
       <p className="text-sm text-slate-400">
         Dashboard {label} — contenu métier à venir.
       </p>

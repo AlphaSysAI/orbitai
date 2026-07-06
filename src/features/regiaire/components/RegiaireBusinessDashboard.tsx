@@ -47,7 +47,7 @@ export function RegiaireBusinessDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-[2rem] border border-emerald-500/30 bg-gradient-to-br from-emerald-600/10 to-slate-900/40 p-8 shadow-xl lg:col-span-2">
+        <div className="rounded-[2rem] border border-emerald-500/30 bg-gradient-to-br from-emerald-600/10 to-slate-900/40 p-4 sm:p-8 shadow-xl lg:col-span-2">
           <div className="mb-4 flex items-center gap-3 text-emerald-400">
             <TrendingUp size={28} />
             <p className="font-black text-[11px] uppercase tracking-widest text-white">
@@ -92,7 +92,7 @@ export function RegiaireBusinessDashboard() {
           ) : null}
         </div>
 
-        <div className="rounded-[2rem] border border-amber-500/30 bg-gradient-to-br from-amber-600/10 to-slate-900/40 p-8 shadow-xl">
+        <div className="rounded-[2rem] border border-amber-500/30 bg-gradient-to-br from-amber-600/10 to-slate-900/40 p-4 sm:p-8 shadow-xl">
           <div className="mb-4 flex items-center gap-3 text-amber-400">
             <Clock size={28} />
             <p className="font-black text-[11px] uppercase tracking-widest text-white">
@@ -101,7 +101,7 @@ export function RegiaireBusinessDashboard() {
           </div>
           <p className="text-sm text-slate-400">
             {TRADITIONAL_RECEPTION_MINUTES} min habituellement →{" "}
-            {REGIAIRE_RECEPTION_MINUTES} min avec RégiAire.
+            {REGIAIRE_RECEPTION_MINUTES} min avec Orbit Aire.
           </p>
 
           {isLoading ? (
@@ -128,7 +128,7 @@ export function RegiaireBusinessDashboard() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Link
           href="/station"
-          className="group rounded-[2rem] border border-amber-500/30 bg-gradient-to-br from-amber-600/10 to-slate-900/40 p-8 shadow-xl transition-all hover:border-amber-500/50 hover:from-amber-600/15"
+          className="group rounded-[2rem] border border-amber-500/30 bg-gradient-to-br from-amber-600/10 to-slate-900/40 p-4 sm:p-8 shadow-xl transition-all hover:border-amber-500/50 hover:from-amber-600/15"
         >
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-3 text-amber-400">
@@ -147,11 +147,11 @@ export function RegiaireBusinessDashboard() {
             stations.
           </p>
           <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-amber-500/80">
-            Ouvrir RégiAire
+            Ouvrir Orbit Aire
           </p>
         </Link>
 
-        <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8 shadow-xl">
+        <div className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-4 sm:p-8 shadow-xl">
           <div className="mb-4 flex items-center gap-3 text-emerald-400">
             <PackageX size={28} />
             <p className="font-black text-[11px] uppercase tracking-widest text-white">
@@ -164,7 +164,7 @@ export function RegiaireBusinessDashboard() {
           </p>
           {!isLoading && stats && stats.aireCount === 0 && (
             <p className="mt-4 text-xs text-amber-400/80">
-              Aucune aire configurée — contactez OrbitAI pour activer vos sites.
+              Aucune aire configurée — contactez OrbitAll pour activer vos sites.
             </p>
           )}
         </div>

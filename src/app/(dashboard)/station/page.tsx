@@ -43,13 +43,13 @@ export default async function StationPage() {
     return (
       <div className="mx-auto max-w-lg space-y-6 px-4 py-12 text-center">
         <h1 className="text-2xl font-extrabold uppercase italic tracking-tighter text-white">
-          RégiAire
+          Orbit Aire
         </h1>
         <p className="text-sm text-slate-400">
           Aucune aire n&apos;est encore configurée pour votre organisation.
         </p>
         <p className="text-xs text-slate-500">
-          Contactez votre administrateur OrbitAI pour activer vos aires de
+          Contactez votre administrateur OrbitAll pour activer vos aires de
           service.
         </p>
       </div>

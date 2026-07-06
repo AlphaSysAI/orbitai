@@ -16,7 +16,7 @@ export function ScenarioComparison({ scenarios, selectedIds }: ScenarioCompariso
   
   if (selected.length < 2) {
     return (
-      <div className="p-8 text-center text-slate-400">
+      <div className="p-4 sm:p-8 text-center text-slate-400">
         <p>Sélectionnez au moins 2 scénarios pour les comparer</p>
       </div>
     );

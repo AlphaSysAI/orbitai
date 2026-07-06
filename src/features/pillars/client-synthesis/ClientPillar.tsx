@@ -72,13 +72,13 @@ export function ClientPillar({ user }: ClientPillarProps) {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative text-white">
-      <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center px-8 z-20">
+      <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center px-4 sm:px-8 z-20">
         <span className={`text-[10px] font-black uppercase tracking-[0.2em] italic ${pillarConfig?.color ?? "text-emerald-400"}`}>
           {pillarConfig?.name ?? "Synthèse Intelligente Client"}
         </span>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-8">
         <ClientDashboard
           feedbackItems={feedbackItems}
           analyses={analyses}

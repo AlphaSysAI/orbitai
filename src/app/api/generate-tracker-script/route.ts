@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     if (os === 'macos') {
       // Générer un script .command pour macOS (s'exécute au double-clic)
       const script = `#!/bin/bash
-# Script de tracking OrbitAI pour macOS
+# Script de tracking OrbitAll pour macOS
 # Généré automatiquement avec votre User ID
 
 set -e
@@ -34,7 +34,7 @@ RED='\\033[0;31m'
 NC='\\033[0m'
 
 echo -e "\${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\${NC}"
-echo -e "\${GREEN}🚀 OrbitAI - Tracking d'activité\${NC}"
+echo -e "\${GREEN}🚀 OrbitAll - Tracking d'activité\${NC}"
 echo -e "\${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\${NC}"
 echo ""
 
@@ -188,12 +188,12 @@ python3 activity-tracker.py
     } else if (os === 'windows') {
       // Générer un script .bat pour Windows
       const script = `@echo off
-REM Script de tracking OrbitAI pour Windows
+REM Script de tracking OrbitAll pour Windows
 REM Généré automatiquement avec votre User ID
 
 echo.
 echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-echo 🚀 OrbitAI - Tracking d'activité
+echo 🚀 OrbitAll - Tracking d'activité
 echo ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 echo.
 

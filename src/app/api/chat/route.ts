@@ -4,6 +4,8 @@ import { streamText, generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { createClient } from '@supabase/supabase-js';
 
+import { requireAuthOrResponse } from '@/server/auth/require-auth';
+
 export const runtime = 'edge';
 
 /**
@@ -118,6 +120,9 @@ function findRelevantPassages(query: string, documents: Array<{ name: string; fu
 }
 
 export async function POST(req: Request) {
+  const denied = await requireAuthOrResponse(req);
+  if (denied) return denied;
+
   try {
     const { messages, stream, userId } = await req.json();
 
@@ -253,7 +258,7 @@ Génère un titre très court (maximum 6-8 mots) qui résume l'idée principale 
         personalizationInstructions += `\n`;
       }
       
-      const baseSystemPrompt = `Tu es OrbitAI, l'assistant intelligent pour la transmission de savoir et l'onboarding dans les entreprises.
+      const baseSystemPrompt = `Tu es OrbitAll, l'assistant intelligent pour la transmission de savoir et l'onboarding dans les entreprises.
 
 TON RÔLE :
 - Aider les entreprises à sauvegarder et transmettre leur savoir interne

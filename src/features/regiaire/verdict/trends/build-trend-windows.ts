@@ -46,7 +46,7 @@ async function loadSalesForDates(
   if (dates.length === 0) return [];
 
   if (organizationId !== ctx.organizationId) {
-    throw new Error("organizationId incohérent avec le contexte RégiAire");
+    throw new Error("organizationId incohérent avec le contexte Orbit Aire");
   }
 
   const { data, error } = await ctx.db

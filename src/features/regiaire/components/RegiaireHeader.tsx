@@ -68,7 +68,7 @@ export function RegiaireHeader({ aireId, initial = null }: RegiaireHeaderProps) 
   const weather = snapshot?.weather;
 
   return (
-    <header className="z-20 flex h-14 flex-shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950/80 px-6 backdrop-blur-xl">
+    <header className="z-20 flex h-14 flex-shrink-0 items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/80 px-4 backdrop-blur-xl sm:px-6">
       {/* Brand */}
       <div className="flex items-center gap-3">
         <div className="h-1.5 w-6 rounded-full bg-amber-500" />

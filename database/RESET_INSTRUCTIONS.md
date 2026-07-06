@@ -2,7 +2,7 @@
 
 ## ⚠️ Attention
 
-Cette procédure va **supprimer toutes les données OrbitAI** de votre base de données. Les tables système Supabase (authentification, etc.) ne seront **PAS** affectées.
+Cette procédure va **supprimer toutes les données OrbitAll** de votre base de données. Les tables système Supabase (authentification, etc.) ne seront **PAS** affectées.
 
 ## Étapes
 
@@ -15,7 +15,7 @@ Exécutez le script `reset.sql` dans votre console SQL Supabase :
 ```
 
 Ce script va :
-- Supprimer toutes les tables OrbitAI
+- Supprimer toutes les tables OrbitAll
 - Supprimer toutes les fonctions et triggers
 - Préparer la base pour une réinitialisation complète
 
@@ -34,13 +34,13 @@ Ce script va :
 
 ## Résultat
 
-Vous aurez une base de données OrbitAI complètement propre et fonctionnelle, sans aucune donnée existante.
+Vous aurez une base de données OrbitAll complètement propre et fonctionnelle, sans aucune donnée existante.
 
 ## Note importante
 
 - ✅ Vos utilisateurs (auth.users) ne seront **PAS** supprimés
 - ✅ Votre configuration Supabase ne sera **PAS** affectée
-- ❌ Toutes les données OrbitAI seront **supprimées** (documents, threads, messages, feedback, etc.)
+- ❌ Toutes les données OrbitAll seront **supprimées** (documents, threads, messages, feedback, etc.)
 
 
 

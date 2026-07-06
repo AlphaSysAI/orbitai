@@ -66,6 +66,9 @@ export async function GET(request: Request) {
   if (!orgId) {
     return NextResponse.json({ error: "orgId requis" }, { status: 400 });
   }
+  if (!z.string().uuid().safeParse(orgId).success) {
+    return NextResponse.json({ error: "orgId invalide" }, { status: 400 });
+  }
 
   try {
     const data = await getOrgHierarchyData(orgId);

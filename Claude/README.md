@@ -1,4 +1,4 @@
-# OrbitAI — Vue produit (2026)
+# OrbitAll — Vue produit (2026)
 
 > **Document de référence** pour onboarding, assistants IA (Claude Cowork) et décisions produit.  
 > Complète l’historique technique à la racine : [`../README.md`](../README.md), [`../project_state.md`](../project_state.md).
@@ -7,15 +7,15 @@
 
 ## But du projet
 
-**OrbitAI** est une plateforme SaaS multi-tenant développée par **AlphaSys**. Elle héberge des **applications métier verticales** activables par client (organisation), sur une base commune : authentification, organisations, modules, et optionnellement des **add-ons IA transverses**.
+**OrbitAll** est une plateforme SaaS multi-tenant développée par **AlphaSys**. Elle héberge des **applications métier verticales** activables par client (organisation), sur une base commune : authentification, organisations, modules, et optionnellement des **add-ons IA transverses**.
 
 Le positionnement actuel n’est plus « 5 piliers IA » comme cœur produit, mais **des verticals métier** :
 
 | Priorité | Module BDD | Marque UI | Statut |
 |----------|------------|-----------|--------|
-| **Cœur actuel** | `regiaire_core` | **RégiAire** | ✅ Implémenté et maintenu |
-| Roadmap | `artisan_core` | **Artisan** | Catalogue / branding prêt, pas de code métier |
-| Roadmap | `hotel_core` | **NodAll** (Hôtel) | Catalogue / branding prêt, pas de code métier |
+| **Cœur actuel** | `regiaire_core` | **Orbit Aire** | ✅ Implémenté et maintenu |
+| Roadmap | `artisan_core` | **Orbit Artisan** | Catalogue / branding prêt, pas de code métier |
+| Roadmap | `hotel_core` | **Orbit Hôtel** | Catalogue / branding prêt, pas de code métier |
 
 Les **5 piliers** restent disponibles comme **add-ons** activables par organisation :
 
@@ -29,16 +29,16 @@ Les **5 piliers** restent disponibles comme **add-ons** activables par organisat
 
 ---
 
-## Ce que fait OrbitAI aujourd’hui
+## Ce que fait OrbitAll aujourd’hui
 
 ### Plateforme
 
 - Auth **Supabase** (email / mot de passe), session cookies.
 - **Multi-tenant** : une organisation → plusieurs membres (owner / admin / member) → modules activés à la carte.
 - **Admin plateforme** (`ORBIT_ADMIN_EMAILS`) : provisionnement clients, gestion aires, calendrier Bison Futé.
-- Dashboard global `(dashboard)/` : shell navigation + add-ons piliers + entrée RégiAire.
+- Dashboard global `(dashboard)/` : shell navigation + add-ons piliers + entrée Orbit Aire.
 
-### RégiAire (cœur métier)
+### Orbit Aire (cœur métier)
 
 Gestion opérationnelle de **stations-service** (aires autoroutières), multi-sites :
 
@@ -89,7 +89,7 @@ Variables essentielles : voir [cowork-integration.md](./cowork-integration.md).
 
 ---
 
-## Environnement de test RégiAire
+## Environnement de test Orbit Aire
 
 **Aire de référence** (données démo) :
 
@@ -116,15 +116,15 @@ Constantes code : `src/features/regiaire/lib/demo-aire.ts`.
 | Fichier | Contenu |
 |---------|---------|
 | [architecture.md](./architecture.md) | Architecture technique complète |
-| [regiaire-reference.md](./regiaire-reference.md) | RégiAire : routes, actions, BDD, seeds |
+| [regiaire-reference.md](./regiaire-reference.md) | Orbit Aire : routes, actions, BDD, seeds |
 | [cowork-integration.md](./cowork-integration.md) | Notes pour Claude Cowork et assistants |
 
 ---
 
 ## Roadmap produit (orientation)
 
-1. **RégiAire** — Verdict v2 étape B (UI réappro + narration), flux POS réels, suivi commandes.
-2. **Artisan** — vertical métier artisan (devis, chantiers, planning).
-3. **NodAll** — vertical hôtelier (réservations, housekeeping, réception).
+1. **Orbit Aire** — Verdict v2 étape B (UI réappro + narration), flux POS réels, suivi commandes.
+2. **Orbit Artisan** — vertical métier artisan (devis, chantiers, planning).
+3. **Orbit Hôtel** — vertical hôtelier (réservations, housekeeping, réception).
 
 Les add-ons piliers restent maintenus mais ne pilotent plus la roadmap.

@@ -37,18 +37,18 @@ export const ORG_MODULE_CATALOG: OrgModuleCatalogEntry[] = [
   },
   {
     id: ORG_MODULE_NAMES.REGIAIRE_CORE,
-    label: "RégiAire",
+    label: "Orbit Aire",
     description: "Gestion de station-service (livraisons, stocks, équipes).",
   },
   {
     id: ORG_MODULE_NAMES.ARTISAN_CORE,
-    label: "Artisan",
-    description: "Gestion métier artisan (devis, chantiers, planning).",
+    label: "Orbit Artisan",
+    description: "Devis et factures boostés à l'IA (demande client écrite ou vocale, devis validé par l'artisan).",
   },
   {
     id: ORG_MODULE_NAMES.HOTEL_CORE,
-    label: "Hôtel",
-    description: "Gestion hôtelière (réservations, housekeeping, réception).",
+    label: "Orbit Hôtel",
+    description: "Orchestration IA des logiciels de l'hôtel (réservation → commande en chambre, serveur vocal IA à terme).",
   },
 ];
 

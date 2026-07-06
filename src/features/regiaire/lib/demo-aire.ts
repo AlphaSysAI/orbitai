@@ -1,7 +1,7 @@
 // Copyright © 2026 OrbitSys. Tous droits réservés.
 
 /**
- * Aire de référence pour les tests manuels et seeds démo (OrbitAI / RégiAire).
+ * Aire de référence pour les tests manuels et seeds démo (OrbitAll / Orbit Aire).
  * Seed : database/seeds/017_regiaire_arzens_demo.sql
  */
 export const REGIAIRE_DEMO_AIRE_ID = "7ec3c50b-4893-4904-90d2-56e0ab04532a" as const;

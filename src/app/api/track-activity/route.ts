@@ -3,6 +3,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+import {
+  extractBearerToken,
+  verifyTrackerToken,
+  TrackerTokenError,
+} from '@/server/auth/tracker-token';
+
 export const runtime = 'edge';
 
 interface ActivityData {
@@ -32,13 +38,36 @@ interface ActivityData {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { userId, activity, activities, current_session } = body;
+    const { userId: bodyUserId, activity, activities, current_session } = body;
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "userId requis" },
-        { status: 400 }
-      );
+    // Authentification via token HMAC (si TRACKER_SIGNING_SECRET configuré).
+    // En l'absence du secret (dev / legacy), on accepte userId du body mais on
+    // valide qu'il est bien un UUID.
+    let userId: string;
+    const signingSecretSet = Boolean(process.env.TRACKER_SIGNING_SECRET);
+
+    if (signingSecretSet) {
+      const token = extractBearerToken(req.headers.get("authorization"));
+      if (!token) {
+        return NextResponse.json({ error: "Authorization requis" }, { status: 401 });
+      }
+      try {
+        const payload = await verifyTrackerToken(token);
+        userId = payload.userId;
+      } catch (err) {
+        if (err instanceof TrackerTokenError) {
+          return NextResponse.json({ error: err.message }, { status: err.status });
+        }
+        return NextResponse.json({ error: "Token invalide" }, { status: 401 });
+      }
+    } else {
+      if (!bodyUserId || typeof bodyUserId !== "string") {
+        return NextResponse.json({ error: "userId requis" }, { status: 400 });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bodyUserId)) {
+        return NextResponse.json({ error: "userId invalide" }, { status: 400 });
+      }
+      userId = bodyUserId as string;
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

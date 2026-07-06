@@ -367,7 +367,7 @@ export interface AutomationPolicyUpdate {
   updated_at?: string;
 }
 
-/** RégiAire — statut livraison (013) */
+/** Orbit Aire — statut livraison (013) */
 export type DeliveryStatus = "draft" | "scanning" | "discrepancy" | "completed";
 
 export interface SupplierRow {
@@ -532,6 +532,348 @@ export interface GerantAireRow {
   gerant_user_id: string;
   aire_id: string;
   organization_id: string;
+  created_at: string;
+}
+
+export interface SecteurOverviewCacheRow {
+  secteur_id: string;
+  organization_id: string;
+  run_date: string;
+  aire_count: number;
+  total_savings_eur: number;
+  expiring_count: number;
+  in_progress_count: number;
+  reception_hours_saved: number;
+  computed_at: string;
+}
+
+// ─── Orbit Artisan (035) ─────────────────────────────────────────────────────
+export interface ArtisanProfileRow {
+  organization_id: string;
+  business_name: string;
+  slug: string | null;
+  description: string | null;
+  logo_url: string | null;
+  accent_color: string | null;
+  labor_rate_per_hour: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArtisanServiceRow {
+  id: string;
+  organization_id: string;
+  title: string;
+  duration: number;
+  price: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArtisanContactRow {
+  id: string;
+  organization_id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ArtisanQuoteStatus = "draft" | "sent" | "accepted" | "rejected";
+
+export interface ArtisanQuoteRow {
+  id: string;
+  organization_id: string;
+  contact_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  status: ArtisanQuoteStatus;
+  labor_rate_per_hour: number | null;
+  labor_duration_minutes: number;
+  labor_total: number;
+  materials_total: number;
+  grand_total: number;
+  notes: string | null;
+  signed_at: string | null;
+  signed_by_name: string | null;
+  rejected_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArtisanQuoteServiceRow {
+  id: string;
+  quote_id: string;
+  service_id: string | null;
+  service_title: string;
+  duration_minutes: number;
+  unit_price: number | null;
+  line_total: number | null;
+  created_at: string;
+}
+
+export interface ArtisanQuoteMaterialRow {
+  id: string;
+  quote_id: string;
+  label: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+  created_at: string;
+}
+
+export interface ArtisanInvoiceRow {
+  id: string;
+  organization_id: string;
+  quote_id: string | null;
+  contact_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  invoice_number: string | null;
+  status: "draft" | "sent" | "paid";
+  labor_total: number;
+  materials_total: number;
+  grand_total: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ArtisanInvoiceLineRow {
+  id: string;
+  invoice_id: string;
+  line_kind: "labor" | "service" | "material";
+  label: string;
+  quantity: number | null;
+  unit_price: number | null;
+  line_total: number;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface AireModuleRow {
+  aire_id: string;
+  organization_id: string;
+  module_name: string;
+  created_at: string;
+}
+
+// ─── Orbit Hôtel (037) ───────────────────────────────────────────────────────
+export type HotelHousekeepingStatus = "clean" | "dirty" | "inspected" | "out_of_order";
+
+export interface HotelRoomTypeRow {
+  id: string;
+  organization_id: string;
+  code: string;
+  nom: string;
+  description: string | null;
+  capacity_adults: number;
+  capacity_children: number;
+  base_occupancy: number;
+  equipements: Json;
+  default_rate_cents: number;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HotelRoomRow {
+  id: string;
+  organization_id: string;
+  room_type_id: string;
+  numero: string;
+  etage: string | null;
+  attributs: Json;
+  housekeeping_status: HotelHousekeepingStatus;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HotelInventoryRow {
+  id: string;
+  organization_id: string;
+  room_type_id: string;
+  date: string;
+  total: number;
+  sold: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type HotelBoard = "RO" | "BB" | "HB" | "FB";
+
+export interface HotelRatePlanRow {
+  id: string;
+  organization_id: string;
+  code: string;
+  nom: string;
+  room_type_id: string | null;
+  board: HotelBoard;
+  refundable: boolean;
+  cancellation_policy: Json;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HotelRateCalendarRow {
+  id: string;
+  organization_id: string;
+  rate_plan_id: string;
+  room_type_id: string;
+  date: string;
+  price_cents: number;
+  min_stay: number;
+  max_stay: number | null;
+  closed: boolean;
+  cta: boolean;
+  ctd: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type HotelReservationStatus =
+  | "option"
+  | "confirmed"
+  | "checked_in"
+  | "checked_out"
+  | "no_show"
+  | "cancelled";
+
+export type HotelRoomSource = "direct" | "phone" | "walk_in" | "ota_other";
+
+export interface HotelReservationRow {
+  id: string;
+  organization_id: string;
+  reference: string;
+  contact_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  source: HotelRoomSource;
+  status: HotelReservationStatus;
+  check_in: string;
+  check_out: string;
+  adults: number;
+  children: number;
+  total_cents: number;
+  paid_cents: number;
+  balance_cents: number;
+  deposit_cents: number;
+  notes: string | null;
+  idempotency_key: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HotelReservationRoomRow {
+  id: string;
+  organization_id: string;
+  reservation_id: string;
+  room_type_id: string;
+  room_id: string | null;
+  rate_plan_id: string;
+  check_in: string;
+  check_out: string;
+  guest_name: string | null;
+  occupants: number;
+  status: HotelReservationStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HotelReservationNightRow {
+  id: string;
+  organization_id: string;
+  reservation_room_id: string;
+  date: string;
+  price_snapshot_cents: number;
+  created_at: string;
+}
+
+export interface HotelFolioRow {
+  id: string;
+  organization_id: string;
+  reservation_id: string;
+  status: "open" | "closed";
+  total_cents: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type HotelPaymentMethod = "cash" | "card" | "transfer" | "other";
+export type HotelPaymentKind = "deposit" | "balance" | "refund";
+
+export interface HotelPaymentRow {
+  id: string;
+  organization_id: string;
+  reservation_id: string;
+  folio_id: string | null;
+  method: HotelPaymentMethod;
+  kind: HotelPaymentKind;
+  amount_cents: number;
+  note: string | null;
+  created_at: string;
+}
+
+export interface HotelCityTaxConfigRow {
+  organization_id: string;
+  enabled: boolean;
+  amount_cents_per_person_night: number;
+  exempt_children: boolean;
+  max_nights: number | null;
+  updated_at: string;
+}
+
+export interface HotelInvoiceRow {
+  id: string;
+  organization_id: string;
+  reservation_id: string | null;
+  invoice_number: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  subtotal_cents: number;
+  city_tax_cents: number;
+  total_cents: number;
+  status: "draft" | "sent" | "paid";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface HotelInvoiceLineRow {
+  id: string;
+  invoice_id: string;
+  label: string;
+  amount_cents: number;
+  sort_order: number;
+  created_at: string;
+}
+
+// ─── Orbit Voice (044) ───────────────────────────────────────────────────────
+export interface VoiceNumberRow {
+  phone_e164: string;
+  organization_id: string;
+  vertical: "hotel" | "artisan";
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VoiceCallLogRow {
+  id: string;
+  organization_id: string;
+  vertical: string;
+  caller_number: string | null;
+  intent: string | null;
+  transcript: string | null;
+  reservation_id: string | null;
   created_at: string;
 }
 
@@ -904,6 +1246,189 @@ export interface Database {
           created_at?: string;
         },
         Partial<Pick<GerantAireRow, "aire_id">>
+      >;
+      secteur_overview_cache: TableDef<
+        SecteurOverviewCacheRow,
+        Pick<
+          SecteurOverviewCacheRow,
+          "secteur_id" | "organization_id" | "run_date"
+        > & {
+          aire_count?: number;
+          total_savings_eur?: number;
+          expiring_count?: number;
+          in_progress_count?: number;
+          reception_hours_saved?: number;
+          computed_at?: string;
+        },
+        Partial<
+          Pick<
+            SecteurOverviewCacheRow,
+            | "aire_count"
+            | "total_savings_eur"
+            | "expiring_count"
+            | "in_progress_count"
+            | "reception_hours_saved"
+            | "computed_at"
+          >
+        >
+      >;
+      artisan_profiles: TableDef<
+        ArtisanProfileRow,
+        Pick<ArtisanProfileRow, "organization_id" | "business_name"> &
+          Partial<Omit<ArtisanProfileRow, "organization_id" | "business_name">>,
+        Partial<Omit<ArtisanProfileRow, "organization_id">>
+      >;
+      artisan_services: TableDef<
+        ArtisanServiceRow,
+        Pick<ArtisanServiceRow, "organization_id" | "title" | "duration"> &
+          Partial<Pick<ArtisanServiceRow, "id" | "price" | "created_at" | "updated_at">>,
+        Partial<Omit<ArtisanServiceRow, "id" | "organization_id">>
+      >;
+      artisan_contacts: TableDef<
+        ArtisanContactRow,
+        Pick<ArtisanContactRow, "organization_id" | "full_name"> &
+          Partial<Omit<ArtisanContactRow, "organization_id" | "full_name">>,
+        Partial<Omit<ArtisanContactRow, "id" | "organization_id">>
+      >;
+      artisan_quotes: TableDef<
+        ArtisanQuoteRow,
+        Pick<ArtisanQuoteRow, "organization_id"> &
+          Partial<Omit<ArtisanQuoteRow, "organization_id">>,
+        Partial<Omit<ArtisanQuoteRow, "id" | "organization_id">>
+      >;
+      artisan_quote_services: TableDef<
+        ArtisanQuoteServiceRow,
+        Pick<
+          ArtisanQuoteServiceRow,
+          "quote_id" | "service_title" | "duration_minutes"
+        > &
+          Partial<
+            Pick<ArtisanQuoteServiceRow, "id" | "service_id" | "unit_price" | "line_total" | "created_at">
+          >,
+        Partial<Omit<ArtisanQuoteServiceRow, "id" | "quote_id">>
+      >;
+      artisan_quote_materials: TableDef<
+        ArtisanQuoteMaterialRow,
+        Pick<
+          ArtisanQuoteMaterialRow,
+          "quote_id" | "label" | "unit_price" | "line_total"
+        > &
+          Partial<Pick<ArtisanQuoteMaterialRow, "id" | "quantity" | "created_at">>,
+        Partial<Omit<ArtisanQuoteMaterialRow, "id" | "quote_id">>
+      >;
+      artisan_invoices: TableDef<
+        ArtisanInvoiceRow,
+        Pick<ArtisanInvoiceRow, "organization_id"> &
+          Partial<Omit<ArtisanInvoiceRow, "organization_id">>,
+        Partial<Omit<ArtisanInvoiceRow, "id" | "organization_id">>
+      >;
+      artisan_invoice_lines: TableDef<
+        ArtisanInvoiceLineRow,
+        Pick<ArtisanInvoiceLineRow, "invoice_id" | "line_kind" | "label" | "line_total"> &
+          Partial<
+            Pick<ArtisanInvoiceLineRow, "id" | "quantity" | "unit_price" | "sort_order" | "created_at">
+          >,
+        Partial<Omit<ArtisanInvoiceLineRow, "id" | "invoice_id">>
+      >;
+      aire_modules: TableDef<
+        AireModuleRow,
+        Pick<AireModuleRow, "aire_id" | "organization_id" | "module_name"> & {
+          created_at?: string;
+        },
+        Partial<Pick<AireModuleRow, "module_name">>
+      >;
+      hotel_room_types: TableDef<
+        HotelRoomTypeRow,
+        Pick<HotelRoomTypeRow, "organization_id" | "code" | "nom"> &
+          Partial<Omit<HotelRoomTypeRow, "organization_id" | "code" | "nom">>,
+        Partial<Omit<HotelRoomTypeRow, "id" | "organization_id">>
+      >;
+      hotel_rooms: TableDef<
+        HotelRoomRow,
+        Pick<HotelRoomRow, "organization_id" | "room_type_id" | "numero"> &
+          Partial<Omit<HotelRoomRow, "organization_id" | "room_type_id" | "numero">>,
+        Partial<Omit<HotelRoomRow, "id" | "organization_id">>
+      >;
+      hotel_inventory_calendar: TableDef<
+        HotelInventoryRow,
+        Pick<HotelInventoryRow, "organization_id" | "room_type_id" | "date"> &
+          Partial<Omit<HotelInventoryRow, "organization_id" | "room_type_id" | "date">>,
+        Partial<Omit<HotelInventoryRow, "id" | "organization_id">>
+      >;
+      hotel_rate_plans: TableDef<
+        HotelRatePlanRow,
+        Pick<HotelRatePlanRow, "organization_id" | "code" | "nom"> &
+          Partial<Omit<HotelRatePlanRow, "organization_id" | "code" | "nom">>,
+        Partial<Omit<HotelRatePlanRow, "id" | "organization_id">>
+      >;
+      hotel_rate_calendar: TableDef<
+        HotelRateCalendarRow,
+        Pick<HotelRateCalendarRow, "organization_id" | "rate_plan_id" | "room_type_id" | "date" | "price_cents"> &
+          Partial<Omit<HotelRateCalendarRow, "organization_id" | "rate_plan_id" | "room_type_id" | "date" | "price_cents">>,
+        Partial<Omit<HotelRateCalendarRow, "id" | "organization_id">>
+      >;
+      hotel_reservations: TableDef<
+        HotelReservationRow,
+        Pick<HotelReservationRow, "organization_id" | "reference" | "check_in" | "check_out"> &
+          Partial<Omit<HotelReservationRow, "organization_id" | "reference" | "check_in" | "check_out">>,
+        Partial<Omit<HotelReservationRow, "id" | "organization_id">>
+      >;
+      hotel_reservation_rooms: TableDef<
+        HotelReservationRoomRow,
+        Pick<
+          HotelReservationRoomRow,
+          "organization_id" | "reservation_id" | "room_type_id" | "rate_plan_id" | "check_in" | "check_out"
+        > &
+          Partial<Omit<HotelReservationRoomRow, "organization_id" | "reservation_id" | "room_type_id" | "rate_plan_id" | "check_in" | "check_out">>,
+        Partial<Omit<HotelReservationRoomRow, "id" | "organization_id">>
+      >;
+      hotel_reservation_nights: TableDef<
+        HotelReservationNightRow,
+        Pick<HotelReservationNightRow, "organization_id" | "reservation_room_id" | "date" | "price_snapshot_cents"> &
+          Partial<Pick<HotelReservationNightRow, "id" | "created_at">>,
+        Partial<Pick<HotelReservationNightRow, "price_snapshot_cents">>
+      >;
+      hotel_folios: TableDef<
+        HotelFolioRow,
+        Pick<HotelFolioRow, "organization_id" | "reservation_id"> &
+          Partial<Omit<HotelFolioRow, "organization_id" | "reservation_id">>,
+        Partial<Omit<HotelFolioRow, "id" | "organization_id">>
+      >;
+      hotel_payments: TableDef<
+        HotelPaymentRow,
+        Pick<HotelPaymentRow, "organization_id" | "reservation_id" | "method" | "kind" | "amount_cents"> &
+          Partial<Pick<HotelPaymentRow, "id" | "folio_id" | "note" | "created_at">>,
+        Partial<Pick<HotelPaymentRow, "note">>
+      >;
+      hotel_city_tax_config: TableDef<
+        HotelCityTaxConfigRow,
+        Pick<HotelCityTaxConfigRow, "organization_id"> &
+          Partial<Omit<HotelCityTaxConfigRow, "organization_id">>,
+        Partial<Omit<HotelCityTaxConfigRow, "organization_id">>
+      >;
+      hotel_invoices: TableDef<
+        HotelInvoiceRow,
+        Pick<HotelInvoiceRow, "organization_id"> &
+          Partial<Omit<HotelInvoiceRow, "organization_id">>,
+        Partial<Omit<HotelInvoiceRow, "id" | "organization_id">>
+      >;
+      hotel_invoice_lines: TableDef<
+        HotelInvoiceLineRow,
+        Pick<HotelInvoiceLineRow, "invoice_id" | "label" | "amount_cents"> &
+          Partial<Pick<HotelInvoiceLineRow, "id" | "sort_order" | "created_at">>,
+        Partial<Pick<HotelInvoiceLineRow, "label" | "amount_cents" | "sort_order">>
+      >;
+      voice_numbers: TableDef<
+        VoiceNumberRow,
+        Pick<VoiceNumberRow, "phone_e164" | "organization_id" | "vertical"> &
+          Partial<Pick<VoiceNumberRow, "is_active" | "created_at" | "updated_at">>,
+        Partial<Pick<VoiceNumberRow, "phone_e164" | "vertical" | "is_active">>
+      >;
+      voice_call_logs: TableDef<
+        VoiceCallLogRow,
+        Pick<VoiceCallLogRow, "organization_id" | "vertical"> &
+          Partial<Omit<VoiceCallLogRow, "organization_id" | "vertical">>,
+        Partial<Omit<VoiceCallLogRow, "id" | "organization_id">>
       >;
       aire_team_members: TableDef<
         AireTeamMemberRow,

@@ -58,22 +58,23 @@ export async function listAireTeamMembers(
   if (error) throw new Error(error.message);
 
   const admin = getServiceClient();
-  const members: AireTeamMember[] = [];
 
-  for (const row of rows ?? []) {
-    const userId = row.user_id as string;
-    const { data: authUser } = await admin.auth.admin.getUserById(userId);
-    const meta = authUser.user?.user_metadata as Record<string, unknown> | undefined;
+  const members: AireTeamMember[] = await Promise.all(
+    (rows ?? []).map(async (row) => {
+      const userId = row.user_id as string;
+      const { data: authUser } = await admin.auth.admin.getUserById(userId);
+      const meta = authUser.user?.user_metadata as Record<string, unknown> | undefined;
 
-    members.push({
-      userId,
-      email: authUser.user?.email ?? null,
-      firstName:
-        typeof meta?.first_name === "string" ? meta.first_name : null,
-      lastName: typeof meta?.last_name === "string" ? meta.last_name : null,
-      createdAt: row.created_at as string,
-    });
-  }
+      return {
+        userId,
+        email: authUser.user?.email ?? null,
+        firstName:
+          typeof meta?.first_name === "string" ? meta.first_name : null,
+        lastName: typeof meta?.last_name === "string" ? meta.last_name : null,
+        createdAt: row.created_at as string,
+      };
+    })
+  );
 
   return members;
 }

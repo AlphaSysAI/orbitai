@@ -59,7 +59,7 @@ export async function getRegiaireBusinessDashboardStats(): Promise<GetRegiaireBu
     if (!access.allowed) {
       return {
         success: false,
-        error: "Module RégiAire non activé",
+        error: "Module Orbit Aire non activé",
         code: access.reason,
       };
     }

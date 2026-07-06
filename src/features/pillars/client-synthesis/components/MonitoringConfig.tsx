@@ -280,7 +280,7 @@ export function MonitoringConfig({
       {/* Liste des sources configurées */}
       <div className="space-y-4">
         {monitoringSources.length === 0 ? (
-          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-8 text-center">
+          <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 sm:p-8 text-center">
             <p className="text-slate-400 mb-4">Aucune source de surveillance configurée</p>
             <p className="text-sm text-slate-500">
               Ajoutez une source pour commencer la surveillance automatique des avis et commentaires

@@ -42,7 +42,7 @@ export function PillarNavigation({
           <Orbit size={20} className="text-white" />
         </div>
         <h2 className="text-xl font-bold tracking-tighter text-white uppercase italic">
-          OrbitAI
+          OrbitAll
         </h2>
       </div>
 
@@ -74,7 +74,7 @@ export function PillarNavigation({
       {/* Sélecteur de piliers */}
       <div className="mt-6 pt-6 border-t border-slate-800 space-y-2">
         <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4 px-2 italic">
-          Piliers OrbitAI
+          Piliers OrbitAll
         </p>
         {PILLARS.map((pillar) => {
           const Icon = (Icons as any)[pillar.icon] || Icons.LayoutDashboard;

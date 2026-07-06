@@ -2,8 +2,13 @@
 
 import { NextResponse } from 'next/server';
 
+import { requireAuthOrResponse } from '@/server/auth/require-auth';
+
 // Import dynamique des parsers selon le format
 const pdf = require('pdf-parse-fork');
+
+// Limite de taille des fichiers uploadés (anti-DoS / ReDoS sur les parsers).
+const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 Mo
 
 // Fonction pour extraire le texte d'un fichier Word (.docx)
 async function extractFromDocx(buffer: Buffer): Promise<string> {
@@ -61,12 +66,24 @@ function extractFromText(buffer: Buffer, mimeType: string): string {
 }
 
 export async function POST(req: Request) {
+  // Authentification : route accessible uniquement aux utilisateurs connectés.
+  const denied = await requireAuthOrResponse(req);
+  if (denied) return denied;
+
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
       return NextResponse.json({ error: "Fichier non trouvé" }, { status: 400 });
+    }
+
+    // Garde-fou taille : rejette avant de charger le buffer en mémoire.
+    if (typeof file.size === 'number' && file.size > MAX_FILE_BYTES) {
+      return NextResponse.json(
+        { error: "Fichier trop volumineux (max 15 Mo)." },
+        { status: 413 }
+      );
     }
 
     const arrayBuffer = await file.arrayBuffer();

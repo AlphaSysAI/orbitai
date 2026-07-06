@@ -16,7 +16,7 @@ export default async function StationLayout({
     if (access.reason === "unauthenticated") {
       redirect("/login");
     }
-    return <ModuleDisabled moduleLabel="RégiAire" />;
+    return <ModuleDisabled moduleLabel="Orbit Aire" />;
   }
 
   return (

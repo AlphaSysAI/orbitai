@@ -4,6 +4,8 @@ import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { createClient } from '@supabase/supabase-js';
 
+import { requireAuthOrResponse } from '@/server/auth/require-auth';
+
 export const runtime = 'edge';
 
 interface DetectedTask {
@@ -21,6 +23,9 @@ interface DetectedTask {
 }
 
 export async function POST(req: Request) {
+  const denied = await requireAuthOrResponse(req);
+  if (denied) return denied;
+
   try {
     const { content, userId, documentId, source = 'document' } = await req.json();
 

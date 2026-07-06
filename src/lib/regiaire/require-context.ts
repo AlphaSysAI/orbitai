@@ -43,7 +43,7 @@ export type RegiaireContext = {
 const ERROR_MESSAGES: Record<RegiaireContextErrorCode, string> = {
   unauthenticated: "Authentification requise",
   no_organization: "Aucune organisation associée",
-  module_disabled: "Module RégiAire non activé pour votre organisation",
+  module_disabled: "Module Orbit Aire non activé pour votre organisation",
   missing_aire: "Identifiant d'aire requis",
   invalid_aire: "Aire invalide ou inaccessible",
 };
@@ -154,7 +154,7 @@ async function checkAireScopeAccess(
 }
 
 /**
- * Contexte serveur RégiAire : session + org + module + aire (obligatoire).
+ * Contexte serveur Orbit Aire : session + org + module + aire (obligatoire).
  */
 export async function requireRegiaireContext(
   aireId: string

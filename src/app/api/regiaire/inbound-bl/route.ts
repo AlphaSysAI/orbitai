@@ -5,6 +5,7 @@ import { Resend } from "resend";
 import { z } from "zod";
 
 import { processInboundBL } from "@/features/regiaire/inbound/lib/process-inbound-bl";
+import { timingSafeEqualStrings } from "@/server/auth/require-auth";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -55,7 +56,7 @@ async function sendAck(params: {
     to: params.to,
     subject: `BL reçu — ${params.aireName}`,
     text: [
-      `Votre bon de livraison a bien été reçu et intégré dans RégiAire.`,
+      `Votre bon de livraison a bien été reçu et intégré dans Orbit Aire.`,
       ``,
       `Aire     : ${params.aireName}`,
       params.supplierName ? `Fournisseur : ${params.supplierName}` : null,
@@ -80,7 +81,8 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "Configuration serveur manquante" }, { status: 500 });
   }
 
-  if (!secret || secret !== expectedSecret) {
+  // Comparaison timing-safe pour éviter les timing attacks sur le secret webhook.
+  if (!secret || !timingSafeEqualStrings(secret, expectedSecret)) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
 

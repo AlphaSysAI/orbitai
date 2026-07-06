@@ -145,14 +145,14 @@ export default function OrbitDashboard() {
   if (activeTab === "settings") {
     return (
       <>
-        <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-8 z-20 flex-shrink-0">
+        <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 z-20 flex-shrink-0">
           <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">
             <span className="text-purple-500 border-b-2 border-purple-500 py-5">
               Configuration
             </span>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-8 relative">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8 relative">
           <div className="max-w-4xl mx-auto py-10 text-white">
             <h1 className="text-4xl font-extrabold mb-12 text-white italic tracking-tighter uppercase">
               Réglages
@@ -160,7 +160,7 @@ export default function OrbitDashboard() {
             {isOrgRoleLoading ? null : isOrgAdmin ? (
               <OrganizationSettingsPanel />
             ) : (
-              <div className="bg-slate-900/40 p-8 rounded-[2rem] border border-slate-800/50">
+              <div className="bg-slate-900/40 p-4 sm:p-8 rounded-[2rem] border border-slate-800/50">
                 <p className="text-slate-400">
                   Accès réservé aux administrateurs de votre organisation.
                 </p>
@@ -175,7 +175,7 @@ export default function OrbitDashboard() {
   if (showGlobalDashboard) {
     return (
       <>
-        <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-8 z-20 flex-shrink-0">
+        <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 z-20 flex-shrink-0">
           <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">
             <span
               className={`border-b-2 py-5 ${
@@ -192,7 +192,7 @@ export default function OrbitDashboard() {
             </span>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-8 relative">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8 relative">
           <GlobalDashboard enabledModules={enabledModules} />
         </main>
       </>
@@ -214,10 +214,10 @@ export default function OrbitDashboard() {
 
   return (
     <>
-      <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-8 z-20 flex-shrink-0">
+      <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 z-20 flex-shrink-0">
         <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">
           <span className="text-purple-500 border-b-2 border-purple-500 py-5">
-            {PILLARS.find((p) => p.id === activePillar)?.name || "OrbitAI"}
+            {PILLARS.find((p) => p.id === activePillar)?.name || "OrbitAll"}
           </span>
         </div>
       </header>

@@ -128,7 +128,7 @@ export function MesAiresFlyoutNav() {
               </div>
             ) : aires.length === 0 ? (
               <p className="max-w-xs px-1 py-4 text-xs text-slate-500">
-                Aucune aire configurée. Contactez votre administrateur OrbitAI.
+                Aucune aire configurée. Contactez votre administrateur OrbitAll.
               </p>
             ) : (
               <div className="flex max-h-72 w-56 flex-col gap-1.5 overflow-y-auto py-0.5">

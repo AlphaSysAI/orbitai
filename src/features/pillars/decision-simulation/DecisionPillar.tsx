@@ -122,7 +122,7 @@ export function DecisionPillar({ user, activeTab, onTabChange }: DecisionPillarP
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative text-white">
-      <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-8 z-20">
+      <header className="h-16 border-b border-slate-800 bg-[#0f172a]/50 backdrop-blur-md flex items-center justify-between px-4 sm:px-8 z-20">
         <div className="flex items-center gap-8 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 italic">
           <span className={`${pillarConfig?.color || 'text-sky-400'} border-b-2 border-${pillarColor} py-5`}>
             {pillarConfig?.name || "Simulation Décisionnelle"}
@@ -130,7 +130,7 @@ export function DecisionPillar({ user, activeTab, onTabChange }: DecisionPillarP
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-8 relative">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-8 relative">
       {view === 'list' && (
         <SimulationList
             simulations={simulations}

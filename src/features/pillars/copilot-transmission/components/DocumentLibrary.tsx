@@ -28,7 +28,7 @@ export function DocumentLibrary({
         Archives
       </h1>
       {documents.length === 0 ? (
-        <div className="bg-slate-900/40 border border-slate-800 p-12 rounded-[2rem] text-center">
+        <div className="bg-slate-900/40 border border-slate-800 p-5 sm:p-12 rounded-[2rem] text-center">
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-slate-800/50 rounded-2xl">
               <FileText size={32} className="text-slate-500" />

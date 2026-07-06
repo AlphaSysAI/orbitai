@@ -53,13 +53,13 @@ export function ChatInterface({
     doc.setFontSize(10);
     doc.setTextColor(30, 41, 59);
     doc.text(splitText, 10, 40);
-    doc.save(`OrbitAI_${Date.now()}.pdf`);
+    doc.save(`OrbitAll_${Date.now()}.pdf`);
   };
 
   const downloadLatestAnalysis = () => {
     const lastAiMessage = [...messages].reverse().find((m) => m.role === "assistant");
     if (lastAiMessage) {
-      generatePDF("Rapport OrbitAI", lastAiMessage.content);
+      generatePDF("Rapport OrbitAll", lastAiMessage.content);
     }
   };
 
@@ -107,7 +107,7 @@ export function ChatInterface({
           <ChatMessage
             key={msg.id}
             message={msg}
-            onExport={() => generatePDF("OrbitAI Report", msg.content)}
+            onExport={() => generatePDF("OrbitAll Report", msg.content)}
             userId={userId}
             threadId={threadId}
           />
@@ -119,7 +119,7 @@ export function ChatInterface({
               <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="text-xs">OrbitAI réfléchit...</span>
+            <span className="text-xs">OrbitAll réfléchit...</span>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -268,7 +268,7 @@ function ChatMessage({
     >
       <div className="flex items-center gap-3 mb-2 px-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 italic text-white">
         <span className={isUser ? "text-blue-500" : "text-cyan-400"}>
-          {isUser ? "Operator" : "OrbitAI Core"}
+          {isUser ? "Operator" : "OrbitAll Core"}
         </span>
         {!isUser && (
           <button

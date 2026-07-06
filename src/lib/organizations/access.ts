@@ -79,3 +79,11 @@ export async function checkModuleAccess(
 export async function requireRegiaireAccess(): Promise<ModuleAccessResult> {
   return checkModuleAccess(ORG_MODULE_NAMES.REGIAIRE_CORE);
 }
+
+export async function requireArtisanAccess(): Promise<ModuleAccessResult> {
+  return checkModuleAccess(ORG_MODULE_NAMES.ARTISAN_CORE);
+}
+
+export async function requireHotelAccess(): Promise<ModuleAccessResult> {
+  return checkModuleAccess(ORG_MODULE_NAMES.HOTEL_CORE);
+}

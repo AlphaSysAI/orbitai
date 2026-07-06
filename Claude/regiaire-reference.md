@@ -1,6 +1,6 @@
-# RégiAire — Référence technique
+# Orbit Aire — Référence technique
 
-> Module `regiaire_core` — cœur métier OrbitAI. Voir aussi [architecture.md](./architecture.md).
+> Module `regiaire_core` — cœur métier OrbitAll. Voir aussi [architecture.md](./architecture.md).
 
 ---
 

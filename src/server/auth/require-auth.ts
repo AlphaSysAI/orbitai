@@ -60,6 +60,21 @@ export async function requireAuthUserFromRequest(
 }
 
 /**
+ * Garde d'authentification pour Route Handlers : retourne la réponse 401 à
+ * renvoyer si la session est absente/invalide, sinon `null` (laisser passer).
+ */
+export async function requireAuthOrResponse(
+  request: Request
+): Promise<NextResponse | null> {
+  try {
+    await requireAuthUserFromRequest(request);
+    return null;
+  } catch (error) {
+    return authErrorToResponse(error);
+  }
+}
+
+/**
  * Session Supabase optionnelle (Route Handlers) — retourne `null` si absent ou invalide.
  */
 export async function getOptionalAuthUserFromRequest(
@@ -74,7 +89,7 @@ export async function getOptionalAuthUserFromRequest(
   };
 }
 
-function timingSafeEqualStrings(a: string, b: string): boolean {
+export function timingSafeEqualStrings(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   const encoder = new TextEncoder();
   const aBytes = encoder.encode(a);
@@ -87,15 +102,11 @@ function timingSafeEqualStrings(a: string, b: string): boolean {
 }
 
 function getReviewPollingToken(): string | undefined {
-  return (
-    process.env.REVIEW_POLLING_TOKEN ??
-    process.env.OPENCLAW_VALIDATION_STATUS_TOKEN
-  );
+  return process.env.REVIEW_POLLING_TOKEN;
 }
 
 /**
  * Vérifie le token serveur pour GET /api/review/status (polling machine).
- * Fallback OPENCLAW_VALIDATION_STATUS_TOKEN — LEGACY, supprimé Phase D.
  */
 export function verifyReviewPollingToken(request: Request): boolean {
   const expected = getReviewPollingToken();
@@ -103,13 +114,6 @@ export function verifyReviewPollingToken(request: Request): boolean {
   const provided = extractBearerToken(request.headers.get("authorization"));
   if (!provided) return false;
   return timingSafeEqualStrings(provided, expected);
-}
-
-/**
- * @deprecated Utiliser verifyReviewPollingToken — LEGACY OpenClaw, supprimé Phase D.
- */
-export function verifyOpenClawValidationStatusToken(request: Request): boolean {
-  return verifyReviewPollingToken(request);
 }
 
 /**

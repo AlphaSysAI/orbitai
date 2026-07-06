@@ -7,8 +7,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Settings, Orbit, LogOut, ChevronDown, ChevronUp, ChevronRight,
-  FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap, CheckCircle2, Fuel, Shield,
-  Network, Wrench, Users,
+  FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap, CheckCircle2, Fuel,
+  Wrench, Network, Tag, CalendarCheck, CalendarRange, Users,
 } from "lucide-react";
 import { PILLARS, type PillarId } from "../types";
 import {
@@ -22,7 +22,6 @@ import { resolveSaasBrandFromModules } from "@/lib/organizations/saas-branding";
 import { SaasBrandTitle } from "@/components/branding/SaasBrandTitle";
 import { MesAiresFlyoutNav } from "@/features/regiaire/components/MesAiresFlyoutNav";
 import { useRegiaireCapabilities } from "@/features/regiaire/hooks/useRegiaireCapabilities";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useOrgRole } from "@/features/organization/hooks/useOrgRole";
 import { useUserProfile } from "@/features/organization/hooks/useUserProfile";
 import * as Icons from "lucide-react";
@@ -49,6 +48,10 @@ interface ContextualNavigationProps {
   onDashboardClick?: () => void;
   /** Modules activés pour l'organisation (multi-tenant) */
   enabledModules?: EnabledOrgModule[];
+  /** Drawer mobile ouvert (off-canvas). Ignoré dès `lg:` (sidebar statique). */
+  isOpen?: boolean;
+  /** Ferme le drawer mobile. */
+  onClose?: () => void;
 }
 
 export function ContextualNavigation({
@@ -64,20 +67,18 @@ export function ContextualNavigation({
   onThreadDelete,
   onDashboardClick,
   enabledModules = [],
+  isOpen = false,
+  onClose,
 }: ContextualNavigationProps) {
   const pathname = usePathname();
   const isStationRoute = pathname.startsWith("/station");
   const aireId = extractAireIdFromPath(pathname);
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
-  const [isAdminFlyoutOpen, setIsAdminFlyoutOpen] = useState(false);
-  const isOnAdminRoute = pathname.startsWith("/admin");
 
-  // Ferme l'accordion admin quand on quitte les routes /admin, le menu système à chaque navigation
+  // Ferme le menu système à chaque navigation.
   useEffect(() => {
-    if (!isOnAdminRoute) setIsAdminFlyoutOpen(false);
     setIsSystemMenuOpen(false);
-  }, [pathname, isOnAdminRoute]);
-  const { isAdmin } = useIsAdmin();
+  }, [pathname]);
   const { isOrgAdmin } = useOrgRole();
   const { profile: userProfile } = useUserProfile();
   const activePillarConfig = PILLARS.find((p) => p.id === activePillar);
@@ -92,6 +93,8 @@ export function ContextualNavigation({
         ? []
         : stationLinksRaw;
   const hasRegiaire = isModuleEnabled(enabledModules, "regiaire_core");
+  const hasArtisan = isModuleEnabled(enabledModules, "artisan_core");
+  const hasHotel = isModuleEnabled(enabledModules, "hotel_core");
   const saasBrand = resolveSaasBrandFromModules(enabledModules);
 
   const visiblePillars = PILLARS.filter((pillar) => {
@@ -154,15 +157,28 @@ export function ContextualNavigation({
     );
 
   return (
-    <aside className="w-72 border-r border-slate-800 bg-[#0f172a] flex flex-col z-30 shadow-2xl text-white overflow-hidden">
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] transform flex-col border-r border-slate-800 bg-[#0f172a] text-white shadow-2xl transition-transform duration-300 ease-out lg:static lg:z-30 lg:max-w-none lg:translate-x-0 ${
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      } overflow-hidden`}
+    >
       {/* Logo en haut */}
       <div className="flex items-center gap-3 p-5 border-b border-slate-800">
         <div className="bg-purple-600 p-2 rounded-lg">
           <Orbit size={20} className="text-white" />
         </div>
-        <h2 className="leading-none">
+        <h2 className="leading-none flex-1">
           <SaasBrandTitle brand={saasBrand} size="md" />
         </h2>
+        {/* Fermeture du drawer (mobile uniquement) */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fermer le menu"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-white/5 hover:text-white lg:hidden"
+        >
+          <X size={20} />
+        </button>
       </div>
 
       {/* Bouton Dashboard au-dessus des Piliers */}
@@ -262,7 +278,7 @@ export function ContextualNavigation({
         </div>
       </div>
 
-      {/* RégiAire — liens filtrés par module org */}
+      {/* Orbit Aire — liens filtrés par module org */}
       {hasRegiaire && (
         <div className="border-b border-slate-800 bg-slate-900/30 p-3 flex-shrink-0">
           <p className="text-[8px] font-black uppercase tracking-[0.3em] mb-3 px-2 flex items-center gap-2 text-slate-500">
@@ -290,6 +306,138 @@ export function ContextualNavigation({
                 </Link>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {hasHotel && (
+        <div className="border-b border-slate-800 bg-slate-900/30 p-3 flex-shrink-0">
+          <p className="text-[8px] font-black uppercase tracking-[0.3em] mb-3 px-2 flex items-center gap-2 text-slate-500">
+            <Network size={10} className="text-sky-500" />
+            Orbit Hôtel
+          </p>
+          <div className="flex flex-col gap-2">
+            <Link
+              href="/hotel/planning"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname.startsWith("/hotel/planning")
+                  ? "bg-sky-600/20 border border-sky-500/40 text-sky-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <CalendarRange size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Planning</span>
+            </Link>
+            <Link
+              href="/hotel/reservations"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname === "/hotel/reservations" || pathname.match(/^\/hotel\/reservations\/[^/]+$/)
+                  ? "bg-sky-600/20 border border-sky-500/40 text-sky-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <CalendarCheck size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Réservations</span>
+            </Link>
+            <Link
+              href="/hotel"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname === "/hotel"
+                  ? "bg-sky-600/20 border border-sky-500/40 text-sky-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <Network size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Inventaire</span>
+            </Link>
+            <Link
+              href="/hotel/tarifs"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname.startsWith("/hotel/tarifs")
+                  ? "bg-sky-600/20 border border-sky-500/40 text-sky-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <Tag size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Tarifs</span>
+            </Link>
+            <Link
+              href="/hotel/factures"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname.startsWith("/hotel/factures")
+                  ? "bg-sky-600/20 border border-sky-500/40 text-sky-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <FileText size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Factures</span>
+            </Link>
+            <Link
+              href="/hotel/reglages"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname.startsWith("/hotel/reglages")
+                  ? "bg-sky-600/20 border border-sky-500/40 text-sky-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <Settings size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Réglages</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {hasArtisan && (
+        <div className="border-b border-slate-800 bg-slate-900/30 p-3 flex-shrink-0">
+          <p className="text-[8px] font-black uppercase tracking-[0.3em] mb-3 px-2 flex items-center gap-2 text-slate-500">
+            <Wrench size={10} className="text-orange-500" />
+            Orbit Artisan
+          </p>
+          <div className="flex flex-col gap-2">
+            <Link
+              href="/artisan"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname === "/artisan"
+                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <Wrench size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Devis IA</span>
+            </Link>
+            <Link
+              href="/artisan/contacts"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname.startsWith("/artisan/contacts")
+                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <Users size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Contacts</span>
+            </Link>
+            <Link
+              href="/artisan/factures"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname.startsWith("/artisan/factures")
+                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <FileText size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Factures</span>
+            </Link>
+            <Link
+              href="/artisan/reglages"
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+                pathname.startsWith("/artisan/reglages")
+                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-400"
+                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              }`}
+            >
+              <Settings size={18} />
+              <span className="text-[9px] font-bold uppercase tracking-wider">Réglages</span>
+            </Link>
           </div>
         </div>
       )}
@@ -382,89 +530,6 @@ export function ContextualNavigation({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto scrollbar-hide"></div>
-      )}
-
-      {/* Administration (admins uniquement) — accordion SaaS par clic */}
-      {isAdmin && (
-        <div className="border-b border-slate-800 p-3 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsAdminFlyoutOpen((v) => !v)}
-            className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
-              isOnAdminRoute
-                ? "bg-violet-600/15 border border-violet-500/30 text-violet-400"
-                : "text-slate-400 hover:bg-violet-600/10 hover:text-violet-300"
-            }`}
-          >
-            <Shield size={18} />
-            <span className="text-[9px] font-bold uppercase tracking-wider flex-1 text-left">Administration</span>
-            {isAdminFlyoutOpen || isOnAdminRoute
-              ? <ChevronUp size={13} className="opacity-50" />
-              : <ChevronDown size={13} className="opacity-50" />
-            }
-          </button>
-
-          {/* SaaS list — visible au survol ou quand on est sur /admin */}
-          {(isAdminFlyoutOpen || isOnAdminRoute) && (
-            <div className="mt-2 flex flex-col gap-1 pl-2">
-              <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] px-2 pt-1 pb-0.5">
-                SaaS
-              </p>
-              <Link
-                href="/admin"
-                className={`flex items-center gap-3 p-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${
-                  isOnAdminRoute
-                    ? "bg-violet-600/20 text-violet-300"
-                    : "text-slate-500 hover:bg-slate-800 hover:text-slate-200"
-                }`}
-              >
-                <Fuel size={14} className="text-amber-400" />
-                RégiAire
-              </Link>
-              <div className="flex items-center gap-3 p-2 rounded-xl opacity-35 cursor-not-allowed">
-                <Network size={14} className="text-blue-400" />
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">NodAll</span>
-                <span className="ml-auto text-[8px] text-slate-600 font-bold uppercase">Bientôt</span>
-              </div>
-              <div className="flex items-center gap-3 p-2 rounded-xl opacity-35 cursor-not-allowed">
-                <Wrench size={14} className="text-orange-400" />
-                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">AlphArtisan</span>
-                <span className="ml-auto text-[8px] text-slate-600 font-bold uppercase">Bientôt</span>
-              </div>
-
-              {/* Sub-nav quand on est sur /admin/* */}
-              {isOnAdminRoute && (
-                <>
-                  <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] px-2 pt-2 pb-0.5">
-                    Pages
-                  </p>
-                  <Link
-                    href="/admin"
-                    className={`flex items-center gap-3 p-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${
-                      pathname === "/admin"
-                        ? "bg-violet-600/20 text-violet-300"
-                        : "text-slate-500 hover:bg-slate-800 hover:text-slate-200"
-                    }`}
-                  >
-                    <Users size={14} />
-                    Clients
-                  </Link>
-                  <Link
-                    href="/admin/bison-fute"
-                    className={`flex items-center gap-3 p-2 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all ${
-                      pathname.startsWith("/admin/bison-fute")
-                        ? "bg-violet-600/20 text-violet-300"
-                        : "text-slate-500 hover:bg-slate-800 hover:text-slate-200"
-                    }`}
-                  >
-                    <Zap size={14} />
-                    Bison Futé
-                  </Link>
-                </>
-              )}
-            </div>
-          )}
-        </div>
       )}
 
       {/* Menu système (Dashboard/Réglages) */}

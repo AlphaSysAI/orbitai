@@ -176,7 +176,7 @@ export function OrganizationSettingsPanel() {
         </p>
       )}
 
-      <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8">
+      <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-4 sm:p-8">
         <h2 className="text-lg font-bold text-white">Profil entreprise</h2>
         <p className="mt-1 text-sm text-slate-400">
           Informations de votre organisation.
@@ -238,7 +238,7 @@ export function OrganizationSettingsPanel() {
         </form>
       </section>
 
-      <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8">
+      <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-4 sm:p-8">
         <h2 className="flex items-center gap-2 text-lg font-bold text-white">
           <Truck size={20} className="text-amber-400" />
           Fournisseurs
@@ -294,7 +294,7 @@ export function OrganizationSettingsPanel() {
         )}
       </section>
 
-      <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-8">
+      <section className="rounded-[2rem] border border-slate-800/50 bg-slate-900/40 p-4 sm:p-8">
         <div className="flex items-center gap-3">
           <Users className="text-purple-400" size={22} />
           <div>

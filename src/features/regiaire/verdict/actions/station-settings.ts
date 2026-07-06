@@ -45,7 +45,7 @@ export async function upsertStationSettings(
   return {
     success: false,
     error:
-      "La configuration des aires est gérée par OrbitAI. Contactez votre administrateur.",
+      "La configuration des aires est gérée par OrbitAll. Contactez votre administrateur.",
     code: "forbidden",
   };
 }

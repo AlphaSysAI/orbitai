@@ -31,14 +31,14 @@ const createClientSchema = z
     if (hasRegiaire && aireCount === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Au moins une aire est requise lorsque RégiAire est activé.",
+        message: "Au moins une aire est requise lorsque Orbit Aire est activé.",
         path: ["aires"],
       });
     }
     if (!hasRegiaire && aireCount > 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Les aires ne sont autorisées qu'avec le module RégiAire.",
+        message: "Les aires ne sont autorisées qu'avec le module Orbit Aire.",
         path: ["aires"],
       });
     }

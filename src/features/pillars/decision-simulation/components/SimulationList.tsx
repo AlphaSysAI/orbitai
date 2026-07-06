@@ -203,7 +203,7 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
       });
     }
 
-    doc.save(`OrbitAI_Rapport_${sim.title.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.pdf`);
+    doc.save(`OrbitAll_Rapport_${sim.title.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.pdf`);
   };
 
   const handleExportClick = (sim: DecisionSimulation, e: React.MouseEvent) => {
@@ -213,7 +213,7 @@ export function SimulationList({ simulations, activeId, onSelect, onDelete }: Si
   return (
     <div className="max-w-4xl mx-auto py-10 animate-in fade-in duration-500 text-white">
       {simulations.length === 0 ? (
-        <div className="bg-slate-900/40 border border-slate-800 p-12 rounded-[2rem] text-center">
+        <div className="bg-slate-900/40 border border-slate-800 p-5 sm:p-12 rounded-[2rem] text-center">
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-slate-800/50 rounded-2xl">
               <Brain size={32} className="text-slate-500" />

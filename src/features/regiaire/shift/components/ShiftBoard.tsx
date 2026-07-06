@@ -3,10 +3,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Loader2, Lock } from "lucide-react";
+import { CheckCircle2, CloudOff, Loader2, Lock } from "lucide-react";
 
 import { useRegiaireAireId } from "@/features/regiaire/hooks/useRegiaireAireId";
 import { useRegiaireOrg } from "@/features/regiaire/reception/hooks/useRegiaireOrg";
+import {
+  enqueueOfflineAction,
+  flushOfflineQueue,
+  isNetworkError,
+  readOfflineQueue,
+  type OfflineAction,
+} from "@/features/regiaire/lib/offline-queue";
 import {
   closeShift,
   getCurrentServiceContext,
@@ -37,6 +44,8 @@ export function ShiftBoard() {
     completion_pct: number;
     missing_labels: string[];
   } | null>(null);
+  // Actions en attente de réseau (zone blanche) — cf. offline-queue.ts
+  const [pendingCount, setPendingCount] = useState(0);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -75,25 +84,45 @@ export function ShiftBoard() {
     void load();
   }, [load]);
 
-  const handleToggle = async (taskDefId: string, checked: boolean) => {
-    if (!data || data.isClosed) return;
-    setTogglingId(taskDefId);
-
-    const result = await toggleTaskCheck(
-      aireId,
-      data.shift,
-      data.service_date,
-      taskDefId,
-      checked
-    );
-
-    setTogglingId(null);
-
-    if (!result.success) {
-      setError(result.error);
+  // Rejoue les actions en attente (zone blanche) au montage et à chaque
+  // retour de la connexion, puis recharge l'état serveur.
+  const flushPending = useCallback(async () => {
+    if (readOfflineQueue().length === 0) {
+      setPendingCount(0);
       return;
     }
+    const result = await flushOfflineQueue({
+      toggle_task: (a: OfflineAction) =>
+        toggleTaskCheck(
+          a.aireId,
+          a.payload.shift as Parameters<typeof toggleTaskCheck>[1],
+          a.payload.service_date as string,
+          a.payload.taskDefId as string,
+          a.payload.checked as boolean
+        ),
+      close_shift: (a: OfflineAction) =>
+        closeShift(
+          a.aireId,
+          a.payload.shift as Parameters<typeof closeShift>[1],
+          a.payload.service_date as string,
+          (a.payload.note as string | null) ?? null
+        ),
+    });
+    setPendingCount(result.remaining);
+    if (result.replayed > 0) {
+      await load();
+    }
+  }, [load]);
 
+  useEffect(() => {
+    setPendingCount(readOfflineQueue().length);
+    void flushPending();
+    const onOnline = () => void flushPending();
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [flushPending]);
+
+  const applyLocalToggle = (taskDefId: string, checked: boolean) => {
     setData((prev) => {
       if (!prev) return prev;
       return {
@@ -107,24 +136,87 @@ export function ShiftBoard() {
     });
   };
 
+  const handleToggle = async (taskDefId: string, checked: boolean) => {
+    if (!data || data.isClosed) return;
+    setTogglingId(taskDefId);
+
+    try {
+      const result = await toggleTaskCheck(
+        aireId,
+        data.shift,
+        data.service_date,
+        taskDefId,
+        checked
+      );
+
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      applyLocalToggle(taskDefId, checked);
+    } catch (err) {
+      if (!isNetworkError(err)) throw err;
+      // Zone blanche : on garde l'état localement, synchronisation au retour réseau.
+      const count = enqueueOfflineAction(
+        {
+          type: "toggle_task",
+          aireId,
+          payload: {
+            shift: data.shift,
+            service_date: data.service_date,
+            taskDefId,
+            checked,
+          },
+        },
+        (a) => a.type === "toggle_task" && a.payload.taskDefId === taskDefId
+      );
+      setPendingCount(count);
+      applyLocalToggle(taskDefId, checked);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const handleClose = async () => {
     if (!data || data.isClosed) return;
     setIsClosing(true);
     setError(null);
 
-    const result = await closeShift(aireId, data.shift, data.service_date, note || null);
-    setIsClosing(false);
+    try {
+      const result = await closeShift(aireId, data.shift, data.service_date, note || null);
 
-    if (!result.success) {
-      setError(result.error);
-      return;
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      setCloseResult({
+        completion_pct: result.data.closure.completion_pct,
+        missing_labels: result.data.closure.missing_labels,
+      });
+      await load();
+    } catch (err) {
+      if (!isNetworkError(err)) throw err;
+      // Zone blanche : la clôture est mise en attente et rejouée à la reconnexion.
+      const count = enqueueOfflineAction(
+        {
+          type: "close_shift",
+          aireId,
+          payload: {
+            shift: data.shift,
+            service_date: data.service_date,
+            note: note || null,
+          },
+        },
+        (a) =>
+          a.type === "close_shift" &&
+          a.payload.shift === data.shift &&
+          a.payload.service_date === data.service_date
+      );
+      setPendingCount(count);
+    } finally {
+      setIsClosing(false);
     }
-
-    setCloseResult({
-      completion_pct: result.data.closure.completion_pct,
-      missing_labels: result.data.closure.missing_labels,
-    });
-    await load();
   };
 
   if (isLoading) {
@@ -224,6 +316,15 @@ export function ShiftBoard() {
       {error && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/8 px-4 py-3 text-sm text-red-300">
           {error}
+        </p>
+      )}
+
+      {pendingCount > 0 && (
+        <p className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          <CloudOff size={16} className="shrink-0" />
+          {pendingCount === 1
+            ? "1 action en attente de réseau — synchronisation automatique au retour de la connexion."
+            : `${pendingCount} actions en attente de réseau — synchronisation automatique au retour de la connexion.`}
         </p>
       )}
 

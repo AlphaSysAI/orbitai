@@ -203,7 +203,7 @@ export function ConversationGuide({
       });
     }
 
-    doc.save(`OrbitAI_Rapport_${simulationTitle.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.pdf`);
+    doc.save(`OrbitAll_Rapport_${simulationTitle.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.pdf`);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -227,7 +227,7 @@ export function ConversationGuide({
               <span className={`text-xs font-bold uppercase tracking-wider ${
                 msg.role === 'user' ? 'text-blue-400' : 'text-sky-400'
               }`}>
-                {msg.role === 'user' ? 'Vous' : 'OrbitAI'}
+                {msg.role === 'user' ? 'Vous' : 'OrbitAll'}
               </span>
             </div>
             <div
@@ -250,7 +250,7 @@ export function ConversationGuide({
               <div className="w-2 h-2 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
               <div className="w-2 h-2 bg-sky-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
-            <span className="text-xs">OrbitAI réfléchit...</span>
+            <span className="text-xs">OrbitAll réfléchit...</span>
           </div>
         )}
         <div ref={messagesEndRef} />

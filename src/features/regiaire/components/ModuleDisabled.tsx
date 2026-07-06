@@ -7,7 +7,7 @@ type ModuleDisabledProps = {
   moduleLabel?: string;
 };
 
-export function ModuleDisabled({ moduleLabel = "RégiAire" }: ModuleDisabledProps) {
+export function ModuleDisabled({ moduleLabel = "Orbit Aire" }: ModuleDisabledProps) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#020617] px-6 text-center text-slate-200">
       <div className="mb-6 rounded-2xl bg-amber-600/10 p-4">

@@ -149,7 +149,7 @@ Cette page vérifiera automatiquement le statut du tracking.`;
 Ce script va :
 • Installer les dépendances Python nécessaires
 • Collecter des données sur votre activité (fenêtres, applications, emails)
-• Envoyer ces données à OrbitAI pour détecter les tâches grises
+• Envoyer ces données à OrbitAll pour détecter les tâches grises
 
 ⚠️ IMPORTANT : Vous devrez donner les permissions nécessaires à votre système.
 

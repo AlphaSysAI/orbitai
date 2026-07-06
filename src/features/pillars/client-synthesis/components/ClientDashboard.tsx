@@ -198,7 +198,7 @@ export function ClientDashboard({
 
       {/* ── Pas encore connecté ── */}
       {!reviewSyncConnected && totalFeedback === 0 && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-12 text-center">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-5 sm:p-12 text-center">
           <Settings size={40} className="mx-auto mb-4 text-slate-600" />
           <h3 className="text-lg font-bold text-white mb-2">Aucune donnée</h3>
           <p className="text-sm text-slate-400 max-w-sm mx-auto">

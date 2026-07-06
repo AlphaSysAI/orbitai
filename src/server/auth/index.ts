@@ -27,7 +27,6 @@ export {
   requireAuthUserFromRequest,
   getOptionalAuthUserFromRequest,
   verifyReviewPollingToken,
-  verifyOpenClawValidationStatusToken,
   unauthorizedResponse,
   forbiddenResponse,
   authErrorToResponse,

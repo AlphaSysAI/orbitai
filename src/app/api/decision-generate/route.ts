@@ -4,6 +4,8 @@ import { generateObject } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 
+import { requireAuthOrResponse } from '@/server/auth/require-auth';
+
 export const runtime = 'edge';
 
 const ScenarioSchema = z.object({
@@ -40,6 +42,9 @@ const ScenariosResponseSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const denied = await requireAuthOrResponse(req);
+  if (denied) return denied;
+
   try {
     const { context, conversation } = await req.json();
 

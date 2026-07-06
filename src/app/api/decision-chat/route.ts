@@ -3,14 +3,19 @@
 import { streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
+import { requireAuthOrResponse } from '@/server/auth/require-auth';
+
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
+  const denied = await requireAuthOrResponse(req);
+  if (denied) return denied;
+
   try {
     const { conversation, context, simulationId } = await req.json();
 
     // Construire le prompt système pour guider la conversation
-    const systemPrompt = `Tu es OrbitAI, un expert en simulation décisionnelle et stratégie d'entreprise.
+    const systemPrompt = `Tu es OrbitAll, un expert en simulation décisionnelle et stratégie d'entreprise.
 
 Ton rôle est de :
 1. **Poser des questions pertinentes** pour comprendre le contexte de la décision
