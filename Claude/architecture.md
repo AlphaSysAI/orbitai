@@ -1,6 +1,8 @@
 # OrbitAll — Architecture technique
 
-> Document de référence pour développeurs et assistants IA. Dernière révision : juin 2026.
+> Document de référence pour développeurs et assistants IA.
+>
+> Ce document détaille surtout **Orbit Aire** (`regiaire_core`), le vertical le plus abouti et le patron de référence. Les verticals **Orbit Artisan** (`src/features/artisan/`), **Orbit Hôtel** (`src/features/hotel/`) et le **serveur vocal IA** (`src/features/voice/`, ElevenLabs) suivent les mêmes principes (Server Actions, Supabase RLS, Zod) mais ne sont pas encore détaillés ici. Résumé produit à jour : [`README.md`](./README.md).
 
 ---
 
@@ -70,11 +72,20 @@ organization_modules.module_name :
 
 ### Rôles
 
+Contrainte `organization_members_role_check` (migration 031) :
+
 | Rôle | Périmètre |
 |------|-----------|
 | `owner` / `admin` org | Réglages org, membres, délais fournisseurs |
-| `member` | Opérations Orbit Aire sur les aires de l’org |
+| `member` | Opérations sur les aires de l’org |
+| `direction_france` | Sommet hiérarchie d'enseigne |
+| `directeur_region` | Périmètre régional |
+| `chef_secteur` | Secteur (ensemble d'aires) — cache `secteur_overview` |
+| `gerant` | Aires rattachées (migration 030) |
+| `employe` | Membre d'aire (`aire_team_members`, migration 032) |
 | Admin plateforme | `ORBIT_ADMIN_EMAILS` → `/admin`, service_role pour Bison Futé |
+
+Hiérarchie d'enseigne introduite par la migration 029 (`org_hierarchy`).
 
 ---
 
@@ -101,17 +112,23 @@ src/app/
 ├── (dashboard)/
 │   ├── layout.tsx                # DashboardShell + navigation
 │   ├── page.tsx                  # Piliers add-on + GlobalDashboard Orbit Aire
-│   └── station/
-│       ├── page.tsx              # Liste aires / redirect
-│       └── [aireId]/
-│           ├── layout.tsx        # Header station, nav Orbit Aire
-│           ├── dashboard/
-│           ├── deliveries/       # + new, [id]/scan
-│           ├── equipe/           # + config, historique
-│           └── verdict/
-└── admin/
-    ├── page.tsx                  # Clients
-    └── bison-fute/             # Calendrier Bison Futé plateforme
+│   ├── station/
+│   │   ├── page.tsx              # Liste aires / redirect
+│   │   ├── aires/
+│   │   └── [aireId]/
+│   │       ├── layout.tsx        # Header station, nav Orbit Aire
+│   │       ├── dashboard/
+│   │       ├── deliveries/       # + new, [id]/scan
+│   │       ├── equipe/           # + config, employes, historique
+│   │       └── verdict/
+│   ├── artisan/                  # Orbit Artisan : contacts, devis, factures, reglages
+│   ├── hotel/                    # Orbit Hôtel : reservations, planning, tarifs, factures
+│   ├── region/chef/             # Vue hiérarchie enseigne (chef de secteur)
+│   └── admin/
+│       ├── bison-fute/          # Calendrier Bison Futé plateforme
+│       ├── orbit-aire/[orgId]/
+│       ├── orbit-artisan/
+│       └── orbit-hotel/
 ```
 
 Navigation Orbit Aire : `src/lib/organizations/navigation.ts` → `buildStationNavLinks(aireId)`.
@@ -147,9 +164,11 @@ Chaîne d’accès :
 | Fichier | Rôle |
 |---------|------|
 | `database/init.sql` | Schéma complet idempotent |
-| `database/migrations/001–027` | Historique incrémental |
-| `database/seeds/013–017` | Données démo |
+| `database/migrations/001–045` | Historique incrémental |
+| `database/seeds/013–017` | Données démo (Orbit Aire) |
 | `src/types/database.types.ts` | Types TypeScript tables Supabase |
+
+Jalons hors Orbit Aire : `028` inbound email BL · `029–032` hiérarchie org / gérant / rôles / équipe d'aire · `033` durcissement RLS · `034` cache secteur · `035`,`045` Orbit Artisan · `036` modules par aire · `037–043` Orbit Hôtel · `044` voice IA.
 
 ### Migrations Orbit Aire (ordre logique)
 
@@ -194,21 +213,25 @@ Politiques `regiaire_*` : accès via `is_org_member(organization_id)`. Les écri
 
 ```
 features/
-├── regiaire/              # CŒUR MÉTIER
+├── regiaire/              # Orbit Aire (vertical le plus abouti)
 │   ├── aires/             # CRUD aires, autocomplete adresse
 │   ├── reception/         # BL, scan, finalize, stock
-│   ├── shift/             # Passation équipe
+│   ├── inbound/           # Réception BL par email (migration 028)
+│   ├── shift/ + team/     # Passation équipe, membres d'aire
 │   ├── verdict/           # Signaux, IA, réappro, périmés
-│   ├── organization/      # (via features/organization)
+│   ├── direction/ region/ sector-manager/ gerant/  # Hiérarchie enseigne
 │   └── lib/demo-aire.ts
+├── artisan/               # Orbit Artisan : quotes, invoices, contacts, services
+├── hotel/                 # Orbit Hôtel : reservations, planning, rates, billing, inventory
+├── voice/                 # Serveur vocal IA (ElevenLabs), outils hôtel
 ├── organization/          # Profil org, membres, fournisseurs
-├── admin/                 # Provisioning clients, Bison Futé admin
-└── pillars/               # ADD-ONS (5 piliers)
+├── admin/                 # Provisioning clients, modules par aire, Bison Futé admin
+└── pillars/               # ADD-ONS IA transverses
     ├── copilot-transmission/
     ├── detection-automation/
     ├── decision-simulation/
     ├── client-synthesis/
-    └── emotional-ai/
+    └── emotional-ai/      # placeholder (hors catalogue)
 ```
 
 Chaque domaine Orbit Aire suit le pattern :
@@ -281,7 +304,10 @@ Principales routes hors Server Actions :
 | `/api/track-activity` | Automatisation |
 | `/api/review/*` | AI Review Engine |
 | `/api/admin/clients` | Provisioning |
+| `/api/admin/aire-modules` | Activation modules par aire |
 | `/api/regiaire/address-search` | BAN adresses aires |
+| `/api/regiaire/inbound-bl` | Réception BL par email (webhook) |
+| `/api/voice/hotel` | Serveur vocal IA — outils hôtel |
 
 Orbit Aire métier : **Server Actions** prioritairement (pas REST public).
 

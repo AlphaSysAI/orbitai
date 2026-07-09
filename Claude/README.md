@@ -13,9 +13,11 @@ Le positionnement actuel n’est plus « 5 piliers IA » comme cœur produit, ma
 
 | Priorité | Module BDD | Marque UI | Statut |
 |----------|------------|-----------|--------|
-| **Cœur actuel** | `regiaire_core` | **Orbit Aire** | ✅ Implémenté et maintenu |
-| Roadmap | `artisan_core` | **Orbit Artisan** | Catalogue / branding prêt, pas de code métier |
-| Roadmap | `hotel_core` | **Orbit Hôtel** | Catalogue / branding prêt, pas de code métier |
+| **Cœur actuel** | `regiaire_core` | **Orbit Aire** | ✅ Implémenté et maintenu (le plus abouti) |
+| Actif | `artisan_core` | **Orbit Artisan** | ✅ Implémenté — devis/factures IA, contacts, services |
+| Actif | `hotel_core` | **Orbit Hôtel** | ✅ Implémenté — réservations, planning, tarifs, facturation, inventaire |
+
+Un **serveur vocal IA** (ElevenLabs, `src/features/voice/`) complète les verticals (outils hôtel branchés).
 
 Les **5 piliers** restent disponibles comme **add-ons** activables par organisation :
 
@@ -34,8 +36,9 @@ Les **5 piliers** restent disponibles comme **add-ons** activables par organisat
 ### Plateforme
 
 - Auth **Supabase** (email / mot de passe), session cookies.
-- **Multi-tenant** : une organisation → plusieurs membres (owner / admin / member) → modules activés à la carte.
-- **Admin plateforme** (`ORBIT_ADMIN_EMAILS`) : provisionnement clients, gestion aires, calendrier Bison Futé.
+- **Multi-tenant** : une organisation → plusieurs membres → modules activés à la carte.
+- **Hiérarchie d'enseigne** : rôles `owner` / `admin` / `member` + `direction_france` / `directeur_region` / `chef_secteur` / `gerant` / `employe` (membres d'aire).
+- **Admin plateforme** (`ORBIT_ADMIN_EMAILS`) : provisionnement clients, gestion aires, activation de modules par aire, calendrier Bison Futé.
 - Dashboard global `(dashboard)/` : shell navigation + add-ons piliers + entrée Orbit Aire.
 
 ### Orbit Aire (cœur métier)
@@ -52,6 +55,14 @@ Gestion opérationnelle de **stations-service** (aires autoroutières), multi-si
 | **Périmés** | Alertes lots J+0 à J+3 depuis stock réel |
 
 Routing : `/station/[aireId]/…` (Accueil, Réceptions, Équipe, Verdict).
+
+### Orbit Artisan (`artisan_core`)
+
+Devis et factures boostés à l'IA (`src/features/artisan/`) : gestion des contacts, catalogue de services, brouillon de devis généré depuis une demande client, édition/validation par l'artisan, factures, génération PDF. Routing : `/artisan/{contacts,devis,factures,reglages}`.
+
+### Orbit Hôtel (`hotel_core`)
+
+Orchestration hôtelière (`src/features/hotel/`) : réservations, planning, plans tarifaires, facturation, inventaire (avec RPC de réservation atomique). Routing : `/hotel/{reservations,planning,tarifs,factures,reglages}`. Serveur vocal IA (`src/features/voice/hotel/`) branché sur les outils hôtel.
 
 ### Add-ons (piliers)
 
@@ -117,14 +128,17 @@ Constantes code : `src/features/regiaire/lib/demo-aire.ts`.
 |---------|---------|
 | [architecture.md](./architecture.md) | Architecture technique complète |
 | [regiaire-reference.md](./regiaire-reference.md) | Orbit Aire : routes, actions, BDD, seeds |
+| [orbit-voice-elevenlabs.md](./orbit-voice-elevenlabs.md) | Serveur vocal IA (ElevenLabs) |
 | [cowork-integration.md](./cowork-integration.md) | Notes pour Claude Cowork et assistants |
 
 ---
 
 ## Roadmap produit (orientation)
 
+Les trois verticals sont désormais **implémentés** ; la roadmap porte sur leur approfondissement :
+
 1. **Orbit Aire** — Verdict v2 étape B (UI réappro + narration), flux POS réels, suivi commandes.
-2. **Orbit Artisan** — vertical métier artisan (devis, chantiers, planning).
-3. **Orbit Hôtel** — vertical hôtelier (réservations, housekeeping, réception).
+2. **Orbit Artisan** — enrichissement devis/chantiers/planning, entrée vocale de la demande client.
+3. **Orbit Hôtel** — serveur vocal IA de bout en bout (réservation → commande en chambre).
 
 Les add-ons piliers restent maintenus mais ne pilotent plus la roadmap.
