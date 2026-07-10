@@ -3,11 +3,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateObject } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
+
+import { getModel, aiTimeoutSignal } from '@/lib/ai/model';
+import {
+  enforceAiRateLimitForRequest,
+  AiRateLimitError,
+  AI_RATE_LIMITS,
+} from '@/lib/ai/rate-limit-request';
 
 // Edge runtime désactivé car il peut causer des problèmes avec Supabase et les variables d'environnement
 // export const runtime = 'edge';
+export const maxDuration = 60;
 
 // Schémas pour l'analyse structurée
 const WeaknessSchema = z.object({
@@ -93,6 +100,11 @@ export async function POST(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: "UserId manquant" }, { status: 400 });
     }
+
+    await enforceAiRateLimitForRequest(req, 'client-feedback-analyze', {
+      rule: AI_RATE_LIMITS.heavy,
+      identifier: typeof userId === 'string' ? userId : undefined,
+    });
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: "Clé API manquante" }, { status: 500 });
@@ -315,11 +327,12 @@ IMPORTANT : Réponds UNIQUEMENT en français. Tous les titres, descriptions, rec
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
           const result = await generateObject({
-            model: openai('gpt-4o'),
+            model: getModel(),
             schema: AnalysisResultSchema,
             prompt,
             temperature: 0.3,
             maxOutputTokens: 4000, // Limiter les tokens de sortie aussi
+            abortSignal: aiTimeoutSignal(),
           });
           return result;
         } catch (error: any) {
@@ -424,10 +437,17 @@ IMPORTANT : Réponds UNIQUEMENT en français. Tous les titres, descriptions, rec
       message: "Analyse marketing/com générée avec succès",
     });
   } catch (error: any) {
+    // Rate-limit applicatif (quota OrbitAll) : 429 explicite.
+    if (error instanceof AiRateLimitError) {
+      return NextResponse.json({ error: error.message }, {
+        status: 429,
+        headers: { 'Retry-After': String(error.retryAfterSeconds) },
+      });
+    }
     console.error("❌ ERREUR ANALYSE MARKETING:", error);
-    
-    // Gestion spécifique des rate limits avec message en français
-    const isRateLimit = error.message?.includes('Rate limit') || 
+
+    // Gestion spécifique des rate limits OpenAI avec message en français
+    const isRateLimit = error.message?.includes('Rate limit') ||
                        error.message?.includes('rate limit') ||
                        error.message?.includes('rate_limit') ||
                        error.statusCode === 429;

@@ -3,10 +3,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+
+import { getModel, aiTimeoutSignal } from '@/lib/ai/model';
+import {
+  enforceAiRateLimitForRequest,
+  AiRateLimitError,
+  AI_RATE_LIMITS,
+} from '@/lib/ai/rate-limit-request';
 
 // Edge runtime désactivé car il peut causer des problèmes avec les variables d'environnement et Supabase
 // export const runtime = 'edge';
+export const maxDuration = 60;
 
 // Helper pour obtenir un client Supabase avec SERVICE_ROLE_KEY (contourne RLS)
 function getSupabase() {
@@ -26,6 +33,11 @@ export async function POST(req: Request) {
     if (!userId || !sourceType || !items || !Array.isArray(items)) {
       return NextResponse.json({ error: "Données manquantes" }, { status: 400 });
     }
+
+    await enforceAiRateLimitForRequest(req, 'client-feedback-import', {
+      rule: AI_RATE_LIMITS.heavy,
+      identifier: typeof userId === 'string' ? userId : undefined,
+    });
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: "Clé API manquante" }, { status: 500 });
@@ -159,7 +171,7 @@ Réponds UNIQUEMENT avec un JSON valide :
 
         try {
           const result = await generateText({
-            model: openai('gpt-4o'),
+            model: getModel(),
             messages: [
               {
                 role: 'system',
@@ -168,6 +180,7 @@ Réponds UNIQUEMENT avec un JSON valide :
               { role: 'user', content: extractionPrompt },
             ],
             temperature: 0.2,
+            abortSignal: aiTimeoutSignal(),
           });
 
           const jsonMatch = result.text.match(/\{[\s\S]*\}/);
@@ -280,9 +293,15 @@ Réponds UNIQUEMENT avec un JSON valide :
       message,
     });
   } catch (error: any) {
+    if (error instanceof AiRateLimitError) {
+      return NextResponse.json({ error: error.message }, {
+        status: 429,
+        headers: { 'Retry-After': String(error.retryAfterSeconds) },
+      });
+    }
     console.error("❌ ERREUR IMPORT FEEDBACK:", error);
     console.error("❌ Stack:", error.stack);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: error.message || "Erreur lors de l'import",
       debug: {
         message: error.message,

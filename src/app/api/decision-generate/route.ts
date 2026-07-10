@@ -1,12 +1,18 @@
 // Copyright © 2026 OrbitSys. Tous droits réservés.
 
 import { generateObject } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import { z } from 'zod';
 
+import { getModel, aiTimeoutSignal } from '@/lib/ai/model';
+import {
+  enforceAiRateLimitForRequest,
+  AiRateLimitError,
+  AI_RATE_LIMITS,
+} from '@/lib/ai/rate-limit-request';
 import { requireAuthOrResponse } from '@/server/auth/require-auth';
 
 export const runtime = 'edge';
+export const maxDuration = 30;
 
 const ScenarioSchema = z.object({
   type: z.enum(['optimistic', 'pessimistic', 'realistic', 'worst-case', 'best-case']),
@@ -46,6 +52,8 @@ export async function POST(req: Request) {
   if (denied) return denied;
 
   try {
+    await enforceAiRateLimitForRequest(req, 'decision', { rule: AI_RATE_LIMITS.heavy });
+
     const { context, conversation } = await req.json();
 
     // Préparer le résumé des documents
@@ -69,8 +77,9 @@ ${documentsSummary}
 `;
 
     const { object } = await generateObject({
-      model: openai('gpt-4o'),
+      model: getModel(),
       schema: ScenariosResponseSchema,
+      abortSignal: aiTimeoutSignal(),
       prompt: `Tu es un expert en simulation décisionnelle. 
 
 Basé sur cette conversation et ce contexte :
@@ -102,6 +111,12 @@ Génère aussi un résumé global et une recommandation finale.`,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
+    if (error instanceof AiRateLimitError) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 429,
+        headers: { 'Retry-After': String(error.retryAfterSeconds) },
+      });
+    }
     console.error("❌ ERREUR GÉNÉRATION SCÉNARIOS:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }

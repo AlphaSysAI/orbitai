@@ -18,6 +18,11 @@ import {
   REGIAIRE_BL_BUCKET,
 } from "@/lib/regiaire/constants";
 import {
+  enforceAiRateLimit,
+  AI_RATE_LIMITS,
+  AiRateLimitError,
+} from "@/lib/ai/rate-limit";
+import {
   RegiaireContextError,
   requireRegiaireContext,
 } from "@/lib/regiaire/require-context";
@@ -60,6 +65,9 @@ export async function analyzeBL(
     if (file.size > MAX_BL_BYTES) {
       return { success: false, error: "Fichier trop volumineux (max 10 Mo)" };
     }
+
+    // Garde-fou budgétaire/DoS avant l'extraction IA (par utilisateur).
+    await enforceAiRateLimit(ctx.db, "bl", ctx.userId, AI_RATE_LIMITS.bl);
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const extraction = await parseBlDocument(buffer, file.type, file.name);
@@ -153,9 +161,13 @@ export async function analyzeBL(
 
     return { success: true, data: result };
   } catch (error) {
+    if (error instanceof AiRateLimitError) {
+      return { success: false, error: error.message, code: "rate_limited" };
+    }
     if (error instanceof RegiaireContextError) {
       return { success: false, error: error.message, code: error.code };
     }
+    console.error("[analyzeBL] échec analyse BL:", error);
     const message =
       error instanceof Error ? error.message : "Erreur lors de l'analyse du BL";
     return { success: false, error: message };

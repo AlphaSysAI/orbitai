@@ -3,8 +3,13 @@
 "use server";
 
 import { generateObject } from "ai";
-import { openai } from "@ai-sdk/openai";
 
+import { getModel, aiTimeoutSignal } from "@/lib/ai/model";
+import {
+  enforceAiRateLimit,
+  AI_RATE_LIMITS,
+  AiRateLimitError,
+} from "@/lib/ai/rate-limit";
 import {
   IsoDateSchema,
   VerdictRecommendationSchema,
@@ -175,6 +180,88 @@ async function findCachedVerdict(
   return mapVerdictRunRow(data);
 }
 
+type RegiaireCtx = Awaited<ReturnType<typeof requireRegiaireContext>>;
+
+/**
+ * Déduplication anti-« thundering herd » : coalesce les calculs concurrents du
+ * même verdict (même aire + date) au sein d'une instance serverless, pour éviter
+ * des appels GPT-4o payants en double. La contrainte d'unicité de `verdict_runs`
+ * couvre en complément la course inter-instances (plus rare).
+ */
+const inFlightVerdicts = new Map<string, Promise<VerdictRun>>();
+
+/** Calcule les signaux, appelle l'IA et persiste le verdict. Lève en cas d'échec. */
+async function computeAndStoreVerdict(
+  ctx: RegiaireCtx,
+  runDate: string
+): Promise<VerdictRun> {
+  const settings = await getStationSettings(ctx);
+
+  const [weather, schoolHoliday, traffic, bisonFute, trends] = await Promise.all([
+    getWeather(ctx),
+    getSchoolHolidayStatus(ctx, runDate),
+    getTrafficForDate(ctx, runDate),
+    getBisonFuteForecast(ctx, runDate),
+    buildTrendWindows(ctx.organizationId, runDate, ctx),
+  ]);
+
+  const trendsSummary = summarizeTrendsByCategory(trends);
+  const signalsSnapshot = buildSignalsSnapshot({
+    runDate,
+    settings,
+    weather,
+    schoolHoliday,
+    traffic,
+    bisonFute,
+    trendsSummary,
+  });
+
+  const promptContext = buildVerdictPromptContext(signalsSnapshot);
+
+  const { object: recommendation } = await generateObject({
+    model: getModel(),
+    schema: VerdictRecommendationSchema,
+    prompt: `${VERDICT_PROMPT}\n\n--- SIGNAUX ---\n${promptContext}`,
+    temperature: 0.55,
+    abortSignal: aiTimeoutSignal(),
+  });
+
+  const parsedRecommendation = VerdictRecommendationSchema.parse({
+    ...recommendation,
+    synthese: recommendation.synthese ?? null,
+  });
+
+  const { data: inserted, error: insertError } = await ctx.db
+    .from("verdict_runs")
+    .insert({
+      organization_id: ctx.organizationId,
+      aire_id: ctx.aireId,
+      run_date: runDate,
+      signals: signalsSnapshot,
+      recommendation: parsedRecommendation,
+      created_by: ctx.userId,
+    })
+    .select(
+      "id, organization_id, run_date, signals, recommendation, created_by, created_at"
+    )
+    .single();
+
+  if (insertError) {
+    // Course inter-instances : un autre process a déjà écrit le verdict du jour.
+    if (insertError.code === "23505") {
+      const retry = await findCachedVerdict(ctx, runDate);
+      if (retry) return retry;
+    }
+    throw new Error(insertError.message);
+  }
+
+  if (!inserted) {
+    throw new Error("Insertion verdict impossible");
+  }
+
+  return mapVerdictRunRow(inserted);
+}
+
 /**
  * Génère ou renvoie le Verdict IA du jour (cache verdict_runs par org + run_date).
  */
@@ -193,76 +280,25 @@ export async function generateVerdict(
       return { success: true, data: cached, cached: true };
     }
 
-    const settings = await getStationSettings(ctx);
+    // Garde-fou budgétaire/DoS avant tout appel IA (par utilisateur).
+    await enforceAiRateLimit(ctx.db, "verdict", ctx.userId, AI_RATE_LIMITS.verdict);
 
-    const [weather, schoolHoliday, traffic, bisonFute, trends] = await Promise.all([
-      getWeather(ctx),
-      getSchoolHolidayStatus(ctx, runDate),
-      getTrafficForDate(ctx, runDate),
-      getBisonFuteForecast(ctx, runDate),
-      buildTrendWindows(ctx.organizationId, runDate, ctx),
-    ]);
-
-    const trendsSummary = summarizeTrendsByCategory(trends);
-    const signalsSnapshot = buildSignalsSnapshot({
-      runDate,
-      settings,
-      weather,
-      schoolHoliday,
-      traffic,
-      bisonFute,
-      trendsSummary,
-    });
-
-    const promptContext = buildVerdictPromptContext(signalsSnapshot);
-
-    const { object: recommendation } = await generateObject({
-      model: openai("gpt-4o"),
-      schema: VerdictRecommendationSchema,
-      prompt: `${VERDICT_PROMPT}\n\n--- SIGNAUX ---\n${promptContext}`,
-      temperature: 0.55,
-    });
-
-    const parsedRecommendation = VerdictRecommendationSchema.parse({
-      ...recommendation,
-      synthese: recommendation.synthese ?? null,
-    });
-
-    const { data: inserted, error: insertError } = await ctx.db
-      .from("verdict_runs")
-      .insert({
-        organization_id: ctx.organizationId,
-        aire_id: ctx.aireId,
-        run_date: runDate,
-        signals: signalsSnapshot,
-        recommendation: parsedRecommendation,
-        created_by: ctx.userId,
-      })
-      .select(
-        "id, organization_id, run_date, signals, recommendation, created_by, created_at"
-      )
-      .single();
-
-    if (insertError) {
-      if (insertError.code === "23505") {
-        const retry = await findCachedVerdict(ctx, runDate);
-        if (retry) {
-          return { success: true, data: retry, cached: true };
-        }
-      }
-      return { success: false, error: insertError.message };
+    // Coalescing : un seul calcul IA par aire+date en vol simultanément.
+    const key = `${ctx.aireId}:${runDate}`;
+    let inflight = inFlightVerdicts.get(key);
+    if (!inflight) {
+      inflight = computeAndStoreVerdict(ctx, runDate).finally(() => {
+        inFlightVerdicts.delete(key);
+      });
+      inFlightVerdicts.set(key, inflight);
     }
 
-    if (!inserted) {
-      return { success: false, error: "Insertion verdict impossible" };
-    }
-
-    return {
-      success: true,
-      data: mapVerdictRunRow(inserted),
-      cached: false,
-    };
+    const data = await inflight;
+    return { success: true, data, cached: false };
   } catch (error) {
+    if (error instanceof AiRateLimitError) {
+      return { success: false, error: error.message, code: "rate_limited" };
+    }
     if (error instanceof RegiaireContextError) {
       return { success: false, error: error.message, code: error.code };
     }

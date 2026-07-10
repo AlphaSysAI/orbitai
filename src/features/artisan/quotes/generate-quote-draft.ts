@@ -3,8 +3,13 @@
 "use server";
 
 import { generateObject } from "ai";
-import { openai } from "@ai-sdk/openai";
 
+import { getModel, aiTimeoutSignal } from "@/lib/ai/model";
+import {
+  enforceAiRateLimit,
+  AI_RATE_LIMITS,
+  AiRateLimitError,
+} from "@/lib/ai/rate-limit";
 import { requireArtisanAccess } from "@/lib/organizations/access";
 import { createServerSupabaseClient } from "@/server/auth/supabase-server";
 import { forWrite } from "@/lib/supabase-write";
@@ -41,6 +46,9 @@ export async function generateQuoteDraft(
     const supabase = await createServerSupabaseClient();
     const db = forWrite(supabase);
 
+    // Garde-fou budgétaire/DoS avant l'appel IA (par organisation).
+    await enforceAiRateLimit(db, "quote", access.organizationId, AI_RATE_LIMITS.quote);
+
     const [{ data: profile }, { data: services }] = await Promise.all([
       db
         .from("artisan_profiles")
@@ -75,17 +83,22 @@ Demande du client :
 ${text}`;
 
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: getModel(),
       schema: QuoteDraftSchema,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.3,
+      abortSignal: aiTimeoutSignal(),
     });
 
     return { success: true, data: object };
   } catch (error) {
+    if (error instanceof AiRateLimitError) {
+      return { success: false, error: error.message };
+    }
+    console.error("[generateQuoteDraft] échec génération devis:", error);
     const message = error instanceof Error ? error.message : "Erreur génération devis";
     return { success: false, error: message };
   }

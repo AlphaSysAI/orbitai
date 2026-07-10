@@ -3,11 +3,17 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
 
+import { getModel, aiTimeoutSignal } from '@/lib/ai/model';
+import {
+  enforceAiRateLimitForRequest,
+  AiRateLimitError,
+  AI_RATE_LIMITS,
+} from '@/lib/ai/rate-limit-request';
 import { requireAuthOrResponse } from '@/server/auth/require-auth';
 
 export const runtime = 'edge';
+export const maxDuration = 30;
 
 /**
  * API pour analyser les préférences utilisateur de manière plus approfondie
@@ -27,6 +33,11 @@ export async function POST(req: Request) {
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json({ error: "Clé API manquante" }, { status: 500 });
     }
+
+    await enforceAiRateLimitForRequest(req, 'analyze-preferences', {
+      rule: AI_RATE_LIMITS.heavy,
+      identifier: userId,
+    });
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -91,7 +102,8 @@ Réponds UNIQUEMENT avec un JSON valide :
 }`;
 
     const result = await generateText({
-      model: openai('gpt-4o'),
+      model: getModel(),
+      abortSignal: aiTimeoutSignal(),
       messages: [
         {
           role: 'system',
@@ -147,6 +159,12 @@ Réponds UNIQUEMENT avec un JSON valide :
       message: "Préférences analysées et mises à jour avec succès"
     });
   } catch (error: any) {
+    if (error instanceof AiRateLimitError) {
+      return NextResponse.json({ error: error.message }, {
+        status: 429,
+        headers: { 'Retry-After': String(error.retryAfterSeconds) },
+      });
+    }
     console.error("❌ ERREUR ANALYSE PRÉFÉRENCES:", error);
     return NextResponse.json({ error: error.message || "Erreur lors de l'analyse" }, { status: 500 });
   }
