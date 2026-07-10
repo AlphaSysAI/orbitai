@@ -2,6 +2,8 @@
 
 import "server-only";
 
+import { cache } from "react";
+
 import type { RegiaireContext } from "@/lib/regiaire/require-context";
 import { forWrite } from "@/lib/supabase-write";
 import type { ServerSupabaseClient } from "@/server/auth/supabase-server";
@@ -15,11 +17,19 @@ export const FULL_AIRE_ACCESS_ROLES = new Set([
 
 type Db = ReturnType<typeof forWrite>;
 
-export async function getMembershipRole(
+/**
+ * Rôle d'un membre dans une organisation.
+ *
+ * Mémoïsé par requête via `React.cache()` : le rôle est relu à de multiples
+ * étapes d'une même requête (contexte aire, capabilities, scope…). Le client
+ * `db` a une référence stable par requête (client Supabase mémoïsé + `forWrite`
+ * qui ne fait que caster), la clé de mémoïsation est donc fiable.
+ */
+export const getMembershipRole = cache(async (
   db: Db,
   organizationId: string,
   userId: string
-): Promise<string | null> {
+): Promise<string | null> => {
   const { data, error } = await db
     .from("organization_members")
     .select("role")
@@ -29,7 +39,7 @@ export async function getMembershipRole(
 
   if (error || !data?.role) return null;
   return data.role as string;
-}
+});
 
 export async function listAccessibleAireIds(
   db: Db,

@@ -2,6 +2,8 @@
 
 import "server-only";
 
+import { cache } from "react";
+
 import {
   createServerSupabaseClient,
   getAuthenticatedUser,
@@ -15,9 +17,9 @@ export type ModuleAccessResult =
   | { allowed: false; reason: "unauthenticated" | "no_organization" | "module_disabled" };
 
 /** Première organisation de l'utilisateur (ordre arbitraire — sélecteur multi-org en D.2). */
-export async function getPrimaryOrganizationForUser(
+export const getPrimaryOrganizationForUser = cache(async (
   userId: string
-): Promise<OrganizationSummary | null> {
+): Promise<OrganizationSummary | null> => {
   const supabase = await createServerSupabaseClient();
   const db = forWrite(supabase);
 
@@ -38,9 +40,12 @@ export async function getPrimaryOrganizationForUser(
 
   if (orgError || !org) return null;
   return { id: org.id, name: org.name };
-}
+});
 
-export async function getEnabledModulesForUser(userId: string): Promise<EnabledOrgModule[]> {
+export const getEnabledModulesForUser = cache(async (
+  userId: string
+): Promise<EnabledOrgModule[]> => {
+  void userId; // clé de mémoïsation (le RPC lit l'utilisateur courant côté DB)
   const supabase = await createServerSupabaseClient();
   const db = forWrite(supabase);
 
@@ -51,11 +56,11 @@ export async function getEnabledModulesForUser(userId: string): Promise<EnabledO
     organizationId: row.organization_id,
     moduleName: row.module_name,
   }));
-}
+});
 
-export async function checkModuleAccess(
+export const checkModuleAccess = cache(async (
   moduleName: string
-): Promise<ModuleAccessResult> {
+): Promise<ModuleAccessResult> => {
   const user = await getAuthenticatedUser();
   if (!user) return { allowed: false, reason: "unauthenticated" };
 
@@ -74,7 +79,7 @@ export async function checkModuleAccess(
   }
 
   return { allowed: true, organizationId: org.id };
-}
+});
 
 export async function requireRegiaireAccess(): Promise<ModuleAccessResult> {
   return checkModuleAccess(ORG_MODULE_NAMES.REGIAIRE_CORE);
