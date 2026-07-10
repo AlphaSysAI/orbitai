@@ -61,11 +61,11 @@ export async function enforceAiRateLimit(
 ): Promise<void> {
   const bucket = `${scope}:${identifier}`;
   try {
-    const { data, error } = await db.rpc("rate_limit_check", {
+    const { data, error } = (await db.rpc("rate_limit_check", {
       p_bucket: bucket,
       p_limit: rule.limit,
       p_window_seconds: rule.windowSeconds,
-    });
+    })) as { data: boolean | null; error: { message: string } | null };
     if (error) {
       console.error(`[rate-limit] RPC en échec (fail-open) pour ${bucket}:`, error.message);
       return;
@@ -86,5 +86,5 @@ export async function enforceAiRateLimit(
 export function clientIpFromRequest(request: Request): string {
   const fwd = request.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0]!.trim();
-  return request.headers.get("x-real-ip")?.trim() || "unknown";
+  return request.headers.get("x-real-ip")?.trim() ?? "unknown";
 }
