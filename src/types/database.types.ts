@@ -1484,6 +1484,18 @@ export interface Database {
         Args: { p_delivery_id: string };
         Returns: { outcome: string; batches_created: number }[];
       };
+      rate_limit_check: {
+        Args: {
+          p_bucket: string;
+          p_limit: number;
+          p_window_seconds: number;
+        };
+        Returns: boolean;
+      };
+      rate_limit_gc: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
     };
     Enums: {
       shift_period: ShiftPeriod;
