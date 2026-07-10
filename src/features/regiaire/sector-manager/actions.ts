@@ -3,6 +3,7 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import pLimit from "p-limit";
 
 import { requireRegiaireAccess } from "@/lib/organizations/access";
 import {
@@ -51,6 +52,13 @@ export type SecteurOverview = {
 
 // ─── Core : construit l'overview d'un secteur (réutilisé par chef/région/direction) ─
 
+/**
+ * Concurrence maximale des requêtes par aire. Borne le fan-out pour éviter de
+ * saturer le pool de connexions Postgres/PgBouncer : un secteur (ou une direction
+ * agrégeant des centaines d'aires) ne lance jamais plus de N requêtes en parallèle.
+ */
+const AIRE_QUERY_CONCURRENCY = 10;
+
 export async function buildSecteurOverview(
   db: SupabaseClient,
   organizationId: string,
@@ -69,8 +77,9 @@ export async function buildSecteurOverview(
 
   const aireList = (aires ?? []) as { id: string; name: string; city: string | null }[];
 
+  const limit = pLimit(AIRE_QUERY_CONCURRENCY);
   const cards: SecteurAireCard[] = await Promise.all(
-    aireList.map(async (aire) => {
+    aireList.map((aire) => limit(async () => {
       const [savings, { count: expiringCount }, { count: inProgressCount }, { data: closures }] =
         await Promise.all([
           computeAireSavings(db, aire.id, today),
@@ -114,7 +123,7 @@ export async function buildSecteurOverview(
         todayClosures: allClosures.filter((c) => c.serviceDate === today),
         recentClosures: allClosures.slice(0, 6),
       };
-    })
+    }))
   );
 
   const totals = cards.reduce(
@@ -163,7 +172,8 @@ export async function getSecteurOverview(): Promise<GetSecteurOverviewResult> {
       secteur.name as string
     );
     return { success: true, data: overview };
-  } catch {
+  } catch (error) {
+    console.error("[getSecteurOverview] échec de chargement:", error);
     return { success: false, error: "Erreur de chargement" };
   }
 }
@@ -187,7 +197,8 @@ export async function getGerantAireIds(): Promise<string[]> {
       .eq("organization_id", access.organizationId);
 
     return (data ?? []).map((r) => r.aire_id as string);
-  } catch {
+  } catch (error) {
+    console.error("[getGerantAireIds] échec:", error);
     return [];
   }
 }
@@ -211,7 +222,8 @@ export async function getCurrentUserOrgRole(): Promise<string | null> {
       .maybeSingle();
 
     return (data?.role as string | null) ?? null;
-  } catch {
+  } catch (error) {
+    console.error("[getCurrentUserOrgRole] échec:", error);
     return null;
   }
 }

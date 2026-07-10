@@ -172,7 +172,8 @@ export async function getRegiaireBusinessDashboardStats(): Promise<GetRegiaireBu
         totalSavingsEur: expirySavingsEur + stockSavingsEur,
       },
     };
-  } catch {
+  } catch (error) {
+    console.error("[getRegiaireBusinessDashboardStats] échec:", error);
     return { success: false, error: "Erreur lors du chargement des indicateurs" };
   }
 }

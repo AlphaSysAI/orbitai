@@ -38,7 +38,8 @@ export async function getGerantOverview(): Promise<GetGerantOverviewResult> {
     );
 
     return { success: true, data };
-  } catch {
+  } catch (error) {
+    console.error("[gerant/getOverview] échec de chargement:", error);
     return { success: false, error: "Erreur de chargement" };
   }
 }
