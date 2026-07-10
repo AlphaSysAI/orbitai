@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sparkles, ListChecks, Zap, TrendingUp, Clock, CheckCircle2, RefreshCw, Activity, Play, Square, StopCircle, Download } from "lucide-react";
 import type { AutomationStats, GrayTask, Automation } from "../types";
 
@@ -21,6 +21,48 @@ export function AutomationDashboard({ stats, tasks, automations, isLoading, onAn
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [detectedOS, setDetectedOS] = useState<'macos' | 'windows' | 'linux' | 'unknown'>('unknown');
   const [hasDownloadedScript, setHasDownloadedScript] = useState(false);
+
+  // Suivi des timers de polling pour éviter les fuites : tout timer créé dans un
+  // handler est enregistré ici puis nettoyé au démontage (unmount). Le garde
+  // `mounted` empêche aussi les setState après démontage.
+  const mountedRef = useRef(true);
+  const intervalsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
+  const timeoutsRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    mountedRef.current = true;
+    const intervals = intervalsRef.current;
+    const timeouts = timeoutsRef.current;
+    return () => {
+      mountedRef.current = false;
+      intervals.forEach((id) => clearInterval(id));
+      intervals.clear();
+      timeouts.forEach((id) => clearTimeout(id));
+      timeouts.clear();
+    };
+  }, []);
+
+  const scheduleTimeout = (fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      timeoutsRef.current.delete(id);
+      if (mountedRef.current) fn();
+    }, ms);
+    timeoutsRef.current.add(id);
+    return id;
+  };
+
+  const scheduleInterval = (fn: () => void, ms: number) => {
+    const id = setInterval(() => {
+      if (mountedRef.current) fn();
+    }, ms);
+    intervalsRef.current.add(id);
+    return id;
+  };
+
+  const stopInterval = (id: ReturnType<typeof setInterval>) => {
+    clearInterval(id);
+    intervalsRef.current.delete(id);
+  };
 
   // Détecter le système d'exploitation et vérifier si le script a déjà été téléchargé
   useEffect(() => {
@@ -129,17 +171,17 @@ Cette page vérifiera automatiquement le statut du tracking.`;
       }
       
       // Vérifier le statut après un délai
-      setTimeout(() => {
-        checkTrackingStatus();
-        const checkInterval = setInterval(() => {
-          checkTrackingStatus();
+      scheduleTimeout(() => {
+        void checkTrackingStatus();
+        const checkInterval = scheduleInterval(() => {
+          void checkTrackingStatus();
         }, 5000);
-        
-        setTimeout(() => {
-          clearInterval(checkInterval);
+
+        scheduleTimeout(() => {
+          stopInterval(checkInterval);
         }, 60000); // Vérifier pendant 1 minute
       }, 3000);
-      
+
       return; // Ne pas télécharger à nouveau
     }
 
@@ -231,15 +273,15 @@ Le script s'installera et se lancera automatiquement.
       }
       
       // Vérifier le statut immédiatement et ensuite plus fréquemment après le téléchargement
-      setTimeout(() => {
-        checkTrackingStatus();
+      scheduleTimeout(() => {
+        void checkTrackingStatus();
         // Vérifier toutes les 5 secondes pendant 2 minutes après le téléchargement
-        const checkInterval = setInterval(() => {
-          checkTrackingStatus();
+        const checkInterval = scheduleInterval(() => {
+          void checkTrackingStatus();
         }, 5000);
-        
-        setTimeout(() => {
-          clearInterval(checkInterval);
+
+        scheduleTimeout(() => {
+          stopInterval(checkInterval);
         }, 120000); // Arrêter après 2 minutes
       }, 2000);
     } catch (error: any) {

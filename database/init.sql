@@ -2275,6 +2275,7 @@ ALTER TABLE shift_closures ALTER COLUMN aire_id SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_deliveries_aire_id ON deliveries(aire_id);
 CREATE INDEX IF NOT EXISTS idx_stock_batches_aire_id ON stock_batches(aire_id);
+CREATE INDEX IF NOT EXISTS idx_stock_batches_aire_dlc ON stock_batches(aire_id, dlc) WHERE quantity > 0;
 CREATE INDEX IF NOT EXISTS idx_sales_history_aire_date ON sales_history(aire_id, sale_date);
 CREATE INDEX IF NOT EXISTS idx_traffic_signals_aire_date ON traffic_signals(aire_id, signal_date DESC);
 CREATE INDEX IF NOT EXISTS idx_verdict_runs_aire_date ON verdict_runs(aire_id, run_date DESC);
