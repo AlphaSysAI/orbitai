@@ -105,7 +105,8 @@ async function buildGerantAireCard(
         suggestedOrderQty: line.suggestedOrderQty,
         orderByDate: line.orderByDate,
       }));
-  } catch {
+  } catch (error) {
+    console.error("[gerant/overview] indices de réappro indisponibles:", error);
     replenishmentHints = [];
   }
 

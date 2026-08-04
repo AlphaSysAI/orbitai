@@ -3,8 +3,13 @@
 "use server";
 
 import { generateObject } from "ai";
-import { openai } from "@ai-sdk/openai";
 
+import { getModel, aiTimeoutSignal } from "@/lib/ai/model";
+import {
+  enforceAiRateLimit,
+  AI_RATE_LIMITS,
+  AiRateLimitError,
+} from "@/lib/ai/rate-limit";
 import { canManageShiftOnAire } from "@/lib/regiaire/aire-scope";
 import { requireRegiaireContext } from "@/lib/regiaire/require-context";
 import {
@@ -57,6 +62,9 @@ export async function generateShiftManagerVerdict(
       };
     }
 
+    // Garde-fou budgétaire/DoS avant l'appel IA (par utilisateur).
+    await enforceAiRateLimit(ctx.db, "verdict", ctx.userId, AI_RATE_LIMITS.verdict);
+
     const prompt = `Tu es le directeur des opérations d'une station-service autoroutière.
 Analyse les 7 derniers jours de clôtures de quart ci-dessous et produis un verdict de management.
 
@@ -72,14 +80,19 @@ DIRECTIVES :
 - Réponds en français, ton directif et factuel.`;
 
     const { object } = await generateObject({
-      model: openai("gpt-4o"),
+      model: getModel(),
       schema: ShiftVerdictSchema,
       prompt,
       temperature: 0.5,
+      abortSignal: aiTimeoutSignal(),
     });
 
     return { success: true, data: object };
   } catch (error) {
+    if (error instanceof AiRateLimitError) {
+      return { success: false, error: error.message };
+    }
+    console.error("[generateShiftManagerVerdict] échec:", error);
     const message = error instanceof Error ? error.message : "Erreur serveur";
     return { success: false, error: message };
   }

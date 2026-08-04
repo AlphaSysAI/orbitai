@@ -137,7 +137,8 @@ export async function getDirectionOverview(): Promise<GetDirectionOverviewResult
       success: true,
       data: { regionals, unassignedChefs, totals },
     };
-  } catch {
+  } catch (error) {
+    console.error("[getDirectionOverview] échec de chargement:", error);
     return { success: false, error: "Erreur de chargement" };
   }
 }

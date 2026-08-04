@@ -1,12 +1,18 @@
 // Copyright © 2026 OrbitSys. Tous droits réservés.
 
 import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import { createClient } from '@supabase/supabase-js';
 
+import { getModel, aiTimeoutSignal } from '@/lib/ai/model';
+import {
+  enforceAiRateLimitForRequest,
+  AiRateLimitError,
+  AI_RATE_LIMITS,
+} from '@/lib/ai/rate-limit-request';
 import { requireAuthOrResponse } from '@/server/auth/require-auth';
 
 export const runtime = 'edge';
+export const maxDuration = 30;
 
 interface DetectedTask {
   title: string;
@@ -37,6 +43,11 @@ export async function POST(req: Request) {
       return new Response(JSON.stringify({ error: "Contenu ou utilisateur manquant" }), { status: 400 });
     }
 
+    await enforceAiRateLimitForRequest(req, 'detect-tasks', {
+      rule: AI_RATE_LIMITS.heavy,
+      identifier: userId,
+    });
+
     // Analyser le contenu avec l'IA pour détecter les tâches grises
     const analysisPrompt = `Tu es un expert en détection de tâches répétitives et automatisables dans les entreprises.
 Analyse le contenu suivant et identifie les tâches "grises" (tâches répétitives qui pourraient être automatisées).
@@ -65,11 +76,12 @@ CONTENU À ANALYSER:
 ${content.substring(0, 8000)}`;
 
     const result = await generateText({
-      model: openai('gpt-4o'),
+      model: getModel(),
+      abortSignal: aiTimeoutSignal(),
       messages: [
         {
           role: 'system',
-          content: `Tu es un expert en automatisation de processus d'entreprise. 
+          content: `Tu es un expert en automatisation de processus d'entreprise.
           Tu identifies les tâches répétitives qui peuvent être automatisées.
           Tu réponds UNIQUEMENT en JSON valide, sans texte additionnel.`,
         },
@@ -149,6 +161,12 @@ ${content.substring(0, 8000)}`;
       }
     );
   } catch (error: any) {
+    if (error instanceof AiRateLimitError) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 429,
+        headers: { 'Retry-After': String(error.retryAfterSeconds) },
+      });
+    }
     console.error("❌ ERREUR DÉTECTION TÂCHES:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Erreur lors de la détection" }),

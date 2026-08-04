@@ -6,6 +6,14 @@ import { z } from "zod";
 
 import { processInboundBL } from "@/features/regiaire/inbound/lib/process-inbound-bl";
 import { timingSafeEqualStrings } from "@/server/auth/require-auth";
+import { createServiceRoleSupabaseClient } from "@/server/auth/supabase-server";
+import {
+  enforceAiRateLimit,
+  AiRateLimitError,
+  AI_RATE_LIMITS,
+} from "@/lib/ai/rate-limit";
+
+export const maxDuration = 60;
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -133,6 +141,23 @@ export async function POST(request: Request): Promise<Response> {
       { error: "Aucune pièce jointe PDF trouvée dans l'email" },
       { status: 422 }
     );
+  }
+
+  // Garde-fou budgétaire : borne le nombre d'extractions IA par aire (slug),
+  // même si le secret webhook est valide (fournisseur compromis / boucle email).
+  const rlDb = createServiceRoleSupabaseClient();
+  if (rlDb) {
+    try {
+      await enforceAiRateLimit(rlDb, "inbound-bl", emailSlug, AI_RATE_LIMITS.bl);
+    } catch (err) {
+      if (err instanceof AiRateLimitError) {
+        return NextResponse.json(
+          { error: err.message },
+          { status: 429, headers: { "Retry-After": String(err.retryAfterSeconds) } }
+        );
+      }
+      throw err;
+    }
   }
 
   const pdfBuffer = Buffer.from(pdfAttachment.content, "base64");

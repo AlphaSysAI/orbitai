@@ -3,6 +3,7 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import pLimit from "p-limit";
 
 import { requireRegiaireAccess } from "@/lib/organizations/access";
 import {
@@ -24,6 +25,14 @@ import {
  * par secteur par fenêtre, quel que soit le nombre de consultations.
  */
 const OVERVIEW_CACHE_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * Concurrence maximale des recalculs de secteur (cache froid). Borne le fan-out
+ * pour ne pas saturer le pool Postgres quand un grand nombre de chefs doivent
+ * être recalculés simultanément (chaque recalcul est lui-même déjà borné côté
+ * `buildSecteurOverview`).
+ */
+const CHEF_SUMMARY_CONCURRENCY = 10;
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -128,8 +137,9 @@ export async function buildChefSummaries(
 
   const toUpsert: Array<Record<string, unknown>> = [];
 
+  const limit = pLimit(CHEF_SUMMARY_CONCURRENCY);
   const summaries = await Promise.all(
-    chefUserIds.map(async (chefId) => {
+    chefUserIds.map((chefId) => limit(async () => {
       const secteur = secteurByChef.get(chefId) ?? null;
       let aireCount = 0;
       let totalSavingsEur = 0;
@@ -181,7 +191,7 @@ export async function buildChefSummaries(
         expiringCount,
         inProgressCount,
       };
-    })
+    }))
   );
 
   // Écriture batch du cache (best-effort : n'altère pas la réponse en cas d'échec).
@@ -235,7 +245,8 @@ export async function getRegionOverview(): Promise<GetRegionOverviewResult> {
     );
 
     return { success: true, data: { chefs, totals } };
-  } catch {
+  } catch (error) {
+    console.error("[getRegionOverview] échec de chargement:", error);
     return { success: false, error: "Erreur de chargement" };
   }
 }
@@ -308,7 +319,8 @@ export async function getChefSecteurDetail(
         overview,
       },
     };
-  } catch {
+  } catch (error) {
+    console.error("[getChefSecteurDetail] échec de chargement:", error);
     return { success: false, error: "Erreur de chargement" };
   }
 }

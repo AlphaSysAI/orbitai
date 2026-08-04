@@ -2275,6 +2275,7 @@ ALTER TABLE shift_closures ALTER COLUMN aire_id SET NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_deliveries_aire_id ON deliveries(aire_id);
 CREATE INDEX IF NOT EXISTS idx_stock_batches_aire_id ON stock_batches(aire_id);
+CREATE INDEX IF NOT EXISTS idx_stock_batches_aire_dlc ON stock_batches(aire_id, dlc) WHERE quantity > 0;
 CREATE INDEX IF NOT EXISTS idx_sales_history_aire_date ON sales_history(aire_id, sale_date);
 CREATE INDEX IF NOT EXISTS idx_traffic_signals_aire_date ON traffic_signals(aire_id, signal_date DESC);
 CREATE INDEX IF NOT EXISTS idx_verdict_runs_aire_date ON verdict_runs(aire_id, run_date DESC);
@@ -2646,6 +2647,60 @@ CREATE POLICY "bison_fute_forecast_select_authenticated"
 
 COMMIT;
 
+
+-- ============================================
+-- RATE-LIMITING IA (cf. migration 046)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS public.rate_limit_hits (
+  bucket        text        NOT NULL,
+  window_start  timestamptz NOT NULL,
+  count         integer     NOT NULL DEFAULT 0,
+  PRIMARY KEY (bucket, window_start)
+);
+
+ALTER TABLE public.rate_limit_hits ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.rate_limit_check(
+  p_bucket         text,
+  p_limit          integer,
+  p_window_seconds integer
+) RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_window timestamptz;
+  v_count  integer;
+BEGIN
+  v_window := to_timestamp(
+    floor(extract(epoch FROM now()) / p_window_seconds) * p_window_seconds
+  );
+
+  INSERT INTO public.rate_limit_hits AS r (bucket, window_start, count)
+  VALUES (p_bucket, v_window, 1)
+  ON CONFLICT (bucket, window_start)
+  DO UPDATE SET count = r.count + 1
+  RETURNING r.count INTO v_count;
+
+  RETURN v_count <= p_limit;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.rate_limit_gc() RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  DELETE FROM public.rate_limit_hits
+  WHERE window_start < now() - interval '1 day';
+$$;
+
+REVOKE ALL ON FUNCTION public.rate_limit_check(text, integer, integer) FROM public;
+GRANT EXECUTE ON FUNCTION public.rate_limit_check(text, integer, integer)
+  TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.rate_limit_gc() TO service_role;
 
 -- ============================================
 -- FIN DU SCRIPT D'INITIALISATION

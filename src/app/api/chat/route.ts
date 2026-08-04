@@ -1,12 +1,18 @@
 // Copyright © 2026 OrbitSys. Tous droits réservés.
 
 import { streamText, generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import { createClient } from '@supabase/supabase-js';
 
+import { getModel, aiTimeoutSignal } from '@/lib/ai/model';
+import {
+  enforceAiRateLimitForRequest,
+  AiRateLimitError,
+  AI_RATE_LIMITS,
+} from '@/lib/ai/rate-limit-request';
 import { requireAuthOrResponse } from '@/server/auth/require-auth';
 
 export const runtime = 'edge';
+export const maxDuration = 30;
 
 /**
  * Recherche les passages pertinents dans les documents
@@ -131,6 +137,12 @@ export async function POST(req: Request) {
       console.error("❌ CLÉ API MANQUANTE DANS .ENV");
       return new Response(JSON.stringify({ error: "Clé API manquante" }), { status: 500 });
     }
+
+    // Garde-fou budgétaire/DoS avant tout appel IA.
+    await enforceAiRateLimitForRequest(req, 'chat', {
+      rule: AI_RATE_LIMITS.chat,
+      identifier: typeof userId === 'string' ? userId : undefined,
+    });
 
     // Récupérer tous les documents de l'utilisateur depuis Supabase
     // (uniquement pour les conversations, pas pour la génération de titre)
@@ -287,9 +299,10 @@ ${personalizationInstructions}Ton ton est professionnel, bienveillant et pédago
     // Si stream est false, retourner le texte complet (pour la génération de titre par exemple)
     if (stream === false) {
       const result = await generateText({
-        model: openai('gpt-4o'),
+        model: getModel(),
         messages,
         system: systemPrompt,
+        abortSignal: aiTimeoutSignal(),
       });
 
       return new Response(result.text, {
@@ -299,13 +312,20 @@ ${personalizationInstructions}Ton ton est professionnel, bienveillant et pédago
 
     // Sinon, streaming par défaut
     const result = await streamText({
-      model: openai('gpt-4o'),
+      model: getModel(),
       messages,
       system: systemPrompt,
+      abortSignal: aiTimeoutSignal(),
     });
 
     return result.toTextStreamResponse();
   } catch (error: any) {
+    if (error instanceof AiRateLimitError) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 429,
+        headers: { 'Retry-After': String(error.retryAfterSeconds) },
+      });
+    }
     console.error("❌ ERREUR API OPENAI:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }

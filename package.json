@@ -52,6 +52,7 @@
     "next": "^15.5.19",
     "next-auth": "5.0.0-beta.25",
     "openai": "^6.15.0",
+    "p-limit": "^7.3.0",
     "pdf-parse": "^2.4.5",
     "pdf-parse-fork": "^1.2.0",
     "pdf-text-reader": "^5.1.0",

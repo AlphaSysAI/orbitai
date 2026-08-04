@@ -3,17 +3,13 @@
 import "server-only";
 
 import { generateObject } from "ai";
-import { openai } from "@ai-sdk/openai";
 
+import { getModel, aiTimeoutSignal } from "@/lib/ai/model";
+import { extractPdfText } from "@/lib/regiaire/pdf-extract";
 import {
   BLUncertainExtractionSchema,
   type BLUncertainExtraction,
 } from "@/features/regiaire/reception/schemas";
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse-fork") as (
-  buffer: Buffer
-) => Promise<{ text: string }>;
 
 const IMAGE_MIME_TYPES = new Set([
   "image/jpeg",
@@ -46,16 +42,18 @@ function normalizeMimeType(mimeType: string, fileName: string): string {
 }
 
 async function extractFromPdf(buffer: Buffer): Promise<BLUncertainExtraction> {
-  const parsed = await pdfParse(buffer);
-  const text = parsed.text?.trim();
+  // Parsing CPU-bound déporté dans un worker thread (cf. pdf-extract.ts) pour ne
+  // pas bloquer l'event-loop de l'instance sous uploads concurrents.
+  const text = (await extractPdfText(buffer)).trim();
   if (!text) {
     throw new Error("Impossible d'extraire le texte du PDF");
   }
 
   const { object } = await generateObject({
-    model: openai("gpt-4o"),
+    model: getModel(),
     schema: BLUncertainExtractionSchema,
     prompt: `${BL_EXTRACTION_PROMPT}\n\n--- CONTENU BL (texte extrait) ---\n${text.slice(0, 120_000)}`,
+    abortSignal: aiTimeoutSignal(),
   });
 
   return BLUncertainExtractionSchema.parse(object);
@@ -63,8 +61,9 @@ async function extractFromPdf(buffer: Buffer): Promise<BLUncertainExtraction> {
 
 async function extractFromImage(buffer: Buffer): Promise<BLUncertainExtraction> {
   const { object } = await generateObject({
-    model: openai("gpt-4o"),
+    model: getModel(),
     schema: BLUncertainExtractionSchema,
+    abortSignal: aiTimeoutSignal(),
     messages: [
       {
         role: "user",

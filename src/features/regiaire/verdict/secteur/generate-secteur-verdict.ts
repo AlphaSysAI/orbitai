@@ -3,8 +3,13 @@
 "use server";
 
 import { generateObject } from "ai";
-import { openai } from "@ai-sdk/openai";
 
+import { getModel, aiTimeoutSignal } from "@/lib/ai/model";
+import {
+  enforceAiRateLimit,
+  AI_RATE_LIMITS,
+  AiRateLimitError,
+} from "@/lib/ai/rate-limit";
 import { requireRegiaireAccess } from "@/lib/organizations/access";
 import {
   createServerSupabaseClient,
@@ -126,6 +131,9 @@ export async function generateSecteurVerdict(
       }
     }
 
+    // Garde-fou budgétaire/DoS avant l'appel IA (par utilisateur).
+    await enforceAiRateLimit(db, "verdict", user.id, AI_RATE_LIMITS.verdict);
+
     const overview = await buildSecteurOverview(
       db,
       access.organizationId,
@@ -134,10 +142,11 @@ export async function generateSecteurVerdict(
     );
 
     const { object: recommendation } = await generateObject({
-      model: openai("gpt-4o"),
+      model: getModel(),
       schema: SecteurVerdictRecommendationSchema,
       prompt: `${SECTEUR_VERDICT_PROMPT}\n\n--- DONNÉES SECTEUR ---\n${buildPromptContext(overview)}`,
       temperature: 0.5,
+      abortSignal: aiTimeoutSignal(),
     });
 
     const parsed = SecteurVerdictRecommendationSchema.parse(recommendation);
@@ -175,6 +184,10 @@ export async function generateSecteurVerdict(
       }),
     };
   } catch (error) {
+    if (error instanceof AiRateLimitError) {
+      return { success: false, error: error.message };
+    }
+    console.error("[generateSecteurVerdict] échec:", error);
     const message = error instanceof Error ? error.message : "Erreur de génération";
     return { success: false, error: message };
   }

@@ -1,5 +1,7 @@
 // Copyright © 2026 OrbitSys. Tous droits réservés.
 
+import { cache } from "react";
+
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
@@ -88,19 +90,25 @@ export function createServiceRoleSupabaseClient(): ServerSupabaseClient | null {
 /**
  * Client Supabase serveur pour Server Components (Node).
  * Écriture cookies best-effort (contexte parfois lecture seule).
+ *
+ * Mémoïsé par requête via `React.cache()` : plusieurs actions/composants d'une
+ * même requête réutilisent le même client (évite de relire les cookies et de
+ * recréer un client à chaque appel du chaînage d'auth).
  */
-export async function createServerSupabaseClient(): Promise<ServerSupabaseClient> {
-  const cookieStore = await cookies();
-  return buildServerClient(
-    {
-      getAll: () => cookieStore.getAll(),
-      set: (name, value, options) => {
-        cookieStore.set(name, value, options);
+export const createServerSupabaseClient = cache(
+  async (): Promise<ServerSupabaseClient> => {
+    const cookieStore = await cookies();
+    return buildServerClient(
+      {
+        getAll: () => cookieStore.getAll(),
+        set: (name, value, options) => {
+          cookieStore.set(name, value, options);
+        },
       },
-    },
-    "server-component"
-  );
-}
+      "server-component"
+    );
+  }
+);
 
 /**
  * Client Supabase pour Route Handlers (auth callback, API session).
@@ -151,15 +159,19 @@ function mapUser(user: User): AuthenticatedUser {
 /**
  * Récupère l'utilisateur authentifié via `getUser()` (validation JWT côté Supabase).
  * Retourne `null` si absent ou session invalide.
+ *
+ * Mémoïsé par requête via `React.cache()` : le chaînage d'auth (accès module,
+ * contexte aire…) appelait `getUser()` plusieurs fois par requête, chacune étant
+ * un aller-retour réseau vers Supabase. La mémoïsation les fusionne en un seul.
  */
-export async function getAuthenticatedUser(
-  supabase?: ServerSupabaseClient
-): Promise<AuthenticatedUser | null> {
-  const client = supabase ?? (await createServerSupabaseClient());
-  const { data, error } = await client.auth.getUser();
-  if (error || !data.user) return null;
-  return mapUser(data.user);
-}
+export const getAuthenticatedUser = cache(
+  async (supabase?: ServerSupabaseClient): Promise<AuthenticatedUser | null> => {
+    const client = supabase ?? (await createServerSupabaseClient());
+    const { data, error } = await client.auth.getUser();
+    if (error || !data.user) return null;
+    return mapUser(data.user);
+  }
+);
 
 /**
  * Variante Edge : utilisateur authentifié à partir des cookies de la requête.
