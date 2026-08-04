@@ -20,8 +20,8 @@
 
 | ✅ Faire | ❌ Ne pas supposer |
 |----------|-------------------|
-| Orbit Aire = cœur métier | Les 5 piliers ne sont plus la roadmap principale |
-| Verticals : Orbit Aire → Orbit Artisan → Orbit Hôtel | `artisan_core` / `hotel_core` n’ont pas de code métier encore |
+| Orbit Aire = vertical le plus abouti | Les 5 piliers ne sont plus la roadmap principale |
+| Orbit Artisan **et** Orbit Hôtel ont du code métier (`features/artisan`, `features/hotel`) | Qu'`artisan_core` / `hotel_core` seraient « catalogue seulement » (faux) |
 | Multi-aire : toujours passer `aireId` | Pas de données globales org sans `aire_id` pour stock/ventes |
 | Écritures Orbit Aire via `ctx.db` | Pas de service_role côté station utilisateur |
 | Zod strict sur signaux | `forecast: null` si météo indispo (pas `undefined`) |
@@ -31,13 +31,16 @@
 ## 3. Arborescence utile
 
 ```
-src/features/regiaire/     ← 90 % du travail métier actuel
+src/features/regiaire/     ← Orbit Aire (le vertical le plus abouti)
+src/features/artisan/      ← Orbit Artisan (devis/factures IA, contacts, services)
+src/features/hotel/        ← Orbit Hôtel (réservations, planning, tarifs, facturation)
+src/features/voice/        ← serveur vocal IA (ElevenLabs)
 src/features/organization/ ← membres, profil, fournisseurs
 src/features/admin/        ← provisioning, Bison Futé admin
 src/features/pillars/      ← add-ons (touch with care)
 database/
   init.sql                 ← schéma canonique
-  migrations/              ← 001–027
+  migrations/              ← 001–045
   seeds/                   ← 013–017 (017 = Arzens)
 Claude/                    ← cette doc
 ```
@@ -130,11 +133,12 @@ Route dev existante : `/api/dev/verdict` (vérifier avant usage).
 
 ## 9. Ce qui n’est PAS implémenté (ne pas inventer)
 
-- UI réappro Verdict v2 étape B
+- UI réappro Verdict v2 étape B (Orbit Aire)
 - Suivi commandes fournisseur (réappro v1 ignore commandes passées)
-- POS / caisse → `sales_history` réel
-- Modules **Orbit Artisan** et **Orbit Hôtel** (seulement entrées catalogue + branding)
-- Prix, marge, CA
+- POS / caisse → `sales_history` réel (Orbit Aire)
+- Prix / marge / CA côté Orbit Aire
+
+> **Orbit Artisan et Orbit Hôtel SONT implémentés** — ne pas les recréer. Voir `features/artisan/`, `features/hotel/` et les migrations 035, 037–043, 045.
 
 ---
 
