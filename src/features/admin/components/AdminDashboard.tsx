@@ -11,7 +11,6 @@ type ClientRow = { id: string; enabledModules: string[] };
 const SAAS = [
   { key: "regiaire_core", href: "/admin/orbit-aire", label: "Orbit Aire", Icon: Fuel, color: "text-amber-400", ring: "hover:border-amber-500/50" },
   { key: "hotel_core", href: "/admin/orbit-hotel", label: "Orbit Hôtel", Icon: Network, color: "text-sky-400", ring: "hover:border-sky-500/50" },
-  { key: "artisan_core", href: "/admin/orbit-artisan", label: "Orbit Artisan", Icon: Wrench, color: "text-orange-400", ring: "hover:border-orange-500/50" },
 ];
 
 export function AdminDashboard() {

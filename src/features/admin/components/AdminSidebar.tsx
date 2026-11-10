@@ -19,7 +19,6 @@ const LINKS = [
   { href: "/admin", label: "Dashboard", Icon: LayoutDashboard, exact: true, color: "text-violet-400" },
   { href: "/admin/orbit-aire", label: "Orbit Aire", Icon: Fuel, exact: false, color: "text-amber-400" },
   { href: "/admin/orbit-hotel", label: "Orbit Hôtel", Icon: Network, exact: false, color: "text-sky-400" },
-  { href: "/admin/orbit-artisan", label: "Orbit Artisan", Icon: Wrench, exact: false, color: "text-orange-400" },
   { href: "/admin/test-passwords", label: "Mots de passe (test)", Icon: KeyRound, exact: false, color: "text-emerald-400" },
 ];
 

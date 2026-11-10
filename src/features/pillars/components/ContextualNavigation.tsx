@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Settings, Orbit, LogOut, ChevronDown, ChevronUp, ChevronRight,
   FileText, Brain, MessageSquare, Archive, X, Sparkles, ListChecks, Zap, CheckCircle2, Fuel,
-  Wrench, Network, Tag, CalendarCheck, CalendarRange, Users,
+  Wrench, Network, Tag, CalendarCheck, CalendarRange, Users, CreditCard,
 } from "lucide-react";
 import { PILLARS, type PillarId } from "../types";
 import {
@@ -93,7 +93,6 @@ export function ContextualNavigation({
         ? []
         : stationLinksRaw;
   const hasRegiaire = isModuleEnabled(enabledModules, "regiaire_core");
-  const hasArtisan = isModuleEnabled(enabledModules, "artisan_core");
   const hasHotel = isModuleEnabled(enabledModules, "hotel_core");
   const saasBrand = resolveSaasBrandFromModules(enabledModules);
 
@@ -278,6 +277,21 @@ export function ContextualNavigation({
         </div>
       </div>
 
+      {/* Abonnements — catalogue de features (toujours accessible) */}
+      <div className="border-b border-slate-800 bg-slate-900/30 p-3 flex-shrink-0">
+        <Link
+          href="/abonnements"
+          className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
+            pathname.startsWith("/abonnements")
+              ? "bg-violet-600/20 border border-violet-500/40 text-violet-300"
+              : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+          }`}
+        >
+          <CreditCard size={18} />
+          <span className="text-[9px] font-bold uppercase tracking-wider">Abonnements</span>
+        </Link>
+      </div>
+
       {/* Orbit Aire — liens filtrés par module org */}
       {hasRegiaire && (
         <div className="border-b border-slate-800 bg-slate-900/30 p-3 flex-shrink-0">
@@ -377,61 +391,6 @@ export function ContextualNavigation({
               className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
                 pathname.startsWith("/hotel/reglages")
                   ? "bg-sky-600/20 border border-sky-500/40 text-sky-400"
-                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              }`}
-            >
-              <Settings size={18} />
-              <span className="text-[9px] font-bold uppercase tracking-wider">Réglages</span>
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {hasArtisan && (
-        <div className="border-b border-slate-800 bg-slate-900/30 p-3 flex-shrink-0">
-          <p className="text-[8px] font-black uppercase tracking-[0.3em] mb-3 px-2 flex items-center gap-2 text-slate-500">
-            <Wrench size={10} className="text-orange-500" />
-            Orbit Artisan
-          </p>
-          <div className="flex flex-col gap-2">
-            <Link
-              href="/artisan"
-              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
-                pathname === "/artisan"
-                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-400"
-                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              }`}
-            >
-              <Wrench size={18} />
-              <span className="text-[9px] font-bold uppercase tracking-wider">Devis IA</span>
-            </Link>
-            <Link
-              href="/artisan/contacts"
-              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
-                pathname.startsWith("/artisan/contacts")
-                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-400"
-                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              }`}
-            >
-              <Users size={18} />
-              <span className="text-[9px] font-bold uppercase tracking-wider">Contacts</span>
-            </Link>
-            <Link
-              href="/artisan/factures"
-              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
-                pathname.startsWith("/artisan/factures")
-                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-400"
-                  : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-              }`}
-            >
-              <FileText size={18} />
-              <span className="text-[9px] font-bold uppercase tracking-wider">Factures</span>
-            </Link>
-            <Link
-              href="/artisan/reglages"
-              className={`w-full flex items-center gap-3 p-2.5 rounded-xl transition-all ${
-                pathname.startsWith("/artisan/reglages")
-                  ? "bg-orange-600/20 border border-orange-500/40 text-orange-400"
                   : "bg-slate-800/50 border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200"
               }`}
             >
