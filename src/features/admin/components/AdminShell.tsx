@@ -15,7 +15,7 @@ export async function AdminShell({
   const admin = await requireAdminUser();
   if (!admin.ok) {
     if (admin.reason === "unauthenticated") redirect("/login");
-    redirect("/");
+    redirect("/app");
   }
 
   return (
@@ -34,7 +34,7 @@ export async function AdminShell({
             </div>
           </div>
           <Link
-            href="/"
+            href="/app"
             className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-200"
           >
             <ArrowLeft size={14} />

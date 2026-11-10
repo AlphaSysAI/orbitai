@@ -1,6 +1,7 @@
 // Copyright © 2026 OrbitSys. Tous droits réservés.
 
 "use client";
+import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
@@ -20,11 +21,8 @@ function LoginForm() {
       password,
     });
     if (error) alert(error.message);
-    else router.push('/'); 
+    else router.push('/app');
   };
-
-  // Pas d'inscription libre : les comptes sont créés uniquement par
-  // l'administration OrbitAll (provisioning admin).
 
   return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 text-white">
@@ -54,8 +52,11 @@ function LoginForm() {
         <button onClick={handleSignIn} className="w-full bg-purple-600 p-3 rounded-lg font-bold hover:bg-purple-500 transition">
           Se connecter
         </button>
-        <p className="mt-4 text-center text-[11px] text-slate-600">
-          Accès réservé. Les comptes sont créés par l&apos;administration OrbitAll.
+        <p className="mt-6 text-center text-sm text-slate-500">
+          Pas encore de compte ?{" "}
+          <Link href="/signup" className="font-bold text-purple-400 hover:text-purple-300">
+            Créer un compte
+          </Link>
         </p>
       </div>
     </div>

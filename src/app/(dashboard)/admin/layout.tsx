@@ -12,7 +12,7 @@ export default async function AdminLayout({
   const admin = await requireAdminUser();
   if (!admin.ok) {
     if (admin.reason === "unauthenticated") redirect("/login");
-    redirect("/");
+    redirect("/app");
   }
 
   return <>{children}</>;

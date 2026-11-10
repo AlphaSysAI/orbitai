@@ -21,7 +21,7 @@ export function ModuleDisabled({ moduleLabel = "Orbit Aire" }: ModuleDisabledPro
         votre organisation. Contactez votre administrateur pour souscrire à cette fonctionnalité.
       </p>
       <Link
-        href="/"
+        href="/app"
         className="mt-8 rounded-xl bg-slate-800 px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-200 hover:bg-slate-700"
       >
         Retour au dashboard

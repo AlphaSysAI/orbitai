@@ -59,7 +59,7 @@ export default function SetPasswordPage() {
       return;
     }
 
-    router.replace("/");
+    router.replace("/app");
   };
 
   if (isLoading) {

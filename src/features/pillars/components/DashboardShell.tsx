@@ -93,8 +93,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   const goHomeIfNeeded = () => {
-    if (pathname !== "/") {
-      router.push("/");
+    if (pathname !== "/app") {
+      router.push("/app");
     }
   };
 
