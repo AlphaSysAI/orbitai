@@ -16,7 +16,7 @@ export default function AdminOrbitHotelPage() {
           l&apos;application métier sera disponible dans une prochaine version.
         </p>
         <SaasClientCreation
-          vertical="hotel_core"
+          group="hotel"
           verticalLabel="Orbit Hôtel"
           sectorPlaceholder="Ex. Hôtellerie"
         />

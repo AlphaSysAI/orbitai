@@ -6,8 +6,10 @@ import { z } from "zod";
 import { listClientsForAdmin, provisionClient } from "@/lib/admin/provision-client";
 import { requireAdminUser } from "@/lib/admin/is-admin";
 import { AdminClientAireSchema } from "@/lib/admin/client-aire-schema";
-import { VALID_MODULE_IDS } from "@/lib/organizations/module-catalog";
-import { ORG_MODULE_NAMES } from "@/lib/organizations/types";
+import {
+  SELLABLE_FEATURE_IDS,
+  AIRE_FEATURE_IDS,
+} from "@/lib/organizations/feature-catalog";
 
 const createClientSchema = z
   .object({
@@ -16,29 +18,24 @@ const createClientSchema = z
     managerLastName: z.string().min(1, "Nom requis"),
     managerEmail: z.string().email("Email invalide"),
     businessSector: z.string().min(1, "Métier requis"),
-    moduleNames: z
+    featureIds: z
       .array(z.string())
-      .refine((names) => names.every((n) => VALID_MODULE_IDS.has(n)), {
-        message: "Module inconnu dans la sélection",
+      .refine((ids) => ids.every((id) => SELLABLE_FEATURE_IDS.has(id)), {
+        message: "Feature inconnue dans la sélection",
       }),
     aires: z.array(AdminClientAireSchema).optional(),
   })
   .superRefine((data, ctx) => {
-    const hasRegiaire = data.moduleNames.includes(
-      ORG_MODULE_NAMES.REGIAIRE_CORE
+    const hasAireFeature = data.featureIds.some((id) =>
+      AIRE_FEATURE_IDS.includes(id)
     );
     const aireCount = data.aires?.length ?? 0;
-    if (hasRegiaire && aireCount === 0) {
+    // Les aires ne sont pertinentes qu'avec au moins une feature Orbit Aire.
+    if (!hasAireFeature && aireCount > 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Au moins une aire est requise lorsque Orbit Aire est activé.",
-        path: ["aires"],
-      });
-    }
-    if (!hasRegiaire && aireCount > 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Les aires ne sont autorisées qu'avec le module Orbit Aire.",
+        message:
+          "Les aires ne sont autorisées qu'avec au moins une feature Orbit Aire.",
         path: ["aires"],
       });
     }
@@ -89,7 +86,8 @@ export async function POST(request: Request) {
       client: {
         organizationId: result.organizationId,
         managerEmail: result.managerEmail,
-        enabledModules: result.enabledModules,
+        tempPassword: result.tempPassword,
+        enabledFeatureIds: result.enabledFeatureIds,
       },
     }, { status: 201 });
   } catch (error) {

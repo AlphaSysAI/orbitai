@@ -12,7 +12,7 @@ export default function AdminOrbitAirePage() {
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <AdminSaasHeader
           title="Orbit Aire"
-          subtitle="Créez une entité (enseigne). Ouvrez ensuite son administration pour gérer la hiérarchie et les aires."
+          subtitle="Créez une entité et activez ses features. Ouvrez son administration pour gérer les aires de service."
         />
         <Link
           href="/admin/bison-fute"
@@ -22,10 +22,9 @@ export default function AdminOrbitAirePage() {
           Calendrier Bison Futé
         </Link>
         <SaasClientCreation
-          vertical="regiaire_core"
+          group="aire"
           verticalLabel="Orbit Aire"
           sectorPlaceholder="Ex. Station-service"
-          showTransverse={false}
           manageBasePath="/admin/orbit-aire"
           entityNoun="entité"
         />

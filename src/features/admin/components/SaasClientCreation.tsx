@@ -15,14 +15,13 @@ import {
 } from "lucide-react";
 
 import type { AdminClientAireRecord } from "@/lib/admin/client-aire-schema";
-import { ORG_MODULE_CATALOG } from "@/lib/organizations/module-catalog";
-
-const VERTICAL_MODULES = ["regiaire_core", "hotel_core", "artisan_core"];
-
-/** Modules transverses (add-ons IA) — tout sauf les 3 verticaux métier. */
-const TRANSVERSE_MODULES = ORG_MODULE_CATALOG.filter(
-  (m) => !VERTICAL_MODULES.includes(m.id)
-);
+import {
+  FEATURE_BY_ID,
+  featuresByGroup,
+  umbrellaModuleFor,
+  type FeatureDef,
+  type FeatureGroup,
+} from "@/lib/organizations/feature-catalog";
 
 type ClientRow = {
   id: string;
@@ -37,27 +36,31 @@ type ClientRow = {
 
 type CreateResult = { managerEmail: string; tempPassword?: string };
 
-const moduleLabel = (id: string) =>
-  ORG_MODULE_CATALOG.find((m) => m.id === id)?.label ?? id;
+/** Label lisible d'un module_name (feature vendable ; ignore les parapluies). */
+const featureLabel = (id: string) => FEATURE_BY_ID[id]?.label ?? id;
 
 export function SaasClientCreation({
-  vertical,
+  group,
   verticalLabel,
   sectorPlaceholder = "Ex. Station-service",
-  showTransverse = true,
   manageBasePath,
   entityNoun = "organisation",
 }: {
-  vertical: string;
+  /** Groupe de features proposées à la création (aire / hotel). */
+  group: FeatureGroup;
   verticalLabel: string;
   sectorPlaceholder?: string;
-  /** Cases add-ons IA transverses au niveau entité. Orbit Aire les gère par aire → false. */
-  showTransverse?: boolean;
   /** Si défini, chaque entité affiche un bouton « Administration » → `{base}/{id}`. */
   manageBasePath?: string;
   /** Mot féminin employé dans les libellés (« organisation », « entité »…). */
   entityNoun?: string;
 }) {
+  // Features proposées : le vertical choisi + les add-ons IA transverses.
+  const verticalFeatures = featuresByGroup(group);
+  const addonFeatures = featuresByGroup("addon");
+  const offeredFeatures: FeatureDef[] = [...verticalFeatures, ...addonFeatures];
+  const umbrella = umbrellaModuleFor(verticalFeatures[0]?.id ?? "");
+
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,13 +68,24 @@ export function SaasClientCreation({
   const [success, setSuccess] = useState<CreateResult | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
 
   const [companyName, setCompanyName] = useState("");
   const [managerFirstName, setManagerFirstName] = useState("");
   const [managerLastName, setManagerLastName] = useState("");
   const [managerEmail, setManagerEmail] = useState("");
   const [businessSector, setBusinessSector] = useState("");
-  const [transverse, setTransverse] = useState<Set<string>>(new Set());
+  const [selectedFeatures, setSelectedFeatures] = useState<Set<string>>(
+    new Set(verticalFeatures.map((f) => f.id))
+  );
+
+  const belongsToGroup = useCallback(
+    (c: ClientRow) =>
+      c.enabledModules.some(
+        (m) => FEATURE_BY_ID[m]?.group === group || (umbrella && m === umbrella)
+      ),
+    [group, umbrella]
+  );
 
   const loadClients = useCallback(async () => {
     setIsLoading(true);
@@ -79,23 +93,19 @@ export function SaasClientCreation({
       const res = await fetch("/api/admin/clients");
       const data = await res.json();
       if (res.ok) {
-        setClients(
-          (data.clients ?? []).filter((c: ClientRow) =>
-            c.enabledModules.includes(vertical)
-          )
-        );
+        setClients((data.clients ?? []).filter(belongsToGroup));
       }
     } finally {
       setIsLoading(false);
     }
-  }, [vertical]);
+  }, [belongsToGroup]);
 
   useEffect(() => {
     void loadClients();
   }, [loadClients]);
 
-  const toggleTransverse = (id: string) => {
-    setTransverse((prev) => {
+  const toggleFeatureSelection = (id: string) => {
+    setSelectedFeatures((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -109,34 +119,57 @@ export function SaasClientCreation({
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch("/api/admin/accounts", {
+      const res = await fetch("/api/admin/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          role: "direction_france",
           companyName,
           managerFirstName,
           managerLastName,
           managerEmail,
           businessSector,
-          // Module vertical forcé + éventuels add-ons IA transverses (si gérés à ce niveau).
-          moduleNames: showTransverse ? [vertical, ...Array.from(transverse)] : [vertical],
+          featureIds: Array.from(selectedFeatures),
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? `Erreur ${res.status}`);
-      setSuccess({ managerEmail: data.account.email, tempPassword: data.account.tempPassword });
+      setSuccess({
+        managerEmail: data.client.managerEmail,
+        tempPassword: data.client.tempPassword,
+      });
       setCompanyName("");
       setManagerFirstName("");
       setManagerLastName("");
       setManagerEmail("");
       setBusinessSector("");
-      setTransverse(new Set());
+      setSelectedFeatures(new Set(verticalFeatures.map((f) => f.id)));
       await loadClients();
     } catch (e2) {
       setError(e2 instanceof Error ? e2.message : "Erreur création");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const toggleClientFeature = async (
+    clientId: string,
+    featureId: string,
+    enabled: boolean
+  ) => {
+    setTogglingKey(`${clientId}:${featureId}`);
+    try {
+      const res = await fetch(`/api/admin/clients/${clientId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featureId, enabled }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? `Erreur ${res.status}`);
+      await loadClients();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur mise à jour feature");
+    } finally {
+      setTogglingKey(null);
     }
   };
 
@@ -162,7 +195,7 @@ export function SaasClientCreation({
         <div className="flex items-center gap-2 text-violet-400">
           <Building2 size={18} />
           <h3 className="text-sm font-black uppercase tracking-wider">
-{`Nouvelle ${entityNoun} ${verticalLabel}`.trim()}
+            {`Nouvelle ${entityNoun} ${verticalLabel}`.trim()}
           </h3>
         </div>
 
@@ -184,49 +217,44 @@ export function SaasClientCreation({
           </Field>
         </div>
 
-        {showTransverse ? (
-          <div>
-            <p className="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-              Modules
-            </p>
-            <p className="mb-4 text-xs text-slate-500">
-              <span className="font-semibold text-violet-300">{verticalLabel}</span> est activé
-              d&apos;office. Ajoutez les add-ons IA transverses souhaités :
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {TRANSVERSE_MODULES.map((mod) => {
-                const checked = transverse.has(mod.id);
-                return (
-                  <label
-                    key={mod.id}
-                    className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-                      checked
-                        ? "border-violet-500/50 bg-violet-600/10"
-                        : "border-slate-800 bg-slate-950/50 hover:border-slate-700"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleTransverse(mod.id)}
-                      className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-600 focus:ring-violet-500"
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-white">{mod.label}</span>
-                      <span className="mt-0.5 block text-xs text-slate-500">{mod.description}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ) : (
-          <p className="rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3 text-xs text-slate-400">
-            <span className="font-semibold text-violet-300">{verticalLabel}</span> est activé
-            d&apos;office. Les add-ons IA transverses s&apos;attribuent ensuite <strong>par aire</strong>,
-            depuis la fiche « Administration » de l&apos;entité.
+        <div>
+          <p className="mb-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+            Features activées à la création
           </p>
-        )}
+          <p className="mb-4 text-xs text-slate-500">
+            Sélectionnez les briques <span className="font-semibold text-violet-300">{verticalLabel}</span>{" "}
+            et les add-ons IA à ouvrir d&apos;office. Le client pourra ajuster son abonnement ensuite.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {offeredFeatures.map((feature) => {
+              const checked = selectedFeatures.has(feature.id);
+              return (
+                <label
+                  key={feature.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                    checked
+                      ? "border-violet-500/50 bg-violet-600/10"
+                      : "border-slate-800 bg-slate-950/50 hover:border-slate-700"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleFeatureSelection(feature.id)}
+                    className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-900 text-violet-600 focus:ring-violet-500"
+                  />
+                  <span>
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-white">{feature.label}</span>
+                      <span className="text-[10px] font-bold text-slate-500">{feature.priceEurMonthly} €/mois</span>
+                    </span>
+                    <span className="mt-0.5 block text-xs text-slate-500">{feature.tagline}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
 
         {error && (
           <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
@@ -275,42 +303,62 @@ export function SaasClientCreation({
             {clients.map((client) => (
               <article
                 key={client.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-950/40 p-4"
+                className="rounded-xl border border-slate-800 bg-slate-950/40 p-4"
               >
-                <div>
-                  <p className="font-semibold text-white">{client.name}</p>
-                  <p className="text-xs text-slate-500">
-                    {[client.managerFirstName, client.managerLastName].filter(Boolean).join(" ") || "—"}
-                    {" · "}
-                    {client.managerEmail ?? "—"}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {client.enabledModules.map((m) => (
-                      <span
-                        key={m}
-                        className="rounded-full bg-violet-600/15 px-2 py-0.5 text-[10px] font-bold uppercase text-violet-300"
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-white">{client.name}</p>
+                    <p className="text-xs text-slate-500">
+                      {[client.managerFirstName, client.managerLastName].filter(Boolean).join(" ") || "—"}
+                      {" · "}
+                      {client.managerEmail ?? "—"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {manageBasePath && (
+                      <Link
+                        href={`${manageBasePath}/${client.id}`}
+                        className="inline-flex items-center gap-2 rounded-xl border border-violet-600/40 bg-violet-600/10 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-violet-300 hover:border-violet-500/60 hover:text-violet-200"
                       >
-                        {moduleLabel(m)}
-                      </span>
-                    ))}
+                        <Settings size={14} /> Administration
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDeleteConfirmId(client.id)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-400 hover:border-red-500/60 hover:text-red-300"
+                    >
+                      <Trash2 size={14} /> Supprimer
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {manageBasePath && (
-                    <Link
-                      href={`${manageBasePath}/${client.id}`}
-                      className="inline-flex items-center gap-2 rounded-xl border border-violet-600/40 bg-violet-600/10 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-violet-300 hover:border-violet-500/60 hover:text-violet-200"
-                    >
-                      <Settings size={14} /> Administration
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setDeleteConfirmId(client.id)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-red-800/50 px-4 py-2 text-[10px] font-black uppercase tracking-wider text-red-400 hover:border-red-500/60 hover:text-red-300"
-                  >
-                    <Trash2 size={14} /> Supprimer
-                  </button>
+
+                <div className="mt-4">
+                  <p className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">
+                    Features (clic pour activer / désactiver)
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {offeredFeatures.map((feature) => {
+                      const on = client.enabledModules.includes(feature.id);
+                      const busy = togglingKey === `${client.id}:${feature.id}`;
+                      return (
+                        <button
+                          key={feature.id}
+                          type="button"
+                          disabled={busy}
+                          onClick={() => void toggleClientFeature(client.id, feature.id, !on)}
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                            on
+                              ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:border-emerald-400/60"
+                              : "border-slate-700 bg-slate-900/60 text-slate-500 hover:border-slate-600 hover:text-slate-300"
+                          }`}
+                        >
+                          {busy && <Loader2 size={10} className="animate-spin" />}
+                          {featureLabel(feature.id)}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </article>
             ))}

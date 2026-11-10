@@ -5,15 +5,15 @@ import { z } from "zod";
 
 import { AdminClientAiresPayloadSchema } from "@/lib/admin/client-aire-schema";
 import { syncAiresForOrganization } from "@/lib/admin/client-aires";
-import { deleteClient, updateClientModules } from "@/lib/admin/provision-client";
-import { VALID_MODULE_IDS } from "@/lib/organizations/module-catalog";
+import { deleteClient, setClientFeature } from "@/lib/admin/provision-client";
+import { SELLABLE_FEATURE_IDS } from "@/lib/organizations/feature-catalog";
 import { requireAdminUser } from "@/lib/admin/is-admin";
 
-const UpdateModulesPayloadSchema = z.object({
-  moduleNames: z.array(z.string()).refine(
-    (names) => names.every((n) => VALID_MODULE_IDS.has(n)),
-    { message: "Module inconnu dans la sélection" }
-  ),
+const ToggleFeaturePayloadSchema = z.object({
+  featureId: z.string().refine((id) => SELLABLE_FEATURE_IDS.has(id), {
+    message: "Feature inconnue",
+  }),
+  enabled: z.boolean(),
 });
 
 type RouteParams = { params: Promise<{ organizationId: string }> };
@@ -41,12 +41,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Identifiant client invalide" }, { status: 400 });
   }
 
-  // Mise à jour des modules
-  const modulesParsed = UpdateModulesPayloadSchema.safeParse(body);
-  if (modulesParsed.success) {
+  // Activation / désactivation d'une feature
+  const featureParsed = ToggleFeaturePayloadSchema.safeParse(body);
+  if (featureParsed.success) {
     try {
-      await updateClientModules(organizationId, modulesParsed.data.moduleNames);
-      return NextResponse.json({ success: true });
+      const enabledFeatureIds = await setClientFeature(
+        organizationId,
+        featureParsed.data.featureId,
+        featureParsed.data.enabled
+      );
+      return NextResponse.json({ success: true, enabledFeatureIds });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erreur serveur";
       return NextResponse.json({ error: message }, { status: 500 });

@@ -2,7 +2,8 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-import { sanitizeModuleSelection } from "@/lib/organizations/module-catalog";
+import { SELLABLE_FEATURE_IDS } from "@/lib/organizations/feature-catalog";
+import { setOrganizationModules } from "@/lib/organizations/set-modules";
 import type {
   AdminClientAireInput,
   AdminClientAireRecord,
@@ -21,7 +22,8 @@ export type ProvisionClientInput = {
   managerLastName: string;
   managerEmail: string;
   businessSector: string;
-  moduleNames: string[];
+  /** Ids de features vendables à activer d'office (catalogue à la carte). */
+  featureIds: string[];
   aires?: AdminClientAireInput[];
 };
 
@@ -29,7 +31,7 @@ export type ProvisionClientResult = {
   organizationId: string;
   userId: string;
   managerEmail: string;
-  enabledModules: string[];
+  enabledFeatureIds: string[];
   tempPassword?: string;
 };
 
@@ -44,7 +46,7 @@ function getServiceClient() {
 
 export async function provisionClient(
   input: ProvisionClientInput,
-  topRole: string = "admin"
+  topRole: string = "owner"
 ): Promise<ProvisionClientResult> {
   const admin = getServiceClient();
   const db = forWrite(admin);
@@ -54,7 +56,7 @@ export async function provisionClient(
   const managerLastName = input.managerLastName.trim();
   const managerEmail = input.managerEmail.trim().toLowerCase();
   const businessSector = input.businessSector.trim();
-  const enabledModules = sanitizeModuleSelection(input.moduleNames);
+  const featureIds = input.featureIds.filter((id) => SELLABLE_FEATURE_IDS.has(id));
 
   if (!companyName || !managerFirstName || !managerLastName || !managerEmail || !businessSector) {
     throw new Error("Tous les champs obligatoires doivent être renseignés.");
@@ -99,21 +101,16 @@ export async function provisionClient(
       throw new Error(memberError.message);
     }
 
-    if (enabledModules.length > 0) {
-      const { error: modulesError } = await db.from("organization_modules").upsert(
-        enabledModules.map((module_name) => ({
-          organization_id: org.id,
-          module_name,
-          is_enabled: true,
-          updated_at: new Date().toISOString(),
-        })),
-        { onConflict: "organization_id,module_name" }
-      );
-
-      if (modulesError) {
-        throw new Error(modulesError.message);
-      }
-    }
+    // Active les features choisies + recalcule les modules « parapluie »
+    // (regiaire_core / hotel_core) via la logique d'activation partagée.
+    const enabledFeatureIds =
+      featureIds.length > 0
+        ? await setOrganizationModules(
+            db,
+            org.id,
+            Object.fromEntries(featureIds.map((id) => [id, true]))
+          )
+        : [];
 
     if (input.aires && input.aires.length > 0) {
       await insertAiresForOrganization(org.id, input.aires);
@@ -123,7 +120,7 @@ export async function provisionClient(
       organizationId: org.id,
       userId,
       managerEmail,
-      enabledModules,
+      enabledFeatureIds,
       tempPassword,
     };
   } catch (error) {
@@ -144,35 +141,19 @@ export type AdminClientListItem = {
   aires: AdminClientAireRecord[];
 };
 
-export async function updateClientModules(
+/**
+ * Active / désactive une feature vendable pour un client (côté admin).
+ * Réutilise la logique d'activation partagée (recalcule les parapluies).
+ * @returns la liste des ids de features vendables actives après application.
+ */
+export async function setClientFeature(
   organizationId: string,
-  moduleNames: string[]
-): Promise<void> {
+  featureId: string,
+  enabled: boolean
+): Promise<string[]> {
   const admin = getServiceClient();
   const db = forWrite(admin);
-  const enabled = sanitizeModuleSelection(moduleNames);
-
-  const { error: disableError } = await db
-    .from("organization_modules")
-    .update({ is_enabled: false, updated_at: new Date().toISOString() })
-    .eq("organization_id", organizationId);
-
-  if (disableError) throw new Error(disableError.message);
-
-  if (enabled.length > 0) {
-    const { error: upsertError } = await db
-      .from("organization_modules")
-      .upsert(
-        enabled.map((module_name) => ({
-          organization_id: organizationId,
-          module_name,
-          is_enabled: true,
-          updated_at: new Date().toISOString(),
-        })),
-        { onConflict: "organization_id,module_name" }
-      );
-    if (upsertError) throw new Error(upsertError.message);
-  }
+  return setOrganizationModules(db, organizationId, { [featureId]: enabled });
 }
 
 export async function deleteClient(organizationId: string): Promise<void> {
