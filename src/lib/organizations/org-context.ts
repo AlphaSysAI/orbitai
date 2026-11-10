@@ -10,7 +10,7 @@ import {
 import { forWrite } from "@/lib/supabase-write";
 import { getPrimaryOrganizationForUser } from "@/lib/organizations/access";
 
-export const ORG_ADMIN_ROLES = new Set(["owner", "admin", "direction_france"]);
+export const ORG_ADMIN_ROLES = new Set(["owner", "admin"]);
 
 export type OrgContext = {
   userId: string;

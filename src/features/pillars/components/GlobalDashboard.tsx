@@ -37,9 +37,6 @@ export function GlobalDashboard({
         {primaryModule === ORG_MODULE_NAMES.REGIAIRE_CORE && (
           <RegiaireBusinessDashboard />
         )}
-        {primaryModule === ORG_MODULE_NAMES.ARTISAN_CORE && (
-          <BusinessModulePlaceholder label="Artisan" />
-        )}
         {primaryModule === ORG_MODULE_NAMES.HOTEL_CORE && (
           <BusinessModulePlaceholder label="Hôtel" />
         )}

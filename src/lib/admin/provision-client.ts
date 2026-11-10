@@ -119,17 +119,6 @@ export async function provisionClient(
       await insertAiresForOrganization(org.id, input.aires);
     }
 
-    // Orbit Artisan : profil métier de l'organisation (1:1), créé à l'activation.
-    if (enabledModules.includes("artisan_core")) {
-      const { error: artisanError } = await db
-        .from("artisan_profiles")
-        .upsert(
-          { organization_id: org.id, business_name: companyName },
-          { onConflict: "organization_id" }
-        );
-      if (artisanError) throw new Error(artisanError.message);
-    }
-
     return {
       organizationId: org.id,
       userId,

@@ -4,10 +4,6 @@ export const ORG_ROLE_LABELS: Record<string, string> = {
   owner: "Propriétaire",
   admin: "Administrateur",
   member: "Membre",
-  direction_france: "Direction France",
-  directeur_region: "Directeur régional",
-  chef_secteur: "Chef de secteur",
-  gerant: "Gérant",
   employe: "Employé",
 };
 

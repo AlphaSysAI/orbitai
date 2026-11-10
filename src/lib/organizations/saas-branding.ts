@@ -28,14 +28,6 @@ const SAAS_BRANDS: Partial<Record<OrgModuleName, SaasBrand>> = {
     ],
     dashboardTitle: "Dashboard station",
   },
-  [ORG_MODULE_NAMES.ARTISAN_CORE]: {
-    moduleId: ORG_MODULE_NAMES.ARTISAN_CORE,
-    parts: [
-      { text: "Orbit", highlight: true },
-      { text: " Artisan" },
-    ],
-    dashboardTitle: "Dashboard artisan",
-  },
   [ORG_MODULE_NAMES.HOTEL_CORE]: {
     moduleId: ORG_MODULE_NAMES.HOTEL_CORE,
     parts: [
@@ -49,7 +41,6 @@ const SAAS_BRANDS: Partial<Record<OrgModuleName, SaasBrand>> = {
 /** Modules métier vertical (priorité d'affichage dashboard). */
 const VERTICAL_MODULE_PRIORITY: OrgModuleName[] = [
   ORG_MODULE_NAMES.REGIAIRE_CORE,
-  ORG_MODULE_NAMES.ARTISAN_CORE,
   ORG_MODULE_NAMES.HOTEL_CORE,
 ];
 

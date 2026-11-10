@@ -5,27 +5,11 @@ import { redirect } from "next/navigation";
 import { MapPin } from "lucide-react";
 
 import { listAiresForOrg } from "@/features/regiaire/aires/actions";
-import { getCurrentUserOrgRole } from "@/features/regiaire/sector-manager/actions";
-import { ChefSecteurDashboard } from "@/features/regiaire/sector-manager/components/ChefSecteurDashboard";
-import { DirecteurRegionDashboard } from "@/features/regiaire/region/components/DirecteurRegionDashboard";
-import { DirectionFranceDashboard } from "@/features/regiaire/direction/components/DirectionFranceDashboard";
-import { GerantDashboard } from "@/features/regiaire/gerant/components/GerantDashboard";
+import { getOrgRole } from "@/features/organization/actions";
 
 export default async function StationPage() {
-  const role = await getCurrentUserOrgRole();
-
-  if (role === "chef_secteur") {
-    return <ChefSecteurDashboard />;
-  }
-  if (role === "directeur_region") {
-    return <DirecteurRegionDashboard />;
-  }
-  if (role === "direction_france") {
-    return <DirectionFranceDashboard />;
-  }
-  if (role === "gerant") {
-    return <GerantDashboard />;
-  }
+  const roleResult = await getOrgRole();
+  const role = roleResult.success ? roleResult.role : null;
 
   const result = await listAiresForOrg();
 

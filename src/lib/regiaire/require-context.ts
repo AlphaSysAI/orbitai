@@ -48,7 +48,7 @@ const ERROR_MESSAGES: Record<RegiaireContextErrorCode, string> = {
   invalid_aire: "Aire invalide ou inaccessible",
 };
 
-type ResolvedAire = { id: string; secteurId: string | null };
+type ResolvedAire = { id: string };
 
 async function resolveAireId(
   db: ReturnType<typeof forWrite>,
@@ -61,7 +61,7 @@ async function resolveAireId(
 
   const { data, error } = await db
     .from("aires")
-    .select("id, organization_id, secteur_id")
+    .select("id, organization_id")
     .eq("id", aireId)
     .maybeSingle();
 
@@ -69,18 +69,13 @@ async function resolveAireId(
     throw new RegiaireContextError("invalid_aire", ERROR_MESSAGES.invalid_aire);
   }
 
-  return {
-    id: data.id as string,
-    secteurId: (data.secteur_id as string | null) ?? null,
-  };
+  return { id: data.id as string };
 }
 
 /**
  * Vérifie qu'un compte n'accède qu'aux aires de son périmètre :
- * - employe : aires du rattachement aire_team_members
- * - chef_secteur : aires de son secteur
- * - gerant : aires qui lui sont explicitement attribuées
- * - directeur_region : aires des secteurs de ses chefs subordonnés
+ * - owner / admin / member : toutes les aires de l'org.
+ * - employe : uniquement les aires de son rattachement (aire_team_members).
  */
 async function checkAireScopeAccess(
   db: ReturnType<typeof forWrite>,
@@ -101,49 +96,6 @@ async function checkAireScopeAccess(
       .select("aire_id")
       .eq("user_id", userId)
       .eq("aire_id", aire.id)
-      .maybeSingle();
-    if (!data) deny();
-    return;
-  }
-
-  if (role === "gerant") {
-    const { data } = await db
-      .from("gerant_aires")
-      .select("aire_id")
-      .eq("gerant_user_id", userId)
-      .eq("aire_id", aire.id)
-      .maybeSingle();
-    if (!data) deny();
-    return;
-  }
-
-  if (role === "chef_secteur") {
-    if (!aire.secteurId) deny();
-    const { data } = await db
-      .from("secteurs")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("chef_user_id", userId)
-      .eq("id", aire.secteurId!)
-      .maybeSingle();
-    if (!data) deny();
-    return;
-  }
-
-  if (role === "directeur_region") {
-    if (!aire.secteurId) deny();
-    const { data: links } = await db
-      .from("org_hierarchy_links")
-      .select("subordinate_user_id")
-      .eq("manager_user_id", userId);
-    const chefIds = (links ?? []).map((l) => l.subordinate_user_id as string);
-    if (chefIds.length === 0) deny();
-    const { data } = await db
-      .from("secteurs")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .eq("id", aire.secteurId!)
-      .in("chef_user_id", chefIds)
       .maybeSingle();
     if (!data) deny();
     return;

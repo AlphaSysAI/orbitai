@@ -6,7 +6,6 @@ import {
   canManageAireTeam,
   canManageShiftOnAire,
   getMembershipRole,
-  isGerantOfAire,
 } from "@/lib/regiaire/aire-scope";
 import type { RegiaireContext } from "@/lib/regiaire/require-context";
 
@@ -22,11 +21,7 @@ export type RegiaireCapabilities = {
   isShiftManager: boolean;
 };
 
-const ORG_WIDE_MANAGER_ROLES = new Set([
-  "owner",
-  "admin",
-  "direction_france",
-]);
+const ORG_WIDE_MANAGER_ROLES = new Set(["owner", "admin", "member"]);
 
 export async function resolveRegiaireCapabilities(
   ctx: RegiaireContext
@@ -48,15 +43,13 @@ export async function resolveRegiaireCapabilities(
   }
 
   const isOrgManager = ORG_WIDE_MANAGER_ROLES.has(role);
-  const isGerant =
-    role === "gerant" && (await isGerantOfAire(ctx.db, ctx.userId, ctx.aireId));
   const canManageShift = await canManageShiftOnAire(ctx);
   const canManageTeam = await canManageAireTeam(ctx);
 
   return {
     role,
     canViewAireDashboard: true,
-    canViewVerdict: isOrgManager || isGerant || role === "chef_secteur" || role === "directeur_region",
+    canViewVerdict: isOrgManager,
     canAccessReception: true,
     canAccessEquipe: true,
     canManageShiftConfig: canManageShift,

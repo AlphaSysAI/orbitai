@@ -6,7 +6,6 @@
 export const ORG_MODULE_NAMES = {
   KNOWLEDGE_BASE: "knowledge_base",
   REGIAIRE_CORE: "regiaire_core",
-  ARTISAN_CORE: "artisan_core",
   HOTEL_CORE: "hotel_core",
   COPILOT: "copilot-transmission",
   AUTOMATION: "detection-automation",
