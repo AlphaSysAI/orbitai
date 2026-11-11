@@ -7,13 +7,10 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    AUTH_SECRET:
-      process.env.NODE_ENV === "production"
-        ? z.string()
-        : z.string().optional(),
-    AUTH_DISCORD_ID: z.string(),
-    AUTH_DISCORD_SECRET: z.string(),
-    DATABASE_URL: z.string().url(),
+    AUTH_SECRET: z.string().optional(),
+    AUTH_DISCORD_ID: z.string().optional(),
+    AUTH_DISCORD_SECRET: z.string().optional(),
+    DATABASE_URL: z.string().url().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -28,10 +25,7 @@ export const env = createEnv({
     // Token polling GET /api/review/status (Authorization: Bearer …)
     REVIEW_POLLING_TOKEN: z.string().optional(),
     // Tracker d'activité (script Python) — min. 32 caractères en production
-    TRACKER_SIGNING_SECRET:
-      process.env.NODE_ENV === "production"
-        ? z.string().min(32)
-        : z.string().min(32).optional(),
+    TRACKER_SIGNING_SECRET: z.string().min(32).optional(),
     /** Emails autorisés à accéder à /admin (séparés par des virgules) */
     ORBIT_ADMIN_EMAILS: z.string().optional(),
     /** OpenWeatherMap — météo RégiAire (serveur uniquement) */
